@@ -1,0 +1,21 @@
+board   : hardware/cpu/eagle/rev-a/fusion-export/cpu2-a.brd
+gerbers : hardware/cpu/eagle/rev-a/fab/cpu2a.zip (7 files)
+
+0. SHIFT: the board file is offset from the CAM output by 1.2954, 3.8354 mm (51, 151 mil); applied to every board item
+
+1. HOLES: board 685 (394 pads, 291 vias, 0 holes), drill file cpu2-a.drd 685; board holes not in the drill file 0; drill hits not on the board 0
+   drill sizes (mm: count): 0.610: 291, 0.813: 262, 0.889: 8, 0.914: 32, 1.016: 92
+   (Top gerber -> board: not mirrored, offset 0.4, 0.2 mil)
+
+2. TRACKS Top: board 794 wires, gerber cpu2-a.cmp 794 strokes + 685 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 794
+   (Bottom gerber -> board: MIRRORED in X, offset 5586.2, 0.2 mil)
+
+2. TRACKS Bottom: board 671 wires, gerber cpu2-a.sol 671 strokes + 685 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 671
+
+3. PLANES: none
+
+4. PARTS: board has 61 elements
+
+RESULT: PASS - the board file is the design in this gerber set

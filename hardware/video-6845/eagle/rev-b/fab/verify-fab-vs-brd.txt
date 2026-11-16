@@ -1,0 +1,26 @@
+board   : hardware/video-6845/eagle/rev-b/fusion-export/v6845-b.brd
+gerbers : hardware/video-6845/eagle/rev-b/fab/v6845-b.sol (zipped for the check) (1 files)
+
+1. HOLES: SKIPPED - this CAM set has no drill file; only the copper is compared (result = tracks only)
+
+2. TRACKS Top: no copper_top gerber
+   (Bottom gerber -> board: MIRRORED in X, offset 5542.3, 269.1 mil)
+
+2. TRACKS Bottom: board 669 wires, gerber v6845-b.sol 669 strokes + 556 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 669
+
+3. PLANES: none
+
+4. PARTS: board has 42 elements
+
+RESULT: FAIL
+
+Notes (2026-10-08):
+- "FAIL" above only means the set has no top copper: the 2005 Rev B CAM files are .sol (bottom copper), .plc (silkscreen)
+  and the .dri/.gpi info files; the .cmp was not kept. Every bottom track matches: 669/669, none extra.
+- Pads and vias against the .sol flashes (same mirror and offset): 556 board holes (388 pads + 168 vias), 556 flashes,
+  every one matched both ways.
+- Drill tally by size against v6845-b.dri (CAM run 4/05/2005): 0.024" 168, 0.032" 335, 0.040" 47, 0.100" 4, 0.130" 2
+  = 556 on both sides.
+So the Fusion export of v6845-b.brd (the newest Rev B file) is the board in the April 2005 CAM set, as far as the
+surviving files show. The website copy and the Eagle backups are earlier versions (74LS90 at IC7) and do not match.

@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <title>index</title>
+  </head>
+  <body>
+  <p><font size="6">System-5 HBIOS (Hardware BIOS)</font></p>
+	<p>This code handles the video and keyboard I/O required by Mike's BIOS (see 
+	below). Startup jumps to minimon section of BIOS.</p>
+	<p>Source: <a href="sec1.asm">sec1.asm</a></p>
+	<p>Makefile: <a href="Makefile">Makefile</a> (assumes Mike's BIOS is in 
+	subdirectory called orig_bios)</p>
+	<p>&nbsp;</p>
+	<p><font size="6">Changes required to Mike Riley's BIOS (version 0.9)</font></p>
+	<p>Source: <a href="orig/bios.asm">bios.asm</a></p>
+	<p>Include: <a href="orig/bios.inc">bios.inc</a></p>
+	<p>Makefile: <a href="orig/Makefile">Makefile</a></p>
+	<p>Changes to BIOS are marked with conditional compilation using #DEFINE KSR</p>
+	<p>&nbsp;</p>
+	<p>Note: Makefiles require srecord utility&nbsp; see the
+	<a target="_self" href="../Tools/index.html">Tools Directory</a></p>
+  </body>
+</html>

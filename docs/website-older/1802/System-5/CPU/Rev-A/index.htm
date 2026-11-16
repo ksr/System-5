@@ -1,0 +1,93 @@
+<!--$sitebuilder version="2.1.2" md5="0b13baf4d426a7b24bf9747e2db5d14a"$-->
+<!--$templateKey blank$-->
+<html>
+  <head>
+    <!--$begin exclude$--><title>index</title><!--$end exclude$-->
+    <meta name="generator" content="Yahoo! SiteBuilder/2.1.2/1.4.1_02">
+    <!--$page size 799, 3000$-->
+    <!--$fontFamily Arial$-->
+    <!--$fontSize 14$-->
+    <style type="text/css"><!--
+      BODY {font-family:"Arial"; font-size:14;}
+      P {font-family:"Arial"; font-size:14;}
+    --></style>
+  	<base target="_self">
+  </head>
+  <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" marginheight="0" marginwidth="0" topmargin="0" leftmargin="0" hspace="0" vspace="0">
+    <p><font size="6">
+	CPU Card: 
+	Revision A</font></p>
+	<p>Last Updated: 
+	<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%B %d, %Y %I:%M:%S %p" startspan -->March 30, 2005 04:39:18 PM<!--webbot bot="Timestamp" i-checksum="36201" endspan --></p>
+	<p>
+	<img src="../../../images/P3070206.JPG" width="640" height="328"></p>
+	Revision A of the CPU card had a few mistakes and required some creative pin lifting, double socketing and rewiring to get it working. The bottom connector provides signals to the
+	<a target="_parent" href="../../V1861-Keyboard/index.htm">1861/keyboard</a> card that are not available on the 
+	<a target="_self" href="../../BUS/bus-definition-REV-B.html">standard system bus</a>. The upper connector supports &nbsp;<a target="_parent" href="../../Front-Panel/index.htm">Front Panel 
+	</a>functionality, again it provides signals not available on the bus. The complete system does not require a front panel to operate. This card replaces 
+	<a href="../../../System-4/Boards/System.html">System-4 CPU card</a>.<p>
+	<font size="4">Description</font></p>
+	The CPU card has several separate subsystems; clock generation, mode control, power on reset/run, address demultiplexing/decoding , 4K EPROM, and reset address remapping. The CPU card also has auxiliary connectors required for a full function front panel and an 1861 based video/keyboard system. Jumper blocks select -EF line mapping for the bus EF line, front panel EF line, 1861 Video EF and keyboard input EF line. Another set of jumpers selects the location of the EPROM within the address space. The last jumper block (VMA) determines if/how the address is remapped during reset from 0x0000 to the location occupied by the on board EPROM within the address space. See the
+	<a target="_self" href="ops.html">operational description</a> for details.<p>
+	<font size="4">Issues/todo log</font></p>
+	<table style="table-layout:fixed;border:2px outset #DCDCDC" width=758 height=305 border=2 cellspacing=2 cellpadding=0><col width="135"><col width="351"><col width="127"><col width="131"><tr>
+<td align="center">Date</td>
+<td align="center">Description</td>
+<td colspan="2" align="center">Status</td>
+</tr>
+<tr>
+<td align="center">Jan. 2005</td>
+<td>SV6 pin 8 should be -reset not -run.<br><br>74LS123 should use Q (pin 13), not -Q (pin 4) to &nbsp;IC6 <br soft>Gate A (PIn 1). 74LS123 CLR (Pin 3) should be tied <br soft>high, A (Pin 1) to 1232 RST (Pin 5)<br><br>1232 -ST (Pin 7) should be tied to 1802 Clock out (Pin <br soft>39) not to TPA.<br><br>74LS74 tie PRE (Pin 10) and D (Pin 12) high. CLK (pin <br soft>11) should be connected to A15 not GND.<br soft></td>
+<td align="center">Rewired<br><br><br>Schematic/Layout<br>Done</td>
+<td align="center">Rev. A<br><br><br>Rev. B</td>
+</tr>
+<tr>
+<td align="center">Jan. 2005</td>
+<td>VMA, Boot/Remap silk screen entry touches pad</td>
+<td align="center">Done</td>
+<td align="center">Rev. B</td>
+</tr>
+<tr>
+<td align="center">Mar. 8/2005</td>
+<td>Add jumper to disable automatic run after power on reset</td>
+<td align="center">Done</td>
+<td align="center">Rev. B</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</table>
+	<p></p>
+	<font size="4">Schematics, board layout, and operational description</font><table style="table-layout:fixed;border:2px outset #DCDCDC" width=778 height=86 border=2 cellspacing=2 cellpadding=0><col width="63"><col width="183"><col width="153"><col width="137"><col width="226"><tr>
+<td align="center">Revision<br soft></td>
+<td align="center">Production Date</td>
+<td align="center">Schematic</td>
+<td align="center">Layout</td>
+<td align="center">Operational Description</td>
+</tr>
+<tr>
+<td align="center">A</td>
+<td align="center">Jan. 11/05</td>
+<td align="center">
+<a href="cpu2-a.sch">cpu2-a.sch</a></td>
+<td align="center">
+<a href="cpu2-a.brd">cpu2-a.brd</a></td>
+<td align="center">
+<a target="_self" href="ops.html">Rev. A ops notes</a></td>
+</tr>
+<tr>
+<td align="center">B</td>
+<td align="center">Current Development Board <br soft>*UNBUILT/UNTESTED*</td>
+<td align="center">
+<a href="../Rev-B/cpu2-b.sch">cpu2-b.sch</a></td>
+<td align="center">
+<a href="../Rev-B/cpu2-b.brd">cpu2-b.brd</a></td>
+<td align="center">
+<a target="_self" href="../Rev-B/ops.html">Rev. B ops notes</a></td>
+</tr>
+</table>
+  </body>
+</html>

@@ -1,0 +1,95 @@
+# Author: Claude (Anthropic) for Ken Rother, 2026
+# The System-5 project website: MkDocs 1.6 + Material over the documents stage.py copies from this repository.
+# ./build.sh builds it (website/README.md).
+site_name: System-5
+site_description: An RCA 1802 card computer (2004-05), built to run Mike Riley's ELF/OS on a 30-pin bus kept from the wire-wrapped System-4.
+site_author: Ken Rother
+docs_dir: stage
+site_dir: site
+use_directory_urls: true
+copyright: "System-5 by Ken Rother — <a href=\"https://cottageworker.com\">cottageworker.com</a> · Email ken at cottage worker dot com"
+repo_url: https://github.com/ksr/System-5    # the public repository (Ken, 2026-11-15): the header's source button
+repo_name: ksr/System-5
+edit_uri: ""                                   # no "edit this page": the pages are copies made by stage.py
+hooks:
+  - hooks.py
+
+theme:
+  name: material
+  custom_dir: overrides           # the cottageworker.com bar at the top of every page
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: brown
+      accent: amber
+      toggle: {icon: material/brightness-7, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: brown
+      accent: amber
+      toggle: {icon: material/brightness-4, name: Light mode}
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.details
+
+# Each section under Cards gets one item per KiCad revision from hooks.py (CARD_OF there names the section titles).
+nav:
+  - "← cottageworker.com": https://cottageworker.com
+  - Home System-5: index.md
+  - The machine:
+      - The system and how it works: docs/manual/system.md
+      - Programmer's guide: docs/manual/programmers-guide.md
+      - The manual (PDFs): docs/manual/README.md
+  - Cards:
+      - Backplane and bus:
+          - The bus: docs/manual/bus.md
+      - CPU card:
+          - How it works: docs/manual/cpu-card.md
+      - Memory card:
+          - How it works: docs/manual/memory-card.md
+          - Design review: hardware/memory/REVIEW.md
+      - 6845 video card:
+          - How it works: docs/manual/video-6845-card.md
+          - Against BYTE (May 1979): hardware/video-6845/BYTE-COMPARISON.md
+      - IO card (1861 + keyboard):
+          - How it works: docs/manual/io-card.md
+      - IDE / CF card:
+          - How it works: docs/manual/ide-cf-card.md
+      - Bus driver card:
+          - How it works: docs/manual/bus-driver-card.md
+      - IO panel card: []
+      - Other cards: docs/manual/other-cards.md
+  - Building:
+      - Build rules: hardware/BUILD-RULES.md
+      - Boards fabricated: hardware/FABRICATED.md
+      - Timing review: hardware/TIMING-REVIEW.md
+      - KiCad conversions: hardware/KICAD.md
+      - Fusion exports: hardware/FUSION-EXPORT.md
+      - Schematic drawing tool: tools/kicad/sch/README.md
+  - Software:
+      - Emulator (s5emu): software/s5emu/README.md
+      - Bus driver host tool: software/busdrv/README.md
+      - Bus driver bring-up: software/busdrv/BRINGUP.md
+      - Bus driver firmware: embedded/bus-driver/README.md
+  - Status:
+      - Backlog: BACKLOG.md
+  - The repository: repository.md

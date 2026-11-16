@@ -1,0 +1,2828 @@
+(export
+	(version "E")
+	(design
+		(source "/Users/ksr77/Developer/elf/hardware/bus/kicad/rev-2009/schematic/bus-rev-2009-schematic.kicad_sch")
+		(date "2026-10-28T12:54:50")
+		(tool "Eeschema 10.0.6")
+		(sheet
+			(number "1")
+			(name "/")
+			(tstamps "/")
+			(title_block
+				(title "System-5 bus backplane (2009)")
+				(company "System-5")
+				(rev "2009")
+				(date "2026-10-26")
+				(source "bus-rev-2009-schematic.kicad_sch")
+				(comment
+					(number "1")
+					(value "below; power on X1")
+				)
+				(comment
+					(number "2")
+					(value "Six 36-pin slots: the 30-pin System-5 bus with -EF1-3 above and -INP, -OUT, EXP")
+				)
+				(comment
+					(number "3")
+					(value "Drawn from the board netlist by tools/kicad/sch/gen_schematic.py")
+				)
+				(comment
+					(number "4")
+					(value "Eagle source: hardware/bus/eagle/rev-2009 (from Eagle's 2009 backups)")
+				)
+				(comment
+					(number "5")
+					(value "The bus: docs/manual/bus.md")
+				)
+				(comment
+					(number "6")
+					(value "")
+				)
+				(comment
+					(number "7")
+					(value "")
+				)
+				(comment
+					(number "8")
+					(value "")
+				)
+				(comment
+					(number "9")
+					(value "")
+				)
+			)
+		)
+		(sheet
+			(number "2")
+			(name "/Slots/")
+			(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			(title_block
+				(title "System-5 bus backplane (2009): Slots")
+				(company "System-5")
+				(rev "2009")
+				(date "2026-10-26")
+				(source "bus-rev-2009-schematic-slots.kicad_sch")
+				(comment
+					(number "1")
+					(value "Sheet 2 of the System-5 bus backplane (2009) schematic")
+				)
+				(comment
+					(number "2")
+					(value "Drawn from the board netlist by tools/kicad/sch/gen_schematic.py")
+				)
+				(comment
+					(number "3")
+					(value "Eagle source: hardware/bus/eagle/rev-2009 (from Eagle's 2009 backups)")
+				)
+				(comment
+					(number "4")
+					(value "The bus: docs/manual/bus.md")
+				)
+				(comment
+					(number "5")
+					(value "")
+				)
+				(comment
+					(number "6")
+					(value "")
+				)
+				(comment
+					(number "7")
+					(value "")
+				)
+				(comment
+					(number "8")
+					(value "")
+				)
+				(comment
+					(number "9")
+					(value "")
+				)
+			)
+		)
+		(sheet
+			(number "3")
+			(name "/Power/")
+			(tstamps "/4eed22c7-89b9-5d16-b57f-607a0852919d/")
+			(title_block
+				(title "System-5 bus backplane (2009): Power")
+				(company "System-5")
+				(rev "2009")
+				(date "2026-10-26")
+				(source "bus-rev-2009-schematic-power.kicad_sch")
+				(comment
+					(number "1")
+					(value "Sheet 3 of the System-5 bus backplane (2009) schematic")
+				)
+				(comment
+					(number "2")
+					(value "Drawn from the board netlist by tools/kicad/sch/gen_schematic.py")
+				)
+				(comment
+					(number "3")
+					(value "Eagle source: hardware/bus/eagle/rev-2009 (from Eagle's 2009 backups)")
+				)
+				(comment
+					(number "4")
+					(value "The bus: docs/manual/bus.md")
+				)
+				(comment
+					(number "5")
+					(value "")
+				)
+				(comment
+					(number "6")
+					(value "")
+				)
+				(comment
+					(number "7")
+					(value "")
+				)
+				(comment
+					(number "8")
+					(value "")
+				)
+				(comment
+					(number "9")
+					(value "")
+				)
+			)
+		)
+	)
+	(components
+		(comp
+			(ref "U$1")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "a60ef23e-4423-512f-b32a-6ccffbf5b844")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U$2")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "071a5634-f9ad-5c9c-a8cd-e5663bf6df86")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U$3")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "69017981-129c-5892-adbc-9294deb1e66b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U$4")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "e4e73d9c-50a7-5875-81d1-7759260b10dd")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U$5")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "df9bdd9b-2651-57e1-aa1d-aecae8df5690")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U$6")
+			(value "C36A")
+			(footprint "bus-rev-2009-eagle:C36A")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "k1_C36A")
+				(description "Eagle k1:C36A")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "1a1d9fad-4d08-5b4a-bcfd-921324678056")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "31")
+						)
+						(pin
+							(num "32")
+						)
+						(pin
+							(num "33")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "22")
+						)
+						(pin
+							(num "23")
+						)
+						(pin
+							(num "24")
+						)
+						(pin
+							(num "25")
+						)
+						(pin
+							(num "26")
+						)
+						(pin
+							(num "27")
+						)
+						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
+							(num "34")
+						)
+						(pin
+							(num "35")
+						)
+						(pin
+							(num "36")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "X1")
+			(value "MPT2")
+			(footprint "bus-rev-2009-eagle:2POL254")
+			(fields
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:2POL254")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "bus-rev-2009-eagle")
+				(part "con-phoenix-254_MPT2")
+				(description "Eagle con-phoenix-254:MPT2")
+			)
+			(property
+				(name "Sheetname")
+				(value "Slots")
+			)
+			(property
+				(name "Sheetfile")
+				(value "bus-rev-2009-schematic-slots.kicad_sch")
+			)
+			(sheetpath
+				(names "/Slots/")
+				(tstamps "/77ba91ab-e971-5b7c-b450-054a8c809bab/")
+			)
+			(tstamps "e04b0d84-0194-51d1-8154-104d5c17adb6" "458d0ecf-2a23-55d4-a584-b5908c3aa400")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+				(unit
+					(name "B")
+					(pins
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+	)
+	(groups)
+	(variants)
+	(libparts
+		(libpart
+			(lib "bus-rev-2009-eagle")
+			(part "con-phoenix-254_MPT2")
+			(description "Eagle con-phoenix-254:MPT2")
+			(fields
+				(field
+					(name "Reference") "X")
+				(field
+					(name "Value") "MPT2")
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:2POL254")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Eagle con-phoenix-254:MPT2")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "1")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "1")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "bus-rev-2009-eagle")
+			(part "k1_C36A")
+			(description "Eagle k1:C36A")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "C36A")
+				(field
+					(name "Footprint") "bus-rev-2009-eagle:C36A")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Eagle k1:C36A")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "+5V")
+					(type "power_in")
+				)
+				(pin
+					(num "2")
+					(name "D0")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "D1")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "D2")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "D3")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "D4")
+					(type "passive")
+				)
+				(pin
+					(num "7")
+					(name "D5")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "D6")
+					(type "passive")
+				)
+				(pin
+					(num "9")
+					(name "D7")
+					(type "passive")
+				)
+				(pin
+					(num "10")
+					(name "Q")
+					(type "passive")
+				)
+				(pin
+					(num "11")
+					(name "TPA")
+					(type "passive")
+				)
+				(pin
+					(num "12")
+					(name "TPB")
+					(type "passive")
+				)
+				(pin
+					(num "13")
+					(name "-MRD")
+					(type "passive")
+				)
+				(pin
+					(num "14")
+					(name "-MRW")
+					(type "passive")
+				)
+				(pin
+					(num "15")
+					(name "A0")
+					(type "passive")
+				)
+				(pin
+					(num "16")
+					(name "A1")
+					(type "passive")
+				)
+				(pin
+					(num "17")
+					(name "A2")
+					(type "passive")
+				)
+				(pin
+					(num "18")
+					(name "A3")
+					(type "passive")
+				)
+				(pin
+					(num "19")
+					(name "A4")
+					(type "passive")
+				)
+				(pin
+					(num "20")
+					(name "A5")
+					(type "passive")
+				)
+				(pin
+					(num "21")
+					(name "A6")
+					(type "passive")
+				)
+				(pin
+					(num "22")
+					(name "A7")
+					(type "passive")
+				)
+				(pin
+					(num "23")
+					(name "-INT")
+					(type "passive")
+				)
+				(pin
+					(num "24")
+					(name "N2")
+					(type "passive")
+				)
+				(pin
+					(num "25")
+					(name "-EF")
+					(type "passive")
+				)
+				(pin
+					(num "26")
+					(name "-VMA")
+					(type "passive")
+				)
+				(pin
+					(num "27")
+					(name "-RESET")
+					(type "passive")
+				)
+				(pin
+					(num "28")
+					(name "N1")
+					(type "passive")
+				)
+				(pin
+					(num "29")
+					(name "N0")
+					(type "passive")
+				)
+				(pin
+					(num "30")
+					(name "GND")
+					(type "power_in")
+				)
+				(pin
+					(num "31")
+					(name "-EF1")
+					(type "passive")
+				)
+				(pin
+					(num "32")
+					(name "-EF2")
+					(type "passive")
+				)
+				(pin
+					(num "33")
+					(name "-EF3")
+					(type "passive")
+				)
+				(pin
+					(num "34")
+					(name "-INP")
+					(type "passive")
+				)
+				(pin
+					(num "35")
+					(name "-OUT")
+					(type "passive")
+				)
+				(pin
+					(num "36")
+					(name "EXP")
+					(type "passive")
+				)
+			)
+		)
+	)
+	(libraries)
+	(nets
+		(net
+			(code "1")
+			(name "/A0")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "15")
+				(pinfunction "A0_15")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "2")
+			(name "/A1")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "16")
+				(pinfunction "A1_16")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "3")
+			(name "/A2")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "17")
+				(pinfunction "A2_17")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "4")
+			(name "/A3")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "18")
+				(pinfunction "A3_18")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "5")
+			(name "/A4")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "19")
+				(pinfunction "A4_19")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "6")
+			(name "/A5")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "20")
+				(pinfunction "A5_20")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "7")
+			(name "/A6")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "21")
+				(pinfunction "A6_21")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "8")
+			(name "/A7")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "22")
+				(pinfunction "A7_22")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "9")
+			(name "/D0")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "2")
+				(pinfunction "D0_2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "10")
+			(name "/D1")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "3")
+				(pinfunction "D1_3")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "11")
+			(name "/D2")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "4")
+				(pinfunction "D2_4")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "12")
+			(name "/D3")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "5")
+				(pinfunction "D3_5")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "13")
+			(name "/D4")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "6")
+				(pinfunction "D4_6")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "14")
+			(name "/D5")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "7")
+				(pinfunction "D5_7")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "15")
+			(name "/D6")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "8")
+				(pinfunction "D6_8")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "16")
+			(name "/D7")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "9")
+				(pinfunction "D7_9")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "17")
+			(name "/EF")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "25")
+				(pinfunction "-EF_25")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "18")
+			(name "/EF1")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "31")
+				(pinfunction "-EF1_31")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "19")
+			(name "/EF2")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "32")
+				(pinfunction "-EF2_32")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "20")
+			(name "/EF3")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "33")
+				(pinfunction "-EF3_33")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "21")
+			(name "/EXP")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "36")
+				(pinfunction "EXP_36")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "22")
+			(name "/INP")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "34")
+				(pinfunction "-INP_34")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "23")
+			(name "/INT")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "23")
+				(pinfunction "-INT_23")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "24")
+			(name "/MRD")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "13")
+				(pinfunction "-MRD_13")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "25")
+			(name "/MRW")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "14")
+				(pinfunction "-MRW_14")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "26")
+			(name "/N0")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "29")
+				(pinfunction "N0_29")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "27")
+			(name "/N1")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "28")
+				(pinfunction "N1_28")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "28")
+			(name "/N2")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "24")
+				(pinfunction "N2_24")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "29")
+			(name "/OUT")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "35")
+				(pinfunction "-OUT_35")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "30")
+			(name "/Q")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "10")
+				(pinfunction "Q_10")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "31")
+			(name "/RESET")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "27")
+				(pinfunction "-RESET_27")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "32")
+			(name "/TPA")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "11")
+				(pinfunction "TPA_11")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "33")
+			(name "/TPB")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "12")
+				(pinfunction "TPB_12")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "34")
+			(name "/VMA")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$2")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$3")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$4")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$5")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+			(node
+				(ref "U$6")
+				(pin "26")
+				(pinfunction "-VMA_26")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "35")
+			(name "GND")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$2")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$3")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$4")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$5")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$6")
+				(pin "30")
+				(pinfunction "GND_30")
+				(pintype "power_in")
+			)
+		)
+		(net
+			(code "36")
+			(name "VCC")
+			(class "Default")
+			(node
+				(ref "U$1")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$2")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$3")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$4")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$5")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U$6")
+				(pin "1")
+				(pinfunction "+5V_1")
+				(pintype "power_in")
+			)
+		)
+		(net
+			(code "37")
+			(name "unconnected-(X1-Pad1)")
+			(class "Default")
+			(node
+				(ref "X1")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive+no_connect")
+			)
+		)
+		(net
+			(code "38")
+			(name "unconnected-(X1B-1-Pad2)")
+			(class "Default")
+			(node
+				(ref "X1")
+				(pin "2")
+				(pinfunction "1_2")
+				(pintype "passive+no_connect")
+			)
+		)
+	)
+)

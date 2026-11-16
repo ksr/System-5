@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System-5 Emulator</title>
+<!-- Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-10-06; Machine tab 2026-11-12 -->
+<style>
+  :root {
+    --bg: #f4f2ee; --panel: #ffffff; --ink: #1d1f22; --muted: #6b6f76; --line: #d9d5cc; --accent: #2f6f5e;
+    --crt-bg: #0d130f; --crt-fg: #9cf0b0; --crt-dim: #2c4a35; --bp: #c0392b; --pc: #fff3c4; --pc-ink: #1d1f22;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171a; --panel: #1d2024; --ink: #e6e3dc; --muted: #9a9ea6; --line: #30343a; --accent: #6cc4a8;
+      --pc: #3d3a22; --pc-ink: #f3ecc8; --bp: #e2675a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171a; --panel: #1d2024; --ink: #e6e3dc; --muted: #9a9ea6; --line: #30343a; --accent: #6cc4a8;
+    --pc: #3d3a22; --pc-ink: #f3ecc8; --bp: #e2675a;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }        /* the tab panels set display, which would override hidden */
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .status { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .tabs { display: flex; gap: 2px; margin-left: 8px; }
+  .tabs button { border-radius: 6px 6px 0 0; border-bottom-color: transparent; }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .dot.run { background: var(--accent); }
+  .q { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+  .q.on { background: #d84b3a; color: #fff; border-color: #d84b3a; }
+  button, select { font: inherit; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button:hover, select:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .crt { background: var(--crt-bg); color: var(--crt-fg); font-family: var(--mono); white-space: pre; overflow-x: auto; outline: none;
+         border: 2px solid transparent; text-shadow: 0 0 4px rgba(120, 255, 160, .35); border-radius: 6px; }
+  .crt:focus { border-color: var(--accent); }
+  .crt .cur { background: var(--crt-fg); color: var(--crt-bg); }
+  .pixie { image-rendering: pixelated; width: 100%; max-width: 512px; background: #000; border-radius: 4px; display: block; }
+
+  /* Machine tab */
+  #machine { max-width: 1000px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  #mscreen { font-size: clamp(9px, 1.45vw, 17px); line-height: 1.3; padding: 18px 20px; min-height: 16em; position: relative; cursor: text; }
+  #mscreen:focus-within { border-color: var(--accent); }
+  /* the keyboard's input: a hidden text box on the screen, so typed, inserted (phones, input methods) and pasted text
+     all arrive; the screen above it is only drawn */
+  #kbdsink { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; overflow: hidden; }
+  .rate { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  /* the IO panel card */
+  .prow { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .bits { display: flex; gap: 6px; }
+  .bit { display: flex; flex-direction: column; align-items: center; gap: 3px; font: 11px var(--mono); color: var(--muted); }
+  .led { width: 16px; height: 16px; border-radius: 50%; background: #3b1f1d; border: 1px solid #5a2b27; }
+  .led.on { background: #ff4230; border-color: #ff7a6b; box-shadow: 0 0 8px #ff4230; }
+  .til { background: #120807; color: #ff4b38; font: 600 30px/1 var(--mono); padding: 6px 10px; border-radius: 6px; letter-spacing: 6px;
+         text-shadow: 0 0 6px rgba(255, 75, 56, .6); min-width: 70px; text-align: center; }
+  .til.off { color: #4a1f1b; text-shadow: none; }
+  .tog { width: 30px; padding: 4px 0; font: 600 12px var(--mono); }
+  .tog[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .hand { min-width: 70px; }
+  .hand[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #pinput:active, #pinput.down { background: #d84b3a; color: #fff; border-color: #d84b3a; }
+
+  /* Debugger tab */
+  #debug main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: 14px; padding: 14px 16px; }
+  @media (max-width: 1100px) { #debug main { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  #screen { font-size: 15px; line-height: 1.25; padding: 12px 14px; }
+  .regs { font-family: var(--mono); font-size: 13px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 10px; }
+  .regs .flags { grid-column: 1 / -1; margin-bottom: 4px; }
+  .regs b { color: var(--muted); font-weight: 500; }
+  .code, .mem { font-family: var(--mono); font-size: 12.5px; white-space: pre; overflow-x: auto; }
+  .code div { padding: 0 4px; border-radius: 3px; cursor: pointer; }
+  .code div:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .code div.pc { background: var(--pc); color: var(--pc-ink); }
+  .code div.bp::before { content: "\25CF "; color: var(--bp); }
+  .code div:not(.bp)::before { content: "  "; }
+  .code .sym { color: var(--accent); }
+  .mem input, .console input { font: 12.5px var(--mono); padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); }
+  .console pre { font-family: var(--mono); font-size: 12.5px; height: 220px; overflow-y: auto; margin: 0 0 8px; white-space: pre-wrap; }
+  .console form { display: flex; gap: 8px; }
+  .console input { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>System-5</h1>
+  <span class="status"><span id="dot" class="dot"></span><span id="state">connecting</span></span>
+  <span id="qled" class="q" title="the 1802's Q output">Q</span>
+  <nav class="tabs" role="tablist">
+    <button id="tab-machine" role="tab" aria-selected="true">Machine</button>
+    <button id="tab-debug" role="tab" aria-selected="false">Debugger</button>
+  </nav>
+  <span class="status" id="reason"></span>
+  <span class="status" id="link"></span>
+</header>
+
+<div id="machine" role="tabpanel">
+  <section>
+    <h2>Screen (6845, 64 x 16) <span id="mkbdq"></span></h2>
+    <div id="mscreen" class="crt"><div id="mtext"></div><textarea id="kbdsink" aria-label="System-5 keyboard"
+      autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea></div>
+    <div class="hint">Type straight onto the screen. At the monitor's <b>test&gt;</b> prompt, <b>Boot ELF/OS</b> types <code>@FF00</code> and Enter.
+      Paste works too (Cmd-V / Ctrl-V).</div>
+  </section>
+  <div class="toolbar">
+    <button id="mrun" class="primary">Run</button>
+    <button id="mreset" title="Reset the machine (as the CPU card's reset button)">Reset</button>
+    <button id="mboot" title="Types @FF00 and Enter: HBIOS boots ELF/OS from the CF card">Boot ELF/OS</button>
+    <label class="status">Clock
+      <select id="mspeed" title="The emulated CPU clock">
+        <option value="max">as fast as possible</option>
+        <option value="2m">2 MHz (CPU Rev D)</option>
+        <option value="1.76m">1.76 MHz (1861 crystal)</option>
+        <option value="500k">500 kHz (the machine today)</option>
+      </select>
+    </label>
+    <span class="rate" id="mrate"></span>
+    <span class="rate" id="mdisk"></span>
+  </div>
+  <section id="mpanel" hidden>
+    <h2>IO panel card (port 4, designed, not built) <span class="rate" id="pmode"></span></h2>
+    <div class="prow">
+      <div class="bits" id="pleds" title="the byte the last OUT 4 wrote"></div>
+      <div class="til off" id="ptil" title="the two TIL311 hex displays">--</div>
+      <div class="bit"><span class="led" id="pq"></span>Q</div>
+    </div>
+    <div class="prow">
+      <div class="bits" id="ptoggles" title="the eight toggles: INP 4 reads them"></div>
+      <button id="pinput" title="INPUT: EF1 while held; in LOAD mode each press stores the toggles at M(R0)">INPUT</button>
+      <button id="prun" class="hand" title="RUN off holds the 1802 in reset">RUN</button>
+      <button id="pload" class="hand" title="LOAD on pauses the 1802; with RUN off it is LOAD mode">LOAD</button>
+    </div>
+    <div class="hint">To toggle a program in: RUN off, LOAD on; for each byte set the toggles and press INPUT; then LOAD off and RUN on
+      (it runs from 0000). OUT 4 shows a byte on the LEDs, INP 4 reads the toggles, B1 / BN1 test INPUT. Reset boots the ROM again.</div>
+  </section>
+  <section id="mpixiebox" hidden>
+    <h2>1861 graphics <span id="mpixieinfo"></span></h2>
+    <canvas id="mpixie" class="pixie" width="64" height="128"></canvas>
+  </section>
+</div>
+
+<div id="debug" role="tabpanel" hidden>
+  <header style="border-bottom:0;padding-bottom:0">
+    <div class="toolbar">
+      <button id="run" class="primary" title="Run (F5)">Run</button>
+      <button id="pause" title="Pause (Esc)">Pause</button>
+      <button id="step" title="Step (F10)">Step</button>
+      <button id="over" title="Step over (F11)">Over</button>
+      <button id="reset">Reset</button>
+    </div>
+  </header>
+  <main>
+    <div class="col">
+      <section>
+        <h2>System-5 screen (6845) <span id="kbdq"></span></h2>
+        <div id="screen" class="crt" tabindex="0"></div>
+        <div class="hint">Click the screen to type on the System-5 keyboard. Enter sends CR; Esc is sent as ESC.</div>
+      </section>
+      <section id="pixiebox" hidden>
+        <h2>1861 graphics <span id="pixieinfo"></span></h2>
+        <canvas id="pixie" class="pixie" width="64" height="128"></canvas>
+      </section>
+      <section class="console">
+        <h2>Console <span class="hint" style="margin:0">help · s · n · c · b ADDR · w w ADDR · m ADDR · d ADDR · key TEXT · trace · stack · speed</span></h2>
+        <pre id="log"></pre>
+        <form id="cmdform"><input id="cmd" autocomplete="off" placeholder="debugger command (help)"><button>Send</button></form>
+      </section>
+    </div>
+    <div class="col">
+      <section><h2>Registers</h2><div class="regs" id="regs"></div></section>
+      <section><h2>Code <span class="hint" style="margin:0">click a line to toggle a breakpoint</span></h2><div class="code" id="code"></div></section>
+      <section class="mem"><h2>Memory <form id="memform"><input id="memaddr" size="8" placeholder="addr"></form></h2><div id="mem"></div></section>
+    </div>
+  </main>
+</div>
+
+<script>
+// The emulator, behind one small interface. Over HTTP here (the Python server in s5emu/web.py); a page that runs the
+// emulator in the browser defines window.S5_EMU with the same four methods before this script runs.
+function httpEmu() {
+  async function post(path, body) {
+    const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    return r.json();
+  }
+  return {
+    state: async light => (await fetch(light ? "api/state?light" : "api/state")).json(),
+    command: c => post("api/cmd", {cmd: c}),
+    key: t => post("api/key", {text: t}),
+    mem: a => post("api/mem", {addr: a}),
+  };
+}
+const emu = window.S5_EMU || httpEmu();
+
+const $ = id => document.getElementById(id);
+const hex = (v, n) => v.toString(16).toUpperCase().padStart(n, "0");
+let last = null, inflight = false, tab = "machine", rate = null;
+
+try { const t = localStorage.getItem("s5emu-tab"); if (t === "debug" || t === "machine") tab = t; } catch (e) {}
+
+async function cmd(c) { await emu.command(c); refresh(); }
+function esc(s) { return s.replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c])); }
+
+function screenHTML(s) {
+  const lines = s.screen.map(l => l.split(""));
+  if (s.cursor && lines[s.cursor[0]]) {
+    const row = lines[s.cursor[0]]; const c = s.cursor[1];
+    if (c < row.length) row[c] = "\u0000" + row[c];
+  }
+  return lines.map(r => r.map(ch => ch[0] === "\u0000" ? '<span class="cur">' + esc(ch.slice(1) || " ") + "</span>" : esc(ch)).join("")).join("\n");
+}
+
+function drawPixie(s, box, canvas, info) {
+  $(box).hidden = !s.pixie.on;
+  if (!s.pixie.on || !s.pixie.frame) return;
+  $(info).textContent = "port " + s.pixie.port;
+  const ctx = $(canvas).getContext("2d"), img = ctx.createImageData(64, 128), f = s.pixie.frame;
+  for (let i = 0; i < 1024; i++) {
+    const byte = parseInt(f.substr(i * 2, 2), 16);
+    for (let b = 0; b < 8; b++) { const on = byte & (0x80 >> b), p = (i * 8 + b) * 4; img.data[p] = img.data[p+1] = img.data[p+2] = on ? 235 : 0; img.data[p+3] = 255; }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function renderCommon(s) {
+  $("dot").className = "dot" + (s.running ? " run" : "");
+  $("state").textContent = s.running ? "running" : "paused";
+  $("qled").className = "q" + (s.cpu.Q ? " on" : "");
+  $("reason").textContent = s.running ? "" : (s.reason || "");
+  $("link").textContent = s.link ? "bus link " + s.link : "";
+}
+
+function renderMachine(s) {
+  $("mtext").innerHTML = screenHTML(s);
+  $("mkbdq").textContent = s.kbd ? s.kbd + " key(s) queued" : "";
+  $("mrun").textContent = s.running ? "Pause" : "Run";
+  $("mrun").className = s.running ? "" : "primary";
+  if (document.activeElement !== $("mspeed")) {
+    const opts = [...$("mspeed").options].map(o => o.value);
+    const cur = s.clock === null ? "max" : ({2000000: "2m", 1760000: "1.76m", 500000: "500k"})[Math.round(s.clock)];
+    if (cur && opts.includes(cur)) $("mspeed").value = cur;
+  }
+  $("mrate").textContent = rate ? "running at " + (rate >= 1e6 ? (rate / 1e6).toFixed(2) + " MHz" : (rate / 1e3).toFixed(0) + " kHz") : "";
+  $("mdisk").textContent = (s.rom ? "ROM: " + s.rom.replace(/\.(rom|hex|bin)$/, "") + " · " : "") + (s.disk ? "CF card: " + s.disk : "no CF card");
+  drawPixie(s, "mpixiebox", "mpixie", "mpixieinfo");
+  renderPanel(s);
+}
+
+// The IO panel card: LEDs and TIL311s from the latch, the toggles, INPUT, RUN, LOAD
+// The controls as the page last set them (ctl): clicks build on these, not on the last state drawn, so quick clicks
+// all count; the emulator's own state replaces them whenever no panel command is on its way.
+let ctl = null, panelBusy = 0;
+function buildPanel() {
+  for (let k = 7; k >= 0; k--) {
+    $("pleds").insertAdjacentHTML("beforeend", `<div class="bit"><span class="led" id="pled${k}"></span>${k}</div>`);
+    $("ptoggles").insertAdjacentHTML("beforeend", `<div class="bit"><button class="tog" id="ptog${k}" aria-pressed="false">0</button>${k}</div>`);
+    $("ptog" + k).onclick = () => { if (!ctl) return; ctl.switches ^= 1 << k; drawControls(); panelCmd("panel sw " + hex(ctl.switches, 2)); };
+  }
+}
+function drawControls() {
+  for (let k = 0; k < 8; k++) {
+    const t = $("ptog" + k), up = (ctl.switches >> k) & 1;
+    t.textContent = up ? "1" : "0"; t.setAttribute("aria-pressed", up ? "true" : "false");
+  }
+  $("prun").setAttribute("aria-pressed", ctl.run ? "true" : "false");
+  $("pload").setAttribute("aria-pressed", ctl.load ? "true" : "false");
+}
+function renderPanel(s) {
+  $("mpanel").hidden = !s.panel;
+  if (!s.panel) return;
+  const p = s.panel, on = p.latch !== null;
+  if (!ctl || !panelBusy) ctl = {switches: p.switches, run: p.run, load: p.load};
+  drawControls();
+  for (let k = 0; k < 8; k++) $("pled" + k).className = "led" + (on && (p.latch >> k) & 1 ? " on" : "");
+  $("ptil").textContent = on ? hex(p.latch, 2) : "--"; $("ptil").className = "til" + (on ? "" : " off");
+  $("pq").className = "led" + (s.cpu.Q ? " on" : "");
+  $("pinput").className = p.input ? "down" : "";
+  $("pmode").textContent = {run: "running", pause: "paused (LOAD on)", reset: "held in reset (RUN off)", load: "LOAD mode: INPUT stores the toggles at M(R0)"}[p.mode];
+}
+// panel commands go out one at a time, in order (a quick press and release must not arrive reversed)
+let panelChain = Promise.resolve();
+function panelCmd(c) {
+  panelBusy++;
+  panelChain = panelChain.then(() => emu.command(c)).catch(() => {}).then(() => { panelBusy--; refresh(); });
+  return panelChain;
+}
+buildPanel();
+let inputDown = false;
+$("pinput").addEventListener("pointerdown", e => { e.preventDefault(); inputDown = true; panelCmd("panel input on"); });
+for (const ev of ["pointerup", "pointerleave", "pointercancel"])
+  $("pinput").addEventListener(ev, () => { if (inputDown) { inputDown = false; panelCmd("panel input off"); } });
+$("prun").onclick = () => { if (!ctl) return; ctl.run = !ctl.run; drawControls(); panelCmd("panel run " + (ctl.run ? "on" : "off")); };
+$("pload").onclick = () => { if (!ctl) return; ctl.load = !ctl.load; drawControls(); panelCmd("panel load " + (ctl.load ? "on" : "off")); };
+
+function renderDebug(s) {
+  $("screen").innerHTML = screenHTML(s);
+  $("kbdq").textContent = s.kbd ? s.kbd + " key(s) queued" : "";
+  const c = s.cpu;
+  let r = `<div class="flags"><b>D</b> ${hex(c.D,2)} &nbsp; <b>DF</b> ${c.DF} &nbsp; <b>X</b> ${hex(c.X,1)} &nbsp; <b>P</b> ${hex(c.P,1)} &nbsp; <b>T</b> ${hex(c.T,2)} &nbsp; <b>IE</b> ${c.IE} &nbsp; <b>Q</b> ${c.Q}${c.idle ? " &nbsp; IDLE" : ""}</div>`;
+  for (let i = 0; i < 16; i++) r += `<span><b>R${hex(i,1)}</b> ${hex(c.R[i],4)}</span>`;
+  r += `<div class="flags" style="margin-top:4px;color:var(--muted)">${c.instructions.toLocaleString()} instructions · ${c.cycles.toLocaleString()} machine cycles</div>`;
+  $("regs").innerHTML = r;
+  $("code").innerHTML = s.code.map(l => `<div data-a="${l.a}" class="${l.a === s.pc ? "pc" : ""}${l.bp ? " bp" : ""}">${hex(l.a,4)}  ${l.b.padEnd(9)} ${esc(l.t).padEnd(22)}${l.s ? '<span class="sym">' + esc(l.s) + "</span>" : ""}</div>`).join("");
+  $("mem").innerHTML = s.mem.map(row => hex(row.a,4) + "  " + row.b.map(b => hex(b,2)).join(" ") + "  " +
+    esc(row.b.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join(""))).join("\n");
+  drawPixie(s, "pixiebox", "pixie", "pixieinfo");
+  const log = $("log"), atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 4;
+  log.textContent = s.log.join("\n"); if (atEnd) log.scrollTop = log.scrollHeight;
+}
+
+let rateSample = null;
+function measure(s) {
+  const now = performance.now();
+  if (rateSample && s.running && now > rateSample.t + 250) {
+    const cps = (s.cpu.cycles - rateSample.c) / ((now - rateSample.t) / 1000);
+    rate = rate ? rate * 0.7 + cps * 8 * 0.3 : cps * 8;          // an 1802 machine cycle is 8 clocks
+  }
+  if (!s.running) rate = null;
+  if (!rateSample || now > rateSample.t + 250) rateSample = {t: now, c: s.cpu.cycles};
+}
+
+async function refresh() {
+  if (inflight) return; inflight = true;
+  try {
+    last = await emu.state(tab === "machine");
+    measure(last); renderCommon(last);
+    if (tab === "machine") renderMachine(last); else renderDebug(last);
+  } catch (e) { $("state").textContent = "disconnected"; $("dot").className = "dot"; }
+  inflight = false;
+}
+function tick() { refresh(); setTimeout(tick, last && last.running ? 120 : 600); }
+
+function showTab(t) {
+  tab = t;
+  $("machine").hidden = t !== "machine"; $("debug").hidden = t !== "debug";
+  $("tab-machine").setAttribute("aria-selected", t === "machine"); $("tab-debug").setAttribute("aria-selected", t === "debug");
+  try { localStorage.setItem("s5emu-tab", t); } catch (e) {}
+  if (t === "machine") $("kbdsink").focus();
+  refresh();
+}
+$("tab-machine").onclick = () => showTab("machine");
+$("tab-debug").onclick = () => showTab("debug");
+
+// keys typed on either screen go to the System-5 keyboard
+function keyText(e) {
+  if (e.metaKey) return null;
+  if (e.key === "Enter") return "\n"; if (e.key === "Backspace") return "\b"; if (e.key === "Escape") return "\x1b";
+  if (e.key === "Tab") return "\t";
+  if (e.ctrlKey && e.key.length === 1) return String.fromCharCode(e.key.toUpperCase().charCodeAt(0) & 0x1f);
+  if (e.key.length === 1 && !e.ctrlKey && !e.altKey) return e.key;
+  return null;
+}
+// Keys go out one request at a time, in order: the server handles requests on several threads, so keys sent each in
+// a request of its own could arrive out of order (typed DIR came out as DRI). Keys typed while a request is out wait
+// and go together in the next one.
+let keyBuf = "", keyBusy = false;
+function typeKeys(t) { keyBuf += t; pumpKeys(); }
+async function pumpKeys() {
+  if (keyBusy || !keyBuf) return;
+  keyBusy = true; const t = keyBuf; keyBuf = "";
+  try { await emu.key(t); } catch (e) { keyBuf = t + keyBuf; }
+  keyBusy = false; refresh();
+  if (keyBuf) pumpKeys();
+}
+function sendKey(e) { const t = keyText(e); if (t !== null) { e.preventDefault(); typeKeys(t); } }
+function sendPaste(e) {
+  const t = (e.clipboardData || window.clipboardData).getData("text");
+  if (t) { e.preventDefault(); typeKeys(t.replace(/\r\n?/g, "\n")); }
+}
+// The Machine screen: keydown handles the keys that are not text (Enter, Backspace, Esc, Tab, Ctrl-letter); text
+// itself comes from the hidden box's input event, however it was entered (a key, a phone keyboard, a paste)
+const sink = $("kbdsink");
+$("mscreen").addEventListener("mousedown", e => { e.preventDefault(); sink.focus(); });
+sink.addEventListener("keydown", e => {
+  if (e.isComposing) return;
+  const t = keyText(e);
+  if (t !== null && (t.length !== 1 || t < " " || e.ctrlKey)) { e.preventDefault(); typeKeys(t); }
+});
+sink.addEventListener("input", () => {
+  const t = sink.value; sink.value = "";
+  if (t) typeKeys(t.replace(/\r\n?/g, "\n"));
+});
+$("screen").addEventListener("keydown", sendKey); $("screen").addEventListener("paste", sendPaste);
+
+// Machine tab controls
+$("mrun").onclick = () => { cmd(last && last.running ? "stop" : "c"); sink.focus(); };
+$("mreset").onclick = () => { cmd("reset"); sink.focus(); };
+$("mboot").onclick = () => { typeKeys("@FF00\n"); sink.focus(); };
+$("mspeed").onchange = () => { cmd("speed " + $("mspeed").value); sink.focus(); };
+
+// Debugger tab controls
+$("run").onclick = () => cmd("c"); $("pause").onclick = () => cmd("stop");
+$("step").onclick = () => cmd("s"); $("over").onclick = () => cmd("n"); $("reset").onclick = () => cmd("reset");
+$("code").onclick = e => { const d = e.target.closest("div[data-a]"); if (!d) return;
+  const a = +d.dataset.a; cmd((last && last.breaks.includes(a) ? "bd " : "b ") + hex(a,4)); };
+$("cmdform").onsubmit = e => { e.preventDefault(); const v = $("cmd").value; $("cmd").value = ""; if (v.trim()) cmd(v); };
+$("memform").onsubmit = e => { e.preventDefault(); emu.mem($("memaddr").value).then(refresh); };
+document.addEventListener("keydown", e => {
+  if (tab === "machine") {                       // on the Machine tab, typing anywhere goes to System-5
+    const a = document.activeElement, t = a ? a.tagName : "";
+    if (!["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(t)) sendKey(e);
+    return;
+  }
+  if (document.activeElement === $("screen") || document.activeElement.tagName === "INPUT") return;
+  if (e.key === "F5") { e.preventDefault(); cmd("c"); } else if (e.key === "Escape") cmd("stop");
+  else if (e.key === "F10") { e.preventDefault(); cmd("s"); } else if (e.key === "F11") { e.preventDefault(); cmd("n"); }
+});
+
+showTab(tab);
+tick();
+</script>
+</body>
+</html>

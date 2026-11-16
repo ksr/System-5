@@ -1,0 +1,20 @@
+// Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-15
+// A GitHub Codespace (or any dev container) that runs the System-5 emulator in a browser tab. On every start it starts
+// the emulator on port 8802, which Codespaces forwards and opens. software/s5emu/CODESPACE.md says how to use it.
+// ELF/OS is Mike Riley's and not in this repository, so the emulator runs with no CF card, from HBIOS's monitor.
+{
+  "name": "System-5 emulator",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "bash software/s5emu/web-start.sh --prepare",
+  "postStartCommand": "bash software/s5emu/web-start.sh",
+  "forwardPorts": [8802],
+  "portsAttributes": {
+    "8802": { "label": "System-5 emulator", "onAutoForward": "openBrowser" }
+  },
+  "hostRequirements": { "cpus": 2 },
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["software/s5emu/CODESPACE.md"]
+    }
+  }
+}

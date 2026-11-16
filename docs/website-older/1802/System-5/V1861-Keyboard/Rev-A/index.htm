@@ -1,0 +1,88 @@
+<!--$sitebuilder version="2.1.2" md5="087908623d0550d9c440babd3ca2d636"$-->
+<!--$templateKey blank$-->
+<html>
+  <head>
+    <!--$begin exclude$--><title>index</title><!--$end exclude$-->
+    <meta name="generator" content="Yahoo! SiteBuilder/2.1.2/1.4.1_02">
+    <!--$page size 1042, 3000$-->
+    <!--$fontFamily Arial$-->
+    <!--$fontSize 14$-->
+    <style type="text/css"><!--
+      BODY {font-family:"Arial"; font-size:14;}
+      P {font-family:"Arial"; font-size:14;}
+    --></style>
+  </head>
+  <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" marginheight="0" marginwidth="0" topmargin="0" leftmargin="0" hspace="0" vspace="0">
+    <font size="6">1861 Video / Keyboard Interface Card: 
+	Revision A</font><p>
+	Last Updated: 
+	<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%B %d, %Y %I:%M:%S %p" startspan -->March 30, 2005 06:03:00 PM<!--webbot bot="Timestamp" i-checksum="35599" endspan --></p>
+	<img src="../../../images/P3070205.JPG" width="640" height="380"><p>
+	Rev. A of the 1861/Keyboard card. The card interfaces to a PS/2 keyboard and uses a standard 1861 setup to drive a composite monitor. Currently the 1861 circuit is untested. The connector at the bottom is from the CPU card and provides some signals required by the 1861 that are not on the standard bus. On System-4 the keyboard interface was contained on the CPU card.</p>
+	<font size="4">Description</font><p>
+	The board has several subsections: I/O decoding logic (borrowed from 
+	<a target="_blank" href="http://www.elf-emulation.com/hardware.html">Mile Riley's ELF</a>), serial to parallel keyboard interface made of a PAK-VI and a PIC 16F84 processor, 1852 based parallel input port, and 1861 video circuit. Jumper blocks select I/O port used by keyboard and 1861. The
+	<a target="_blank" href="http://www.awce.com/pak6.htm">PAK-VI</a> chip at the top of the card is a PS/2 to ASCII decoder produced by 
+	<a target="_blank" href="http://www.awce.com/">AWC Electronics</a>.</p>
+	<font size="4">Issues/todo log</font><table style="table-layout:fixed;border:2px outset #DCDCDC" width=758 height=63 border=2 cellspacing=2 cellpadding=0><col width="135"><col width="351"><col width="127"><col width="131"><tr>
+<td align="center">
+Date</td>
+<td align="center">
+Description</td>
+<td colspan="2" align="center">
+Status</td>
+</tr>
+<tr>
+<td align="center">
+Jan. 12/2005</td>
+<td>Test 1861 Circuit</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</table>
+	&nbsp;<p><font size="4">
+	Schematics, board layout, and operational description</font></p>
+	<table style="table-layout:fixed;border:2px outset #DCDCDC" width=820 height=69 border=2 cellspacing=2 cellpadding=0><col width="63"><col width="183"><col width="153"><col width="137"><col width="177"><col width="89"><tr>
+<td align="center">
+Revision</td>
+<td align="center">
+Production Date</td>
+<td align="center">
+Schematic</td>
+<td align="center">
+Layout</td>
+<td align="center">
+Operational Description</td>
+<td align="center">
+PIC Code</td>
+</tr>
+<tr>
+<td align="center">
+A</td>
+<td align="center">
+Jan. 12/2005</td>
+<td align="center">
+<a href="Video.sch">Video.sch</a></td>
+<td align="center">
+<a href="Video.brd">Video.brd</a></td>
+<td align="center">
+&nbsp;</td>
+<td><a href="keyboard.c">keyboard.c</a></td>
+</tr>
+<tr>
+<td align="center">&nbsp;</td>
+<td align="center">&nbsp;</td>
+<td align="center">&nbsp;</td>
+<td align="center">&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</table>
+  </body>
+</html>

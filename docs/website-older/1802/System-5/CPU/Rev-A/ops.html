@@ -1,0 +1,190 @@
+<!--$sitebuilder version="2.1.2" md5="7c8e39eae00e7f9feea7f1440c645cc2"$-->
+<!--$templateKey blank$-->
+<html>
+  <head>
+    <!--$begin exclude$--><title>ops</title><!--$end exclude$-->
+    <meta name="generator" content="Yahoo! SiteBuilder/2.1.2/1.4.1_02">
+    <!--$fontFamily Arial$-->
+    <!--$fontSize 14$-->
+    <style type="text/css"><!--
+      BODY {font-family:"Arial"; font-size:14;}
+      P {font-family:"Arial"; font-size:14;}
+    --></style>
+  </head>
+<script>
+  ns4 = document.layers && true;
+  msie = document.all && true;
+  function init() {
+  }
+</script>
+  <body bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" onLoad="init()" onResize="if (ns4) history.go(0);" marginheight="0" marginwidth="0" topmargin="0" leftmargin="0" hspace="0" vspace="0">
+    <font size="6">CPU Rev. A operational description</font><p>Last Updated:
+	<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%B %d, %Y %I:%M:%S %p" startspan -->March 30, 2005 03:38:05 PM<!--webbot bot="Timestamp" i-checksum="35968" endspan --></p>
+	<p>Bus Buffering: All required CPU signals are passed directly to the bus with no buffering Mode Control: 74LS20 IC3 and IC4 create a 4 input 2 out mode control to drive 1802 -WAIT and -CLEAR lines. Each of&nbsp; IC3 and IC4 create a SR flip flop, one for -WAIT and one for -CLEAR. The four signals -RUN, -RESET, -LOAD, -PAUSE&nbsp; are inputs to the SR flip flops, each input line has a 10K pull up. SR Flip flops work by receiving a low input pulse on&nbsp; either the upper gate (Set) or the lower gate (reset). It is important any lines driving the 4 mode control inputs are open collector, that way multiple circuits such as front panel can also drive these lines.</p>
+	<table style="table-layout:fixed;border:2px outset #DCDCDC" width=635 height=158 border=2 cellspacing=2 cellpadding=0 id="table1"><col width="90"><col width="90"><col width="92"><col width="70"><col width="84"><col width="94"><col width="95"><tr>
+<td colspan="7" align="center">
+Mode Control Logic</td>
+</tr>
+<tr>
+<td align="center">
+Mode</td>
+<td align="center">
+IC3A<p>
+(Set)</td>
+<td align="center">
+IC3B<p>
+(Reset)</td>
+<td align="center">
+IC4A<p>
+(Set)</td>
+<td align="center">
+IC4B<p>
+(Reset)</td>
+<td align="center">
+-WAIT<p>
+(IC3)</td>
+<td align="center">
+-CLEAR<p>
+(IC4)</td>
+</tr>
+<tr>
+<td align="center">
+Reset</td>
+<td align="center">
+L</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+H</td>
+<td align="center">
+L</td>
+</tr>
+<tr>
+<td align="center">
+Run</td>
+<td align="center">
+L</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+H</td>
+<td align="center">
+H</td>
+</tr>
+<tr>
+<td align="center">
+Wait/Pause</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+L</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+H</td>
+</tr>
+<tr>
+<td align="center">
+Load</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+&nbsp;</td>
+<td align="center">
+L</td>
+<td align="center">
+L</td>
+<td align="center">
+L</td>
+</tr>
+<tr>
+<td colspan="7">
+L = Low pulse, not held low</td>
+</tr>
+</table>
+	<p>Reset: CM1232 U1 provides a power on reset pulse (low) signal when power is first applied. The -RST input of U1 is open collector. This reset signal is also routed to a 74LS123 IC5 one shot pulse generator which generates a low pulse on the -RUN input to mode control at the completion of the reset pulse. The 74LS123 output Pin 13 is connected to the -RUN line via an open collector inverter. CM1232 U1 also supports a push button reset which is connected to both S1 and SV1 to allow connection to the reset switch from the old <a href="../../../System-4/Boards/IO.html">
+	wire wrap Front Panel card</a>.</p>
+	<p>Clock generator: The clock generator is made up 3 NAND gates IC7 gates A, B, and C. &nbsp;74LS74 IC8 gate A divides the clock by 2. LCLK is an inverted version of the CPU clock, this signal is used by the 1861.</p>
+	<p>Address expansion: 74LS373 IC1 demultiplexes address A0-7 into A8-A15 using TPA.</p>
+	<p>4K Bank Select: IC9 74LS138 3 to 8 decoder determines which 4K block of memory to map the EPROM to. IC9 takes A12, A13, and A14 on the decoder input as well as A15 connected to -enable (pin 4) or enable (pin 6) depending if the EPROM is to be mapped to the upper or lower 32K address range as set by SV2. SV4 is used to jumper a decoder output to the EPROM enable logic (see jumpers section below).</p>
+	<p>EPROM: Data D0-7 is connect directly to CPU D0-7, Address A0-A7 is connect to CPU A0-A7, A8-A12 is connected to address expansion IC1. CPU &nbsp;-OE (output enable) on the EPROM.</p>
+	<p>VMA and EPROM chip enable: IC8B 74LS74 flip flop is reset when -RESET is active low. First access to memory with A15 high sets the flip flop (stays set until next reset). If VMA is boot only -Q output of flip flop is connected to VMA, before access to A15 -Q is high and therefore EPROM chip enable is low after inverter IC6B 74LS05, after access to A15 -Q goes low and VMA is always valid (low) and therefore EPROM is not enabled. If VMA is boot/remap EPROM select (active low) is combined with flip flop Q output via a nand gate to generate VMA and EPROM chip enable.</p>
+	<table style="table-layout:fixed;border:2px outset #DCDCDC" border=2 cellspacing=2 cellpadding=0 id="table2"><col width="195"><col width="169"><col width="143"><col width="168"><tr>
+<td align="center">
+EPROM Select from SV4</td>
+<td align="center">
+IC9B 74LS74 Q</td>
+<td align="center">
+VMA<p>
+Active lo (0 = active)</td>
+<td align="center">
+EPROM CE<p>
+Active Lo (0 = active)</td>
+</tr>
+<tr>
+<td align="center">
+1</td>
+<td align="center">
+0<p>
+Before A15 access</td>
+<td align="center">
+1</td>
+<td align="center">
+0</td>
+</tr>
+<tr>
+<td align="center">
+0</td>
+<td align="center">
+0<p>
+Before A15 access</td>
+<td align="center">
+1</td>
+<td align="center">
+0</td>
+</tr>
+<tr>
+<td align="center">
+1</td>
+<td align="center">
+1<p>
+After A15 Access</td>
+<td align="center">
+0<p>
+Bus address valid</td>
+<td align="center">
+1</td>
+</tr>
+<tr>
+<td align="center">
+0</td>
+<td align="center">
+1<p>
+After A15 Access</td>
+<td align="center">
+1</td>
+<td align="center">
+0</td>
+</tr>
+</table>
+	<p>If VMA is No ROM, then VMA is always valid (low) and EPROM is never enabled.</p>
+	<p>Jumper Blocks:<br>JP1: Selects which one of -EF1-4 is routed to the bus<br>JP2: Selects which one of -EF1-4 is routed to the <a href="../../Front-Panel/index.htm">
+	Front Panel card<br></a>JP3: Selects which one of -EF1-4 is routed to the <a href="../../V1861-Keyboard/Rev-A/index.htm">
+	1861/Keyboard Card</a> for 1861 support<br>JP4: Selects which one of -EF1-4 is routed to the <a href="../../V1861-Keyboard/Rev-A/index.htm">
+	1861/Keyboard Card</a> for Keyboard character available flag<br>SV2: Selects if the EPROM is mapped to upper or lower 32K address bank, this block uses two parallel jumpers, &nbsp;<br soft>connect either the &quot;H&quot; pins to the center pins or the &quot;L&quot; pins to the center pins. Default is &quot;H&quot;.<br>SV4: Selects which 4K bank within the 32 bank, selected by SV5, the EPROM occupies. See silk screen for layout. Bank <br soft>7 is 0x7000, bank 0 is 0x0000 (plus the state of SV5 which determines A15). Default is bank 7, therefore the default <br soft>EPROM address is 0xF000 - 0xFFFF.<br>SV5: VMA Mode, selects if the on board EPROM will be enabled:<br>1) &quot;Boot only&quot; Map on board EPROM to 0x0000 and enable on board EPROM access until the first access to an address <br soft>above 0x8000 and then disable on board EPROM.<br>2) &quot;Boot/REMAP&quot; Map on board EPROM to 0x0000 and enable on board EPROM access until the first access to an <br soft>address aboce 0x8000 then remap EPROM to address range set by SV2 and SV4.<br>3) &quot;No ROM&quot; EPROM is never mapped and first access to 0x0000 is to the bus.</p>
+	<p>Headers<br>SV1: External reset on pin 1, active low, connected to U1 CM1232 pushbutton input<br>SV3: <a href="../../V1861-Keyboard/Rev-A/index.htm">
+	1861/Keyboard Card</a> connector<br>SV6: Front Panel Card connector</p>
+	<p>LEDS<br>LED1/PWR connects directly card power<br>LED2/Wait displays CPU -WAIT line status<br>LED3/CLEAR displays CPU -CLEAR line status<br>LED4/Q displays CPU Q line status<br>LED5/VMA displays bus VMA status (On - bus contains valid address)</p></body></html>

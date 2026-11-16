@@ -1,0 +1,18 @@
+board   : hardware/video-6845/eagle/rev-a/fusion-export/v6845-a.brd
+gerbers : hardware/video-6845/eagle/rev-a/fab/v6845-a.cmp + .sol (zipped for the check) (2 files)
+
+1. HOLES: SKIPPED - this CAM set has no drill file; only the copper is compared (result = tracks only)
+   (Top gerber -> board: not mirrored, offset 51.4, 143.1 mil)
+
+2. TRACKS Top: board 639 wires, gerber v6845-a.cmp 639 strokes + 585 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 639
+   (Bottom gerber -> board: MIRRORED in X, offset 5586.6, 143.1 mil)
+
+2. TRACKS Bottom: board 679 wires, gerber v6845-a.sol 679 strokes + 585 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 679
+
+3. PLANES: none
+
+4. PARTS: board has 44 elements
+
+RESULT: PASS (copper only, no drill file) - the board's tracks are the ones in this gerber set

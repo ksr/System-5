@@ -1,0 +1,1228 @@
+    1 0000:              ;
+    2 0000:              ; HBIOS v1.0.5 (2026-11-12): v1.0.4 plus the monitor commands H and B (at the end of this file). build.py
+    3 0000:              ; assembles it with tools/asm1802.py and merges it with Mike Riley's BIOS, v1.0.4's orig_bios/bios.img.
+    4 0000:              ;
+    5 0000:              ; Define BIOS to generate code for use with ELFOS BIOS
+    6 0000:              ;
+    7 0000:              
+    8 0000:              
+    9 0000:              
+   10 0000:              ;
+   11 0000:              ; Define 6845VIDEOLOWER when video card (REV B and beyond) supports lower
+   12 0000:              ; case characters and there is no need to force characters to upper case
+   13 0000:              ;
+   14 0000:              
+   15 0000:              
+   16 0000:              
+   17 0000:              ;
+   18 0000:              ; Define BASIC if the is for use with Tiny basic and not for ELFOS
+   19 0000:              ;
+   20 0000:              
+   21 0000:              ;
+   22 0000:              ; minimon is entry point in ELFOS  to jump to once bios has booted
+   23 0000:              ;
+   24 0000:              
+   25 ff54:             minimon:	equ     0ff54h
+   26 0000:              
+   27 7800:             crtca:		equ	07800h		; CRTC Address register
+   28 7801:             crtcd:		equ	crtca+1		; CRTC Data register
+   29 000e:             cur_h:		equ     14		; Cursor postion high
+   30 000f:             cur_l:		equ     15		; Cursor postion low
+   31 0000:              
+   32 7000:             vmem:		equ	07000h		; Start of video memory
+   33 7800:             vmem_end:	equ     07800h		; End of video memory
+   34 77fe:             vmem_ch:	equ	vmem_end-2
+   35 77ff:             vmem_cl:	equ     vmem_end-1
+   36 0020:             space:		equ	020h		; Ascii Space
+   37 0000:              
+   38 ff00:             JUMPTBL:	equ	0ff00h
+   39 f700:             basic_start:	equ	0f700h
+   40 feff:             basic_end:	equ	0feffh
+   41 0100:             basic_dest:	equ	00100h
+   42 0000:              ;expline23:		equ     vmem+(80*23)
+   43 73c0:             line23:		equ     vmem+(64*15)
+   44 f500:             basmon:		equ	0f500h
+   45 0000:              
+   46 f000:              		org 0f000h
+   47 f000: f8 f0        boot:		ldi high boot	;Trigger Boot rom remap
+   48 f002: b0           		phi r0		;
+   49 f003: f8 78              		ldi high crtca  ; Register E set to CRTC Address register
+   50 f005: be                 		phi re          ;
+   51 f006: f8 00        	        ldi low crtca   ;
+   52 f008: ae           	        plo re          ;
+   53 f009: f8 78              		ldi high crtcd  ; Register F set to CRTC Data register
+   54 f00b: bf           		phi rf          ;
+   55 f00c: f8 01        	        ldi low crtcd   ;
+   56 f00e: af                           plo rf          ;
+   57 f00f: f8 f0        		ldi high vtable ; Register D set to vtable (CRTC parameters)
+   58 f011: bd           		phi rd          ;
+   59 f012: f8 42        		ldi low vtable  ;
+   60 f014: ad           		plo rd          ;
+   61 f015: f8 00        		ldi 00          ; Register C set to 0000
+   62 f017: bc           		phi rc          ; Register C will be a counter used to point to the CRTC data register
+   63 f018: ac           		plo rc          ;
+   64 f019:              ;
+   65 f019:              ; Load Video Paramters into CRTC
+   66 f019:              ;
+   67 f019: 8c           vload:          glo rc          ; Main loop, get counter register
+   68 f01a: 5e           	        str re          ; Store into CRTC address register
+   69 f01b: 4d           	        lda rd          ; Get video paramter
+   70 f01c: 5f           	        str rf          ; Store into CRTC data register
+   71 f01d: 1c                 		inc rc          ; Increment counter
+   72 f01e: 8c           	        glo rc          ; Has counter reached 010h
+   73 f01f: fb 10        	        xri 010h        ;
+   74 f021: 3a 19        	        bnz  vload      ; If not load next CRTC Video paramter
+   75 f023:              ;
+   76 f023:              ; Clear Video memory (with space charachter)
+   77 f023:              ;
+   78 f023:              
+   79 f023: f8 70        		ldi high vmem   ; Register F set to start of Video memory
+   80 f025: bf           		phi rf          ;
+   81 f026: f8 00        		ldi low vmem    ;
+   82 f028: af           		plo rf          ;
+   83 f029: f8 20        clear:          ldi space        ; Load D  space character
+   84 f02b: 5f           		str rf          ; Sstore in Video memory
+   85 f02c: 1f           		inc rf          ; Increment Register F to next video memory location
+   86 f02d: 9f           		ghi rf          ; Check if past end of video memory
+   87 f02e: fb 78        		xri high vmem_end ; Logical XOR D with value
+   88 f030: 3a 29        		bnz clear       ; Short branch on D!=0
+   89 f032:              ;
+   90 f032:              ; Store cursor position in memory
+   91 f032:              ;
+   92 f032: f8 77        		ldi high vmem_ch
+   93 f034: bf           		phi rf
+   94 f035: f8 fe        		ldi low vmem_ch
+   95 f037: af           		plo rf
+   96 f038: f8 73        		ldi 073h	;;;
+   97 f03a: 5f           		str rf
+   98 f03b: 1f           		inc rf
+   99 f03c: f8 c0        		ldi 0c0h	;;;
+  100 f03e: 5f           		str rf
+  101 f03f:              ;
+  102 f03f:              ; Initialization complete jump to real start
+  103 f03f:              ;
+  104 f03f: c0 f2 09     		lbr  cold_entry      ; Long branch
+  105 f042:              ;
+  106 f042:              ; Video Paramters
+  107 f042:              ;
+  108 f042:              ;vtable:	 db 06dh,050h,055h,028h,01ch,01h,018h,01ah,00h,08h,060h,01fh,00h,00h,07h,30h
+  109 f042:              
+  110 f042:              ;vtable:		 db 80 ; R0 total number of horiz chars
+  111 f042:              ;		 db 64 ; R1 number of horiz chars displayed
+  112 f042:              ;		 db 65 ; R2 Horiz sync position (chars)
+  113 f042:              ;		 db 1ah ; R3 VSYNC/HSYNC Widths
+  114 f042:              ;		 db 24 ; R4 Vert Total (chars)
+  115 f042:              ;		 db 02 ; R5 Vert total Adjust (scan lines)
+  116 f042:              ;		 db 16 ; R6 Vert displayed (chars)
+  117 f042:              ;		 db 20 ; R7 Vert Sync position (chars)
+  118 f042:              ;		 db 000 ; R8 mode contro;
+  119 f042:              ;		 db 008 ; R9 scan lines/char
+  120 f042:              ;		 db 040h ; R10 cursor start (scan line/char) + blink rate
+  121 f042:              ;		 db 008h ; R11 cursor end (scan line/char)
+  122 f042:              ;		 db 000h ; R12 display addr start high
+  123 f042:              ;		 db 000h ; R13 display addr start low
+  124 f042:              ;		 db 003h ; R14 Cursor position high
+  125 f042:              ;		 db 0c0h ; R15 Cursor positon low
+  126 f042:              
+  127 f042: 5e           vtable:		 db 94 ; R0 total number of horiz chars
+  128 f043: 40           		 db 64 ; R1 number of horiz chars displayed
+  129 f044: 4d           		 db 77 ; R2 Horiz sync position (chars)
+  130 f045: 08           		 db 8 ; R3 VSYNC/HSYNC Widths
+  131 f046: 1c           		 db 28 ; R4 Vert Total (chars)
+  132 f047: 02           		 db 2 ; R5 Vert total Adjust (scan lines)
+  133 f048: 10           		 db 16 ; R6 Vert displayed (chars)
+  134 f049: 16           		 db 22 ; R7 Vert Sync position (chars)
+  135 f04a: 00           		 db 0 ; R8 mode contro;
+  136 f04b: 08           		 db 8 ; R9 scan lines/char
+  137 f04c: 40           		 db 64 ; R10 cursor start (scan line/char) + blink rate
+  138 f04d: 08           		 db 8 ; R11 cursor end (scan line/char)
+  139 f04e: 00           		 db 0 ; R12 display addr start high
+  140 f04f: 00           		 db 0 ; R13 display addr start low
+  141 f050: 03           		 db 003h ; R14 Cursor position high
+  142 f051: c0           		 db 0c0h ; R15 Cursor positon low
+  143 f052:              ;
+  144 f052:              ; Input/Output routines
+  145 f052:              ;
+  146 f052:              ; output a character
+  147 f052:              ; Character to output in D
+  148 f052:              ;
+  149 f052: fa 7f        outchar: 	ani 07fh         ; Strip off high bit
+  150 f054: ae           		plo re           ; Store Character to output in Register e.0
+  151 f055: fb 7f        		xri 07fh         ; Check if character is is 07Fh (??? Why)
+  152 f057: 32 eb        		bz  outnochar    ; If yes done
+  153 f059: 8e           		glo re
+  154 f05a:              
+  155 f05a:              
+  156 f05a:              
+  157 f05a:              ;save registers
+  158 f05a: e2           cont1:        	sex 2
+  159 f05b: 8f           		glo rf
+  160 f05c: 73           		stxd
+  161 f05d: 9f           		ghi rf
+  162 f05e: 73           		stxd
+  163 f05f: 8e           		glo re
+  164 f060: 73           		stxd
+  165 f061: 9e           		ghi re
+  166 f062: 73           		stxd
+  167 f063: 8c           		glo rc
+  168 f064: 73           		stxd
+  169 f065: 9c           		ghi rc
+  170 f066: 73           		stxd
+  171 f067:              ;
+  172 f067:              ; Get character position in RC
+  173 f067:              ;
+  174 f067: f8 77        		ldi high vmem_ch ; Register F points to CRTC Address register
+  175 f069: bf           		phi rf         ;
+  176 f06a: f8 fe        		ldi low vmem_ch ;
+  177 f06c: af           		plo rf         ;
+  178 f06d: 0f           		ldn rf	       ; Get cursor position high
+  179 f06e: bc           		phi rc         ; Store in RC.1
+  180 f06f: 1f           		inc rf
+  181 f070: 0f           		ldn rf	       ; Get cursor position low
+  182 f071: ac           		plo rc	       ; Store in RC.0
+  183 f072:              
+  184 f072:              
+  185 f072: 8e           	        glo re           ; Check for a control Character below 020h
+  186 f073: fa e0                        ani 0e0h         ;
+  187 f075: 3a bb        		bnz  normal      ; Normal character
+  188 f077: 8e           		glo re           ; Check for carriage return 0dh
+  189 f078: fb 0d        		xri 0dh          ;
+  190 f07a: 32 88        		bz  cr           ; Process carriage return
+  191 f07c: 8e           		glo re           ; Check for line feed 0ah
+  192 f07d: fb 0a        		xri 0ah          ;
+  193 f07f: 32 90        		bz  lf           ; Process line feed
+  194 f081: 8e           		glo re           ; Check for backspace
+  195 f082: fb 08        		xri 08h          ;
+  196 f084: 32 b5        		bz  bs           ; process backspace
+  197 f086: 30 de        		br  outdn
+  198 f088:              ;
+  199 f088:              ; Process a carriage return
+  200 f088:              ;
+  201 f088: f8 73        cr:		ldi high line23  ; Set Register C to start of line 23
+  202 f08a: bc           		phi rc         	 ;
+  203 f08b: f8 c0        		ldi low line23   ;
+  204 f08d: ac           		plo rc           ;
+  205 f08e: 30 be        		br  update       ; Update cursor position
+  206 f090:              ;
+  207 f090:              ; Process a line feed  >>>>>>redo registers
+  208 f090:              ;
+  209 f090: f8 70        lf:		ldi high vmem  ; Set Register E to start of Video memory
+  210 f092: be           		phi re         ;
+  211 f093: f8 00        		ldi low vmem   ;
+  212 f095: ae           		plo re         ;
+  213 f096: f8 70        		ldi high vmem+64 ; set Register F to 2nd line of Video memory
+  214 f098: bf           		phi rf         ;
+  215 f099: f8 40        		ldi low vmem+64 ;
+  216 f09b: af           		plo rf         ;
+  217 f09c:              ; Scrool loop, copy all lines up one
+  218 f09c: 4f           sloop:          lda rf         ;
+  219 f09d: 5e           		str re         ;
+  220 f09e: 1e           		inc re         ;
+  221 f09f: 9f           		ghi rf         ;
+  222 f0a0: fb 78        		xri high vmem_end ; Is Register E past end of video memory
+  223 f0a2: 3a 9c        		bnz  sloop     ; No, continue scrool loop
+  224 f0a4:              ; Clear last line, Register D now point to first character position of last line
+  225 f0a4: f8 73        		ldi high line23
+  226 f0a6: be           		phi re
+  227 f0a7: f8 c0        		ldi low line23
+  228 f0a9: ae           		plo re
+  229 f0aa: f8 20        erl:		ldi space       ; Space Character
+  230 f0ac: 5e           	        str re         ;
+  231 f0ad: 1e                  		inc re         ;
+  232 f0ae: 9e                   	ghi re         ;
+  233 f0af: fb 78                        xri high vmem_end ; Is register D past end of video memory
+  234 f0b1: 3a aa                	bnz  erl       ; Continue erasing line
+  235 f0b3:              ; Line feed done, return (Why not update cursor position)
+  236 f0b3: 30 be        		br update
+  237 f0b5:              ;
+  238 f0b5:              ; Process Back Space
+  239 f0b5:              ;
+  240 f0b5: 2c           bs:             dec rc         ; Register C is character pointer
+  241 f0b6: f8 20        		ldi space       ; Clear postion with a space character
+  242 f0b8: 5c           		str rc         ;
+  243 f0b9: 30 be        	        br  update     ; Update Cursor postion
+  244 f0bb:              ;
+  245 f0bb:              ; Process Normal Character
+  246 f0bb:              ;
+  247 f0bb: 8e           normal:         glo re         ; Register F.1 contains character
+  248 f0bc: 5c           		str rc         ; Store at register C, Character pointer
+  249 f0bd: 1c                           inc rc         ;
+  250 f0be:              ;
+  251 f0be:              ; Update Cursor position
+  252 f0be:              ;
+  253 f0be:              update:
+  254 f0be: f8 78        		ldi high crtca
+  255 f0c0: bf           		phi rf
+  256 f0c1: f8 00        		ldi low crtca
+  257 f0c3: af           		plo rf
+  258 f0c4: f8 0e        		ldi cur_h      ; CRTC High cursor register
+  259 f0c6: 5f           		str rf         ; set CRTC Address register
+  260 f0c7: 9c           		ghi rc         ; Get High portion of cursor postion
+  261 f0c8: fa 3f        		ani 03fh       ; Strip off address, only want zero based character postion
+  262 f0ca: 1f           		inc rf
+  263 f0cb: 5f           		str rf	       ; Get cursor position high
+  264 f0cc: 2f           		dec rf
+  265 f0cd: f8 0f        		ldi cur_l      ; CRTC low cursor register
+  266 f0cf: 5f           		str rf         ; set CRTC Address register
+  267 f0d0: 1f           		inc rf
+  268 f0d1: 8c           		glo rc
+  269 f0d2: 5f           		str rf	       ; get cursor positon low
+  270 f0d3:              ;
+  271 f0d3:              ; Store cursor position in memory
+  272 f0d3:              ;
+  273 f0d3: f8 77        		ldi high vmem_ch
+  274 f0d5: bf           		phi rf
+  275 f0d6: f8 fe        		ldi low vmem_ch
+  276 f0d8: af           		plo rf
+  277 f0d9: 9c           		ghi rc
+  278 f0da: 5f           		str rf
+  279 f0db: 1f           		inc rf
+  280 f0dc: 8c           		glo rc
+  281 f0dd: 5f           		str rf
+  282 f0de:              ;
+  283 f0de:              ;restore registers
+  284 f0de:              ;
+  285 f0de:              outdn:
+  286 f0de: 60           		irx
+  287 f0df: 72           		ldxa
+  288 f0e0: bc           		phi rc
+  289 f0e1: 72           		ldxa
+  290 f0e2: ac           		plo rc
+  291 f0e3: 72           		ldxa
+  292 f0e4: be           		phi re
+  293 f0e5: 72           		ldxa
+  294 f0e6: ae           		plo re
+  295 f0e7: 72           		ldxa
+  296 f0e8: bf           		phi rf
+  297 f0e9: f0           		ldx
+  298 f0ea: af           		plo rf
+  299 f0eb:              ;
+  300 f0eb: d5           outnochar:		sep r5         ; Return
+  301 f0ec:              ;
+  302 f0ec:              ;
+  303 f0ec:              ;
+  304 f100:              		org 0f100h
+  305 f100: 3e 00        inchar:         bn3  inchar    ; Wait for an input character
+  306 f102: e2                   	sex 2
+  307 f103: 69           		inp 1          ; Read character
+  308 f104: 22           		dec r2         ; Decrement (R2) Save inputed character across call
+  309 f105: d4           		sep r4         ; Output the character
+  310 f106: f2 03        		dw out         ;
+  311 f108: 12           		inc r2         ; Increment (R2) restore inputed character
+  312 f109: 02           		ldn r2         ; Get the input Character
+  313 f10a: d5           		sep r5         ; Return
+  314 f10b:              ;
+  315 f10b:              ; Check for a break character
+  316 f10b:              ;
+  317 f10b: 36 12        brk:		b3  brkchk     ; Character is available
+  318 f10d: f8 00        bno:		ldi 00         ; Clear DF
+  319 f10f: fe           		shl            ;
+  320 f110: 30 1b        	        br brkdone       ; Return
+  321 f112:              ;
+  322 f112:              ;
+  323 f112:              ;
+  324 f112:              brkchk:
+  325 f112: e2                   	sex 2
+  326 f113: 69           		inp 1          ; Input to (R(X)) and D, N=001
+  327 f114: fb 1b        		xri 01bh       ; Check for ESC
+  328 f116: 3a 0d                        bnz bno        ; Not a break character
+  329 f118: f8 ff        		ldi 0ffh       ; Set DF to 1
+  330 f11a: fe           		shl            ; Shift left D
+  331 f11b: d5           brkdone:	sep r5         ; Return
+  332 f11c:              
+  333 f11c:              
+  334 f11c:              
+  335 f200:              		org 0f200h
+  336 f200: c0 f1 00     in:		lbr inchar
+  337 f203: c0 f0 52     out:		lbr outchar
+  338 f206: c0 f1 0b     break:		lbr brk
+  339 f209: c0 ff 54     cold_entry:	lbr minimon
+  340 f20c:              ;
+  341 f20c:              ; Monitor commands added in HBIOS v1.0.5 (Ken, 2026-11-12): H lists the commands, B boots the OS from the CF card,
+  342 f20c:              ; D start:end disassembles (a screenful at a time, waiting for a key; D start alone shows one screenful), Q1 / Q0
+  343 f20c:              ; turn the 1802's Q output on / off. @F1C0 runs a small IO panel demo.
+  344 f20c:              ; Mike Riley's monitor (F900) goes back to its prompt when it does not know a command. build.py patches that one
+  345 f20c:              ; branch (F940: BNZ F913 becomes BNZ F9EB) and puts LBR monext in the 's free bytes at F9EB, so an unknown
+  346 f20c:              ; command comes here. On entry: RC.1 = the command character, RA = the hex number typed after it, X = 2, P = 3,
+  347 f20c:              ; SCRT set up (R4 call, R5 return). F913 is the monitor's prompt: it types test> and reads the next line.
+  348 f20c:              ;
+  349 f913:             monprompt:	equ 0f913h
+  350 ff09:             f_msg:		equ 0ff09h	; type the zero-terminated text at RF
+  351 ff15:             f_ltrim:	equ 0ff15h	; RF past spaces
+  352 ff45:             f_hexin:	equ 0ff45h	; RD = the hex number at RF; RF after it
+  353 ff48:             f_hexout2:	equ 0ff48h	; two hex digits of RD.0 to RF, RF after them
+  354 ff4b:             f_hexout4:	equ 0ff4bh	; four hex digits of RD to RF, RF after them
+  355 f20c: 9c           monext:		ghi rc		; the command character
+  356 f20d: fa df        		ani 0dfh	; lower case to upper case (b -> B, h -> H)
+  357 f20f: ff 42        		smi 'B'
+  358 f211: c2 f2 26     		lbz monboot	; B: boot the OS
+  359 f214: ff 02        		smi 'D'-'B'
+  360 f216: c2 f3 ec     		lbz mondis	; D: disassemble
+  361 f219: ff 04        		smi 'H'-'D'
+  362 f21b: c2 f2 2e     		lbz monhelp	; H: list the commands
+  363 f21e: ff 09        		smi 'Q'-'H'
+  364 f220: c2 f1 1c     		lbz monq	; Q1 / Q0: Q on / off
+  365 f223: c0 f9 13     		lbr monprompt	; anything else: back to the prompt, as before
+  366 f226:              ;
+  367 f226: f8 ff        monboot:	ldi high 0ff00h	; as @FF00: R0 = FF00, X = P = 0, then f_boot
+  368 f228: b0           		phi r0
+  369 f229: f8 00        		ldi low 0ff00h
+  370 f22b: a0           		plo r0
+  371 f22c: e0           		sex r0
+  372 f22d: d0           		sep r0
+  373 f22e:              ;
+  374 f22e: f8 f2        monhelp:	ldi high montext
+  375 f230: bf           		phi rf
+  376 f231: f8 43        		ldi low montext
+  377 f233: af           		plo rf
+  378 f234: d4           		sep r4		; f_msg types the text at RF
+  379 f235: ff 09        		dw 0ff09h
+  380 f237: f8 f1        		ldi high montext2	; the rest of the list, at F11C
+  381 f239: bf           		phi rf
+  382 f23a: f8 34        		ldi low montext2
+  383 f23c: af           		plo rf
+  384 f23d: d4           		sep r4
+  385 f23e: ff 09        		dw 0ff09h
+  386 f240: c0 f9 13     		lbr monprompt
+  387 f243:              ;
+  388 f243: 4d 6f 6e 69  montext:	db 'Monitor commands (numbers in hex):',10,13
+      f247: 74 6f 72 20 
+      f24b: 63 6f 6d 6d 
+      f24f: 61 6e 64 73 
+      f253: 20 28 6e 75 
+      f257: 6d 62 65 72 
+      f25b: 73 20 69 6e 
+      f25f: 20 68 65 78 
+      f263: 29 3a 0a 0d 
+  389 f267: 20 3f 61 64  		db ' ?addr           show 128 bytes from addr',10,13
+      f26b: 64 72 20 20 
+      f26f: 20 20 20 20 
+      f273: 20 20 20 20 
+      f277: 20 73 68 6f 
+      f27b: 77 20 31 32 
+      f27f: 38 20 62 79 
+      f283: 74 65 73 20 
+      f287: 66 72 6f 6d 
+      f28b: 20 61 64 64 
+      f28f: 72 0a 0d    
+  390 f292: 20 21 61 64  		db ' !addr bb bb ..  store bytes at addr',10,13
+      f296: 64 72 20 62 
+      f29a: 62 20 62 62 
+      f29e: 20 2e 2e 20 
+      f2a2: 20 73 74 6f 
+      f2a6: 72 65 20 62 
+      f2aa: 79 74 65 73 
+      f2ae: 20 61 74 20 
+      f2b2: 61 64 64 72 
+      f2b6: 0a 0d       
+  391 f2b8: 20 3d 73 72  		db ' =src dst count  copy count bytes from src to dst',10,13
+      f2bc: 63 20 64 73 
+      f2c0: 74 20 63 6f 
+      f2c4: 75 6e 74 20 
+      f2c8: 20 63 6f 70 
+      f2cc: 79 20 63 6f 
+      f2d0: 75 6e 74 20 
+      f2d4: 62 79 74 65 
+      f2d8: 73 20 66 72 
+      f2dc: 6f 6d 20 73 
+      f2e0: 72 63 20 74 
+      f2e4: 6f 20 64 73 
+      f2e8: 74 0a 0d    
+  392 f2eb: 20 40 61 64  		db ' @addr           run at addr (P = X = 0)',10,13
+      f2ef: 64 72 20 20 
+      f2f3: 20 20 20 20 
+      f2f7: 20 20 20 20 
+      f2fb: 20 72 75 6e 
+      f2ff: 20 61 74 20 
+      f303: 61 64 64 72 
+      f307: 20 28 50 20 
+      f30b: 3d 20 58 20 
+      f30f: 3d 20 30 29 
+      f313: 0a 0d       
+  393 f315: 20 42 20 20  		db ' B               boot the OS from the CF card (@FF00)',10,13
+      f319: 20 20 20 20 
+      f31d: 20 20 20 20 
+      f321: 20 20 20 20 
+      f325: 20 62 6f 6f 
+      f329: 74 20 74 68 
+      f32d: 65 20 4f 53 
+      f331: 20 66 72 6f 
+      f335: 6d 20 74 68 
+      f339: 65 20 43 46 
+      f33d: 20 63 61 72 
+      f341: 64 20 28 40 
+      f345: 46 46 30 30 
+      f349: 29 0a 0d    
+  394 f34c: 20 44 20 73  		db ' D start:end     disassemble, a screenful at a time',10,13
+      f350: 74 61 72 74 
+      f354: 3a 65 6e 64 
+      f358: 20 20 20 20 
+      f35c: 20 64 69 73 
+      f360: 61 73 73 65 
+      f364: 6d 62 6c 65 
+      f368: 2c 20 61 20 
+      f36c: 73 63 72 65 
+      f370: 65 6e 66 75 
+      f374: 6c 20 61 74 
+      f378: 20 61 20 74 
+      f37c: 69 6d 65 0a 
+      f380: 0d          
+  395 f381: 20 20 20 20  		db '                 (at -- more --: any key goes on, Esc stops)',10,13
+      f385: 20 20 20 20 
+      f389: 20 20 20 20 
+      f38d: 20 20 20 20 
+      f391: 20 28 61 74 
+      f395: 20 2d 2d 20 
+      f399: 6d 6f 72 65 
+      f39d: 20 2d 2d 3a 
+      f3a1: 20 61 6e 79 
+      f3a5: 20 6b 65 79 
+      f3a9: 20 67 6f 65 
+      f3ad: 73 20 6f 6e 
+      f3b1: 2c 20 45 73 
+      f3b5: 63 20 73 74 
+      f3b9: 6f 70 73 29 
+      f3bd: 0a 0d       
+  396 f3bf: 20 44 20 73  		db ' D start         disassemble one screenful',10,13
+      f3c3: 74 61 72 74 
+      f3c7: 20 20 20 20 
+      f3cb: 20 20 20 20 
+      f3cf: 20 64 69 73 
+      f3d3: 61 73 73 65 
+      f3d7: 6d 62 6c 65 
+      f3db: 20 6f 6e 65 
+      f3df: 20 73 63 72 
+      f3e3: 65 65 6e 66 
+      f3e7: 75 6c 0a 0d 
+  397 f3eb: 00           		db 0
+  398 f3ec:              ;
+  399 f3ec:              ; D start:end - disassemble, one instruction a line: the address, the bytes, the mnemonic, as the emulator's
+  400 f3ec:              ; disassembler writes them (so the two can be compared line for line). Every 14 lines it waits for a key: Esc,
+  401 f3ec:              ; Ctrl-C or Q stops, any other key goes on. D start with no end shows 14 lines. Stops at the end address or when the
+  402 f3ec:              ; address passes FFFF. Registers: RA the address, R9 the end, R8.0 lines left before a pause, R8.1 1 = an end was
+  403 f3ec:              ; given, RB.0 the opcode, RB.1 its length, R7 a table or the operands, RC a counter. The line is built in the
+  404 f3ec:              ; monitor's input buffer (0003): the address at 0003, the bytes at 0009, the mnemonic at 0013.
+  405 f3ec:              ;
+  406 0003:             dline_at:	equ 0003h
+  407 0009:             dbytes_at:	equ 0009h
+  408 0013:             dtext_at:	equ 0013h
+  409 000e:             dlines:		equ 14
+  410 f3ec: f8 00        mondis:		ldi high 0004h	; read the line again from after the D: f_hexin does not skip spaces
+  411 f3ee: bf           		phi rf
+  412 f3ef: f8 04        		ldi low 0004h
+  413 f3f1: af           		plo rf
+  414 f3f2: d4           		sep r4
+  415 f3f3: ff 15        		dw f_ltrim
+  416 f3f5: d4           		sep r4
+  417 f3f6: ff 45        		dw f_hexin	; the start address
+  418 f3f8: 9d           		ghi rd
+  419 f3f9: ba           		phi ra
+  420 f3fa: 8d           		glo rd
+  421 f3fb: aa           		plo ra
+  422 f3fc: d4           		sep r4
+  423 f3fd: ff 15        		dw f_ltrim
+  424 f3ff: 0f           		ldn rf		; ':' or '-' between the two addresses
+  425 f400: fb 3a        		xri ':'
+  426 f402: c2 f4 0a     		lbz dskip
+  427 f405: fb 17        		xri ':'^'-'
+  428 f407: ca f4 0e     		lbnz dnosep
+  429 f40a: 1f           dskip:		inc rf
+  430 f40b: d4           		sep r4
+  431 f40c: ff 15        		dw f_ltrim
+  432 f40e: 0f           dnosep:		ldn rf
+  433 f40f: c2 f4 1c     		lbz dnoend	; nothing more on the line: no end address
+  434 f412: d4           		sep r4
+  435 f413: ff 45        		dw f_hexin	; the end address
+  436 f415: 9d           		ghi rd
+  437 f416: b9           		phi r9
+  438 f417: 8d           		glo rd
+  439 f418: a9           		plo r9
+  440 f419: f8 01        		ldi 1
+  441 f41b: c8           		lskp
+  442 f41c: f8 00        dnoend:		ldi 0
+  443 f41e: b8           		phi r8		; R8.1 = 1 when an end address was given
+  444 f41f: f8 0e        dpage:		ldi dlines
+  445 f421: a8           		plo r8
+  446 f422:              ;
+  447 f422:              ; one line
+  448 f422: f8 00        dline:		ldi high dline_at	; the address
+  449 f424: bf           		phi rf
+  450 f425: f8 03        		ldi low dline_at
+  451 f427: af           		plo rf
+  452 f428: 9a           		ghi ra
+  453 f429: bd           		phi rd
+  454 f42a: 8a           		glo ra
+  455 f42b: ad           		plo rd
+  456 f42c: d4           		sep r4
+  457 f42d: ff 4b        		dw f_hexout4
+  458 f42f: f8 20        		ldi ' '
+  459 f431: 5f           		str rf
+  460 f432: 1f           		inc rf
+  461 f433: 5f           		str rf
+  462 f434: f8 00        		ldi high dtext_at	; the mnemonic and its operand (sets RB.1 = the length)
+  463 f436: bf           		phi rf
+  464 f437: f8 13        		ldi low dtext_at
+  465 f439: af           		plo rf
+  466 f43a: 4a           		lda ra		; the opcode (RA moves on; dbytes goes back to it)
+  467 f43b: ab           		plo rb
+  468 f43c: 2a           		dec ra
+  469 f43d: d4           		sep r4
+  470 f43e: f4 f3        		dw ddecode
+  471 f440: f8 0a        		ldi 10		; end of the line
+  472 f442: 5f           		str rf
+  473 f443: 1f           		inc rf
+  474 f444: f8 0d        		ldi 13
+  475 f446: 5f           		str rf
+  476 f447: 1f           		inc rf
+  477 f448: f8 00        		ldi 0
+  478 f44a: 5f           		str rf
+  479 f44b: f8 00        		ldi high dbytes_at	; the bytes, in a field 10 wide
+  480 f44d: bf           		phi rf
+  481 f44e: f8 09        		ldi low dbytes_at
+  482 f450: af           		plo rf
+  483 f451: 9b           		ghi rb
+  484 f452: ac           		plo rc		; RC.0 = bytes to show
+  485 f453: f8 03        		ldi 3
+  486 f455: bc           		phi rc		; RC.1 = slots
+  487 f456: 8c           dbyte:		glo rc
+  488 f457: c2 f4 6f     		lbz dnobyte
+  489 f45a: 2c           		dec rc
+  490 f45b: 4a           		lda ra		; RA moves past the instruction here
+  491 f45c: ad           		plo rd
+  492 f45d: 8a           		glo ra		; RA past FFFF: R8.1 bit 1, to stop after this line
+  493 f45e: ca f4 69     		lbnz dshow
+  494 f461: 9a           		ghi ra
+  495 f462: ca f4 69     		lbnz dshow
+  496 f465: 98           		ghi r8
+  497 f466: f9 02        		ori 2
+  498 f468: b8           		phi r8
+  499 f469: d4           dshow:		sep r4
+  500 f46a: ff 48        		dw f_hexout2
+  501 f46c: c0 f4 75     		lbr dslot
+  502 f46f: f8 20        dnobyte:	ldi ' '
+  503 f471: 5f           		str rf
+  504 f472: 1f           		inc rf
+  505 f473: 5f           		str rf
+  506 f474: 1f           		inc rf
+  507 f475: f8 20        dslot:		ldi ' '
+  508 f477: 5f           		str rf
+  509 f478: 1f           		inc rf
+  510 f479: 9c           		ghi rc
+  511 f47a: ff 01        		smi 1
+  512 f47c: bc           		phi rc
+  513 f47d: ca f4 56     		lbnz dbyte
+  514 f480: f8 20        		ldi ' '
+  515 f482: 5f           		str rf
+  516 f483: f8 00        		ldi high dline_at	; type it
+  517 f485: bf           		phi rf
+  518 f486: f8 03        		ldi low dline_at
+  519 f488: af           		plo rf
+  520 f489: d4           		sep r4
+  521 f48a: ff 09        		dw f_msg
+  522 f48c:              ;
+  523 f48c:              ; the next one, or stop
+  524 f48c: 98           		ghi r8		; past FFFF: stop
+  525 f48d: fa 02        		ani 2
+  526 f48f: ca f4 d8     		lbnz ddone
+  527 f492: 98           		ghi r8
+  528 f493: c2 f4 a2     		lbz dcount	; no end address: just count the lines
+  529 f496: e2           		sex r2		; RA past R9: stop
+  530 f497: 8a           		glo ra
+  531 f498: 52           		str r2
+  532 f499: 89           		glo r9
+  533 f49a: f7           		sm
+  534 f49b: 9a           		ghi ra
+  535 f49c: 52           		str r2
+  536 f49d: 99           		ghi r9
+  537 f49e: 77           		smb
+  538 f49f: cb f4 d8     		lbnf ddone
+  539 f4a2: 28           dcount:		dec r8
+  540 f4a3: 88           		glo r8
+  541 f4a4: ca f4 22     		lbnz dline
+  542 f4a7: 98           		ghi r8
+  543 f4a8: c2 f4 d8     		lbz ddone	; no end address: one screenful
+  544 f4ab: f8 f4        		ldi high dmore	; wait for a key
+  545 f4ad: bf           		phi rf
+  546 f4ae: f8 db        		ldi low dmore
+  547 f4b0: af           		plo rf
+  548 f4b1: d4           		sep r4
+  549 f4b2: ff 09        		dw f_msg
+  550 f4b4: 3e b4        dkey:		bn3 dkey
+  551 f4b6: e2           		sex r2
+  552 f4b7: 69           		inp 1		; the key, not echoed
+  553 f4b8: a7           		plo r7		; (not RC: the screen output uses it)
+  554 f4b9: f8 f4        		ldi high derase
+  555 f4bb: bf           		phi rf
+  556 f4bc: f8 e6        		ldi low derase
+  557 f4be: af           		plo rf
+  558 f4bf: d4           		sep r4
+  559 f4c0: ff 09        		dw f_msg
+  560 f4c2: 87           		glo r7
+  561 f4c3: fb 1b        		xri 1bh		; Esc
+  562 f4c5: c2 f4 d8     		lbz ddone
+  563 f4c8: fb 18        		xri 1bh^03h	; Ctrl-C
+  564 f4ca: c2 f4 d8     		lbz ddone
+  565 f4cd: 87           		glo r7		; Q or q
+  566 f4ce: fa df        		ani 0dfh
+  567 f4d0: fb 51        		xri 'Q'
+  568 f4d2: c2 f4 d8     		lbz ddone
+  569 f4d5: c0 f4 1f     		lbr dpage
+  570 f4d8: c0 f9 13     ddone:		lbr monprompt
+  571 f4db: 2d 2d 20 6d  dmore:		db '-- more --',0
+      f4df: 6f 72 65 20 
+      f4e3: 2d 2d 00    
+  572 f4e6: 0d 20 20 20  derase:		db 13,'          ',13,0
+      f4ea: 20 20 20 20 
+      f4ee: 20 20 20 0d 
+      f4f2: 00          
+  573 f4f3:              ;
+  574 f4f3:              ; ddecode: the mnemonic and operand of the opcode in RB.0 to RF; RB.1 = the instruction's length. RA = its address.
+  575 f4f3: f8 01        ddecode:	ldi 1
+  576 f4f5: bb           		phi rb
+  577 f4f6: 8b           		glo rb
+  578 f4f7: ca f5 03     		lbnz dnotidl
+  579 f4fa: f8 f6        		ldi high tidl
+  580 f4fc: b7           		phi r7
+  581 f4fd: f8 99        		ldi low tidl
+  582 f4ff: a7           		plo r7
+  583 f500: c0 f6 6a     		lbr dname4
+  584 f503: fb d4        dnotidl:	xri 0d4h	; D4 = SEP R4 + an address: CALL, as SCRT uses it
+  585 f505: ca f5 14     		lbnz dnotcall
+  586 f508: f8 f6        		ldi high tcall
+  587 f50a: b7           		phi r7
+  588 f50b: f8 9d        		ldi low tcall
+  589 f50d: a7           		plo r7
+  590 f50e: d4           		sep r4
+  591 f50f: f6 86        		dw dcopy4
+  592 f511: c0 f6 56     		lbr dlong
+  593 f514: fb 01        dnotcall:	xri 0d4h^0d5h	; D5 = SEP R5: RETN
+  594 f516: ca f5 22     		lbnz dnotretn
+  595 f519: f8 f6        		ldi high tretn
+  596 f51b: b7           		phi r7
+  597 f51c: f8 a1        		ldi low tretn
+  598 f51e: a7           		plo r7
+  599 f51f: c0 f6 6a     		lbr dname4
+  600 f522: f8 f6        dnotretn:	ldi high treg	; the groups with a register: LDN INC DEC LDA STR GLO GHI PLO PHI SEP SEX
+  601 f524: b7           		phi r7
+  602 f525: f8 bd        		ldi low treg
+  603 f527: a7           		plo r7
+  604 f528: 8b           		glo rb
+  605 f529: f6           		shr
+  606 f52a: f6           		shr
+  607 f52b: f6           		shr
+  608 f52c: f6           		shr
+  609 f52d: d4           		sep r4
+  610 f52e: f6 6e        		dw dindex3
+  611 f530: 07           		ldn r7
+  612 f531: fb 20        		xri ' '
+  613 f533: c2 f5 4e     		lbz dnotreg
+  614 f536: d4           		sep r4
+  615 f537: f6 83        		dw dcopy3
+  616 f539: f8 20        		ldi ' '
+  617 f53b: 5f           		str rf
+  618 f53c: 1f           		inc rf
+  619 f53d: f8 52        		ldi 'R'
+  620 f53f: 5f           		str rf
+  621 f540: 1f           		inc rf
+  622 f541: 8b           		glo rb		; the register, one hex digit
+  623 f542: fa 0f        		ani 0fh
+  624 f544: ad           		plo rd
+  625 f545: d4           		sep r4
+  626 f546: ff 48        		dw f_hexout2	; writes 0N: keep the N
+  627 f548: 2f           		dec rf
+  628 f549: 0f           		ldn rf
+  629 f54a: 2f           		dec rf
+  630 f54b: 5f           		str rf
+  631 f54c: 1f           		inc rf
+  632 f54d: d5           		sep r5
+  633 f54e: 8b           dnotreg:	glo rb
+  634 f54f: fa f0        		ani 0f0h
+  635 f551: fb 30        		xri 30h
+  636 f553: ca f5 86     		lbnz dnot3
+  637 f556: 8b           		glo rb		; 3N: the short branches (38 is SKP, no operand)
+  638 f557: fb 38        		xri 38h
+  639 f559: ca f5 65     		lbnz dshort
+  640 f55c: f8 f6        		ldi high tskp
+  641 f55e: b7           		phi r7
+  642 f55f: f8 a5        		ldi low tskp
+  643 f561: a7           		plo r7
+  644 f562: c0 f6 6a     		lbr dname4
+  645 f565: f8 f6        dshort:		ldi high tsb
+  646 f567: b7           		phi r7
+  647 f568: f8 ed        		ldi low tsb
+  648 f56a: a7           		plo r7
+  649 f56b: 8b           		glo rb
+  650 f56c: d4           		sep r4
+  651 f56d: f6 6e        		dw dindex3
+  652 f56f: d4           		sep r4
+  653 f570: f6 83        		dw dcopy3
+  654 f572: f8 20        		ldi ' '
+  655 f574: 5f           		str rf
+  656 f575: 1f           		inc rf
+  657 f576: 9a           		ghi ra		; the target: the operand's page, the operand
+  658 f577: b7           		phi r7
+  659 f578: 8a           		glo ra
+  660 f579: a7           		plo r7
+  661 f57a: 17           		inc r7
+  662 f57b: 97           		ghi r7
+  663 f57c: bd           		phi rd
+  664 f57d: 07           		ldn r7
+  665 f57e: ad           		plo rd
+  666 f57f: d4           		sep r4
+  667 f580: ff 4b        		dw f_hexout4
+  668 f582: f8 02        		ldi 2
+  669 f584: bb           		phi rb
+  670 f585: d5           		sep r5
+  671 f586: 8b           dnot3:		glo rb
+  672 f587: fa f0        		ani 0f0h
+  673 f589: fb 60        		xri 60h
+  674 f58b: ca f5 d9     		lbnz dnot6
+  675 f58e: 8b           		glo rb		; 6N: IRX, OUT 1-7, 68, INP 1-7
+  676 f58f: fa 0f        		ani 0fh
+  677 f591: ca f5 9d     		lbnz dnotirx
+  678 f594: f8 f6        		ldi high tirx
+  679 f596: b7           		phi r7
+  680 f597: f8 a9        		ldi low tirx
+  681 f599: a7           		plo r7
+  682 f59a: c0 f6 6a     		lbr dname4
+  683 f59d: fb 08        dnotirx:	xri 08h
+  684 f59f: ca f5 b8     		lbnz dio
+  685 f5a2: f8 f6        		ldi high t68	; 68 (the 1804/1806 prefix): DB 68H
+  686 f5a4: b7           		phi r7
+  687 f5a5: f8 b5        		ldi low t68
+  688 f5a7: a7           		plo r7
+  689 f5a8: d4           		sep r4
+  690 f5a9: f6 86        		dw dcopy4
+  691 f5ab: f8 20        		ldi ' '
+  692 f5ad: 5f           		str rf
+  693 f5ae: 1f           		inc rf
+  694 f5af: f8 f6        		ldi high t68b
+  695 f5b1: b7           		phi r7
+  696 f5b2: f8 b9        		ldi low t68b
+  697 f5b4: a7           		plo r7
+  698 f5b5: c0 f6 6a     		lbr dname4
+  699 f5b8: f8 f6        dio:		ldi high tout
+  700 f5ba: b7           		phi r7
+  701 f5bb: f8 ad        		ldi low tout
+  702 f5bd: a7           		plo r7
+  703 f5be: 8b           		glo rb
+  704 f5bf: fa 08        		ani 08h
+  705 f5c1: c2 f5 ca     		lbz dio1
+  706 f5c4: f8 f6        		ldi high tinp
+  707 f5c6: b7           		phi r7
+  708 f5c7: f8 b1        		ldi low tinp
+  709 f5c9: a7           		plo r7
+  710 f5ca: d4           dio1:		sep r4
+  711 f5cb: f6 86        		dw dcopy4
+  712 f5cd: f8 20        		ldi ' '
+  713 f5cf: 5f           		str rf
+  714 f5d0: 1f           		inc rf
+  715 f5d1: 8b           		glo rb
+  716 f5d2: fa 07        		ani 07h
+  717 f5d4: fc 30        		adi '0'
+  718 f5d6: 5f           		str rf
+  719 f5d7: 1f           		inc rf
+  720 f5d8: d5           		sep r5
+  721 f5d9: 8b           dnot6:		glo rb
+  722 f5da: fa f0        		ani 0f0h
+  723 f5dc: fb 70        		xri 70h
+  724 f5de: ca f5 ff     		lbnz dnot7
+  725 f5e1: f8 f7        		ldi high t7	; 7N: ADCI SDBI SMBI (7C 7D 7F) take a byte
+  726 f5e3: b7           		phi r7
+  727 f5e4: f8 1d        		ldi low t7
+  728 f5e6: a7           		plo r7
+  729 f5e7: 8b           		glo rb
+  730 f5e8: d4           		sep r4
+  731 f5e9: f6 76        		dw dindex4
+  732 f5eb: d4           		sep r4
+  733 f5ec: f6 86        		dw dcopy4
+  734 f5ee: 8b           		glo rb
+  735 f5ef: fb 7c        		xri 7ch
+  736 f5f1: c2 f6 40     		lbz dimm
+  737 f5f4: fb 01        		xri 7ch^7dh
+  738 f5f6: c2 f6 40     		lbz dimm
+  739 f5f9: fb 02        		xri 7dh^7fh
+  740 f5fb: c2 f6 40     		lbz dimm
+  741 f5fe: d5           		sep r5
+  742 f5ff: 8b           dnot7:		glo rb
+  743 f600: fa f0        		ani 0f0h
+  744 f602: fb c0        		xri 0c0h
+  745 f604: ca f6 22     		lbnz dnotc
+  746 f607: f8 f7        		ldi high tc	; CN: long branches take an address; C4-C8 and CC-CF are one byte
+  747 f609: b7           		phi r7
+  748 f60a: f8 5d        		ldi low tc
+  749 f60c: a7           		plo r7
+  750 f60d: 8b           		glo rb
+  751 f60e: d4           		sep r4
+  752 f60f: f6 76        		dw dindex4
+  753 f611: d4           		sep r4
+  754 f612: f6 86        		dw dcopy4
+  755 f614: 8b           		glo rb
+  756 f615: fa 04        		ani 04h
+  757 f617: c2 f6 1b     		lbz dc1
+  758 f61a: d5           		sep r5
+  759 f61b: 8b           dc1:		glo rb
+  760 f61c: fb c8        		xri 0c8h
+  761 f61e: ca f6 56     		lbnz dlong
+  762 f621: d5           		sep r5
+  763 f622: f8 f7        dnotc:		ldi high tf	; FN: LDI ORI ANI XRI ADI SDI SMI (F8-FD, FF) take a byte
+  764 f624: b7           		phi r7
+  765 f625: f8 9d        		ldi low tf
+  766 f627: a7           		plo r7
+  767 f628: 8b           		glo rb
+  768 f629: d4           		sep r4
+  769 f62a: f6 6e        		dw dindex3
+  770 f62c: d4           		sep r4
+  771 f62d: f6 83        		dw dcopy3
+  772 f62f: 8b           		glo rb
+  773 f630: fa 0f        		ani 0fh
+  774 f632: ff 08        		smi 8
+  775 f634: cb f6 3f     		lbnf dnoimm
+  776 f637: fb 06        		xri 6		; FE = SHL
+  777 f639: c2 f6 3f     		lbz dnoimm
+  778 f63c: c0 f6 40     		lbr dimm
+  779 f63f: d5           dnoimm:		sep r5
+  780 f640:              ;
+  781 f640:              ; operands
+  782 f640: f8 20        dimm:		ldi ' '		; one byte: 2 hex digits and H
+  783 f642: 5f           		str rf
+  784 f643: 1f           		inc rf
+  785 f644: 9a           		ghi ra
+  786 f645: b7           		phi r7
+  787 f646: 8a           		glo ra
+  788 f647: a7           		plo r7
+  789 f648: 17           		inc r7
+  790 f649: 07           		ldn r7
+  791 f64a: ad           		plo rd
+  792 f64b: d4           		sep r4
+  793 f64c: ff 48        		dw f_hexout2
+  794 f64e: f8 48        		ldi 'H'
+  795 f650: 5f           		str rf
+  796 f651: 1f           		inc rf
+  797 f652: f8 02        		ldi 2
+  798 f654: bb           		phi rb
+  799 f655: d5           		sep r5
+  800 f656: f8 20        dlong:		ldi ' '		; two bytes: an address
+  801 f658: 5f           		str rf
+  802 f659: 1f           		inc rf
+  803 f65a: 9a           		ghi ra
+  804 f65b: b7           		phi r7
+  805 f65c: 8a           		glo ra
+  806 f65d: a7           		plo r7
+  807 f65e: 17           		inc r7
+  808 f65f: 47           		lda r7
+  809 f660: bd           		phi rd
+  810 f661: 07           		ldn r7
+  811 f662: ad           		plo rd
+  812 f663: d4           		sep r4
+  813 f664: ff 4b        		dw f_hexout4
+  814 f666: f8 03        		ldi 3
+  815 f668: bb           		phi rb
+  816 f669: d5           		sep r5
+  817 f66a: d4           dname4:		sep r4		; a name alone, up to 4 characters
+  818 f66b: f6 86        		dw dcopy4
+  819 f66d: d5           		sep r5
+  820 f66e:              ;
+  821 f66e:              ; R7 = the table + entry D, entries 3 or 4 wide
+  822 f66e: fa 0f        dindex3:	ani 0fh
+  823 f670: 52           		str r2
+  824 f671: fe           		shl
+  825 f672: f4           		add		; 3 x
+  826 f673: c0 f6 7a     		lbr dindex
+  827 f676: fa 0f        dindex4:	ani 0fh
+  828 f678: fe           		shl
+  829 f679: fe           		shl		; 4 x
+  830 f67a: 52           dindex:		str r2
+  831 f67b: 87           		glo r7
+  832 f67c: f4           		add
+  833 f67d: a7           		plo r7
+  834 f67e: 97           		ghi r7
+  835 f67f: 7c 00        		adci 0
+  836 f681: b7           		phi r7
+  837 f682: d5           		sep r5
+  838 f683:              ;
+  839 f683:              ; copy a name from R7 to RF: up to 3 or 4 characters, stopping at a space
+  840 f683: f8 03        dcopy3:		ldi 3
+  841 f685: c8           		lskp
+  842 f686: f8 04        dcopy4:		ldi 4
+  843 f688: ac           		plo rc
+  844 f689: 47           dcopy:		lda r7
+  845 f68a: fb 20        		xri ' '
+  846 f68c: c2 f6 98     		lbz dcopied
+  847 f68f: fb 20        		xri ' '
+  848 f691: 5f           		str rf
+  849 f692: 1f           		inc rf
+  850 f693: 2c           		dec rc
+  851 f694: 8c           		glo rc
+  852 f695: ca f6 89     		lbnz dcopy
+  853 f698: d5           dcopied:	sep r5
+  854 f699:              ;
+  855 f699: 49 44 4c 20  tidl:		db 'IDL '
+  856 f69d: 43 41 4c 4c  tcall:		db 'CALL'
+  857 f6a1: 52 45 54 4e  tretn:		db 'RETN'
+  858 f6a5: 53 4b 50 20  tskp:		db 'SKP '
+  859 f6a9: 49 52 58 20  tirx:		db 'IRX '
+  860 f6ad: 4f 55 54 20  tout:		db 'OUT '
+  861 f6b1: 49 4e 50 20  tinp:		db 'INP '
+  862 f6b5: 44 42 20 20  t68:		db 'DB  '
+  863 f6b9: 36 38 48 20  t68b:		db '68H '
+  864 f6bd: 4c 44 4e 49  treg:		db 'LDNINCDEC   LDASTR      GLOGHIPLOPHI   SEPSEX   '
+      f6c1: 4e 43 44 45 
+      f6c5: 43 20 20 20 
+      f6c9: 4c 44 41 53 
+      f6cd: 54 52 20 20 
+      f6d1: 20 20 20 20 
+      f6d5: 47 4c 4f 47 
+      f6d9: 48 49 50 4c 
+      f6dd: 4f 50 48 49 
+      f6e1: 20 20 20 53 
+      f6e5: 45 50 53 45 
+      f6e9: 58 20 20 20 
+  865 f6ed: 42 52 20 42  tsb:		db 'BR BQ BZ BDFB1 B2 B3 B4 SKPBNQBNZBNFBN1BN2BN3BN4'
+      f6f1: 51 20 42 5a 
+      f6f5: 20 42 44 46 
+      f6f9: 42 31 20 42 
+      f6fd: 32 20 42 33 
+      f701: 20 42 34 20 
+      f705: 53 4b 50 42 
+      f709: 4e 51 42 4e 
+      f70d: 5a 42 4e 46 
+      f711: 42 4e 31 42 
+      f715: 4e 32 42 4e 
+      f719: 33 42 4e 34 
+  866 f71d: 52 45 54 20  t7:		db 'RET DIS LDXASTXDADC SDB SHRCSMB SAV MARKREQ SEQ ADCISDBISHLCSMBI'
+      f721: 44 49 53 20 
+      f725: 4c 44 58 41 
+      f729: 53 54 58 44 
+      f72d: 41 44 43 20 
+      f731: 53 44 42 20 
+      f735: 53 48 52 43 
+      f739: 53 4d 42 20 
+      f73d: 53 41 56 20 
+      f741: 4d 41 52 4b 
+      f745: 52 45 51 20 
+      f749: 53 45 51 20 
+      f74d: 41 44 43 49 
+      f751: 53 44 42 49 
+      f755: 53 48 4c 43 
+      f759: 53 4d 42 49 
+  867 f75d: 4c 42 52 20  tc:		db 'LBR LBQ LBZ LBDFNOP LSNQLSNZLSNFLSKPLBNQLBNZLBNFLSIELSQ LSZ LSDF'
+      f761: 4c 42 51 20 
+      f765: 4c 42 5a 20 
+      f769: 4c 42 44 46 
+      f76d: 4e 4f 50 20 
+      f771: 4c 53 4e 51 
+      f775: 4c 53 4e 5a 
+      f779: 4c 53 4e 46 
+      f77d: 4c 53 4b 50 
+      f781: 4c 42 4e 51 
+      f785: 4c 42 4e 5a 
+      f789: 4c 42 4e 46 
+      f78d: 4c 53 49 45 
+      f791: 4c 53 51 20 
+      f795: 4c 53 5a 20 
+      f799: 4c 53 44 46 
+  868 f79d: 4c 44 58 4f  tf:		db 'LDXOR ANDXORADDSD SHRSM LDIORIANIXRIADISDISHLSMI'
+      f7a1: 52 20 41 4e 
+      f7a5: 44 58 4f 52 
+      f7a9: 41 44 44 53 
+      f7ad: 44 20 53 48 
+      f7b1: 52 53 4d 20 
+      f7b5: 4c 44 49 4f 
+      f7b9: 52 49 41 4e 
+      f7bd: 49 58 52 49 
+      f7c1: 41 44 49 53 
+      f7c5: 44 49 53 48 
+      f7c9: 4c 53 4d 49 
+  869 f7cd:              ;
+  870 f7cd:              ; More of the monitor's commands, in the free bytes after the keyboard code: F200-F7FF is full.
+  871 f11c:              		org 0f11ch
+  872 f11c:              ;
+  873 f11c:              ; Q1 / Q0: the 1802's Q output on (SEQ, 7B) or off (REQ, 7A). Any number but 0 turns it on.
+  874 f11c: f8 00        monq:		ldi high 0004h	; read the number again from after the Q: f_hexin does not skip spaces
+  875 f11e: bf           		phi rf
+  876 f11f: f8 04        		ldi low 0004h
+  877 f121: af           		plo rf
+  878 f122: d4           		sep r4
+  879 f123: ff 15        		dw f_ltrim
+  880 f125: d4           		sep r4
+  881 f126: ff 45        		dw f_hexin
+  882 f128: 8d           		glo rd
+  883 f129: c2 f1 30     		lbz monq0
+  884 f12c: 7b           		seq
+  885 f12d: c0 f9 13     		lbr monprompt
+  886 f130: 7a           monq0:		req
+  887 f131: c0 f9 13     		lbr monprompt
+  888 f134:              ;
+  889 f134: 20 51 31 20  montext2:	db ' Q1 / Q0         turn Q on / off (SEQ / REQ)',10,13
+      f138: 2f 20 51 30 
+      f13c: 20 20 20 20 
+      f140: 20 20 20 20 
+      f144: 20 74 75 72 
+      f148: 6e 20 51 20 
+      f14c: 6f 6e 20 2f 
+      f150: 20 6f 66 66 
+      f154: 20 28 53 45 
+      f158: 51 20 2f 20 
+      f15c: 52 45 51 29 
+      f160: 0a 0d       
+  890 f162: 20 40 46 31  		db ' @F1C0           panel demo: toggles to LEDs, INPUT to Q',10,13
+      f166: 43 30 20 20 
+      f16a: 20 20 20 20 
+      f16e: 20 20 20 20 
+      f172: 20 70 61 6e 
+      f176: 65 6c 20 64 
+      f17a: 65 6d 6f 3a 
+      f17e: 20 74 6f 67 
+      f182: 67 6c 65 73 
+      f186: 20 74 6f 20 
+      f18a: 4c 45 44 73 
+      f18e: 2c 20 49 4e 
+      f192: 50 55 54 20 
+      f196: 74 6f 20 51 
+      f19a: 0a 0d       
+  891 f19c: 20 48 20 20  		db ' H               this list',10,13,0
+      f1a0: 20 20 20 20 
+      f1a4: 20 20 20 20 
+      f1a8: 20 20 20 20 
+      f1ac: 20 74 68 69 
+      f1b0: 73 20 6c 69 
+      f1b4: 73 74 0a 0d 
+      f1b8: 00          
+  892 f1b9:              ;
+  893 f1b9:              ; The IO panel demo (Ken, 2026-11-12): @F1C0 from the monitor. Over and over: read the toggles (INP 4), show them on
+  894 f1b9:              ; the LEDs (OUT 4), and set Q to match INPUT (EF1: pressed = Q on). Reset ends it. The monitor's @ starts it with
+  895 f1b9:              ; P = 0 and X = 0, so R0 is its program counter; INP and OUT need X on a byte of RAM, so R1 points at 00F0 (the
+  896 f1b9:              ; monitor's workspace: nothing else runs meanwhile).
+  897 f1c0:              		org 0f1c0h
+  898 f1c0: f8 00        pdemo:		ldi 00h		; R1 = 00F0, a byte of RAM for INP and OUT
+  899 f1c2: b1           		phi r1
+  900 f1c3: f8 f0        		ldi 0f0h
+  901 f1c5: a1           		plo r1
+  902 f1c6: e1           		sex r1
+  903 f1c7: 6c           ploop:		inp 4		; the toggles to M(R1) and D
+  904 f1c8: 64           		out 4		; M(R1) to the LEDs; R1 + 1
+  905 f1c9: 21           		dec r1
+  906 f1ca: 34 cf        		b1 pqon		; INPUT pressed (EF1): Q on
+  907 f1cc: 7a           		req
+  908 f1cd: 30 c7        		br ploop
+  909 f1cf: 7b           pqon:		seq
+  910 f1d0: 30 c7        		br ploop
+  911 f1d2:              
+  912 f1d2:              
+  913 f1d2:              
+
+0100: BASIC_DEST
+feff: BASIC_END
+f700: BASIC_START
+f500: BASMON
+f10d: BNO
+f000: BOOT
+f206: BREAK
+f10b: BRK
+f112: BRKCHK
+f11b: BRKDONE
+f0b5: BS
+f029: CLEAR
+f209: COLD_ENTRY
+f05a: CONT1
+f088: CR
+7800: CRTCA
+7801: CRTCD
+000e: CUR_H
+000f: CUR_L
+f456: DBYTE
+0009: DBYTES_AT
+f61b: DC1
+f698: DCOPIED
+f689: DCOPY
+f683: DCOPY3
+f686: DCOPY4
+f4a2: DCOUNT
+f4f3: DDECODE
+f4d8: DDONE
+f4e6: DERASE
+f640: DIMM
+f67a: DINDEX
+f66e: DINDEX3
+f676: DINDEX4
+f5b8: DIO
+f5ca: DIO1
+f4b4: DKEY
+f422: DLINE
+000e: DLINES
+0003: DLINE_AT
+f656: DLONG
+f4db: DMORE
+f66a: DNAME4
+f46f: DNOBYTE
+f41c: DNOEND
+f63f: DNOIMM
+f40e: DNOSEP
+f586: DNOT3
+f5d9: DNOT6
+f5ff: DNOT7
+f622: DNOTC
+f514: DNOTCALL
+f503: DNOTIDL
+f59d: DNOTIRX
+f54e: DNOTREG
+f522: DNOTRETN
+f41f: DPAGE
+f565: DSHORT
+f469: DSHOW
+f40a: DSKIP
+f475: DSLOT
+0013: DTEXT_AT
+f0aa: ERL
+ff45: F_HEXIN
+ff48: F_HEXOUT2
+ff4b: F_HEXOUT4
+ff15: F_LTRIM
+ff09: F_MSG
+f200: IN
+f100: INCHAR
+ff00: JUMPTBL
+f090: LF
+73c0: LINE23
+ff54: MINIMON
+f226: MONBOOT
+f3ec: MONDIS
+f20c: MONEXT
+f22e: MONHELP
+f913: MONPROMPT
+f11c: MONQ
+f130: MONQ0
+f243: MONTEXT
+f134: MONTEXT2
+f0bb: NORMAL
+f203: OUT
+f052: OUTCHAR
+f0de: OUTDN
+f0eb: OUTNOCHAR
+f1c0: PDEMO
+f1c7: PLOOP
+f1cf: PQON
+f09c: SLOOP
+0020: SPACE
+f6b5: T68
+f6b9: T68B
+f71d: T7
+f75d: TC
+f69d: TCALL
+f79d: TF
+f699: TIDL
+f6b1: TINP
+f6a9: TIRX
+f6ad: TOUT
+f6bd: TREG
+f6a1: TRETN
+f6ed: TSB
+f6a5: TSKP
+f0be: UPDATE
+f019: VLOAD
+7000: VMEM
+77fe: VMEM_CH
+77ff: VMEM_CL
+7800: VMEM_END
+f042: VTABLE

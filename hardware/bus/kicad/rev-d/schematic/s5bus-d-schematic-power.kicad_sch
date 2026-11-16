@@ -1,0 +1,3300 @@
+(kicad_sch
+	(version 20260306)
+	(generator "elf-gen-schematic")
+	(generator_version "1.0")
+	(uuid "36a1b77c-550c-5719-9744-dbf8afc30907")
+	(paper "A3")
+	(title_block (title "System-5 bus backplane Rev D (S5BUS-D): Power") (date "2026-10-27") (rev "D") (company "System-5")
+		(comment 1 "Sheet 4 of the System-5 bus backplane Rev D (S5BUS-D) schematic")
+		(comment 2 "Drawn from the board netlist by tools/kicad/sch/gen_schematic.py")
+		(comment 3 "Design: hardware/bus/kicad/rev-d/README.md; the bus: docs/manual/bus.md"))
+	(lib_symbols
+	(symbol "Connector:Screw_Terminal_01x02"
+		(pin_names
+			(offset 1.016)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "J"
+			(at 0 2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Screw_Terminal_01x02"
+			(at 0 -5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic screw terminal, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "screw terminal"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "TerminalBlock*:*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "Screw_Terminal_01x02_1_1"
+			(rectangle
+				(start -1.27 1.27)
+				(end 1.27 -3.81)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(polyline
+				(pts
+					(xy -0.5334 0.3302) (xy 0.3302 -0.508)
+				)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -0.5334 -2.2098) (xy 0.3302 -3.048)
+				)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -0.3556 0.508) (xy 0.508 -0.3302)
+				)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -0.3556 -2.032) (xy 0.508 -2.8702)
+				)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 0 0)
+				(radius 0.635)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 0 -2.54)
+				(radius 0.635)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(pin passive line
+				(at -5.08 0 0)
+				(length 3.81)
+				(name "Pin_1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at -5.08 -2.54 0)
+				(length 3.81)
+				(name "Pin_2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:C"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0.254)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "C"
+			(at 0.635 2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "C"
+			(at 0.635 -2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 0.9652 -3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "cap capacitor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "C_*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "C_0_1"
+			(polyline
+				(pts
+					(xy -2.032 0.762) (xy 2.032 0.762)
+				)
+				(stroke
+					(width 0.508)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -2.032 -0.762) (xy 2.032 -0.762)
+				)
+				(stroke
+					(width 0.508)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "C_1_1"
+			(pin passive line
+				(at 0 3.81 270)
+				(length 2.794)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -3.81 90)
+				(length 2.794)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:C_Polarized"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0.254)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "C"
+			(at 0.635 2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "C_Polarized"
+			(at 0.635 -2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 0.9652 -3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Polarized capacitor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "cap capacitor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "CP_*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "C_Polarized_0_1"
+			(rectangle
+				(start -2.286 0.508)
+				(end 2.286 1.016)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.778 2.286) (xy -0.762 2.286)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.27 2.794) (xy -1.27 1.778)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start 2.286 -0.508)
+				(end -2.286 -1.016)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+		)
+		(symbol "C_Polarized_1_1"
+			(pin passive line
+				(at 0 3.81 270)
+				(length 2.794)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -3.81 90)
+				(length 2.794)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:LED"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 1.016)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "D"
+			(at 0 2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "LED"
+			(at 0 -2.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Light emitting diode"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" "1=K 2=A"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "LED diode"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "LED* LED_SMD:* LED_THT:*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "LED_0_1"
+			(polyline
+				(pts
+					(xy -3.048 -0.762) (xy -4.572 -2.286) (xy -3.81 -2.286) (xy -4.572 -2.286) (xy -4.572 -1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.778 -0.762) (xy -3.302 -2.286) (xy -2.54 -2.286) (xy -3.302 -2.286) (xy -3.302 -1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.27 0) (xy 1.27 0)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.27 -1.27) (xy -1.27 1.27)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 1.27 -1.27) (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "LED_1_1"
+			(pin passive line
+				(at -3.81 0 0)
+				(length 2.54)
+				(name "K"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 3.81 0 180)
+				(length 2.54)
+				(name "A"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:Polyfuse"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "F"
+			(at -2.54 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Polyfuse"
+			(at 2.54 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 1.27 -5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resettable fuse, polymeric positive temperature coefficient"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "resettable fuse PTC PPTC polyfuse polyswitch"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "*polyfuse* *PTC*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "Polyfuse_0_1"
+			(polyline
+				(pts
+					(xy -1.524 2.54) (xy -1.524 1.524) (xy 1.524 -1.524) (xy 1.524 -2.54)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start -0.762 2.54)
+				(end 0.762 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 2.54) (xy 0 -2.54)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "Polyfuse_1_1"
+			(pin passive line
+				(at 0 3.81 270)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -3.81 90)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:R"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "R"
+			(at 2.032 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "R"
+			(at 0 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at -1.778 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "R res resistor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "R_*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "R_0_1"
+			(rectangle
+				(start -1.016 -2.54)
+				(end 1.016 2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "R_1_1"
+			(pin passive line
+				(at 0 3.81 270)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -3.81 90)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:R_Network03"
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "RN"
+			(at -5.08 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "R_Network03"
+			(at 5.08 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Array_SIP4"
+			(at 6.985 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "http://www.vishay.com/docs/31509/csc.pdf"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "3 resistor network, star topology, bussed resistors, small symbol"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "R network star-topology"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "R?Array?SIP*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "R_Network03_0_1"
+			(rectangle
+				(start -3.81 -3.175)
+				(end 3.81 3.175)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(rectangle
+				(start -3.302 1.524)
+				(end -1.778 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -2.54 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy -2.54 1.524) (xy -2.54 2.286) (xy 0 2.286) (xy 0 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -2.54 -2.54) (xy -2.54 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start -0.762 1.524)
+				(end 0.762 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 0 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 1.524) (xy 0 2.286) (xy 2.54 2.286) (xy 2.54 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 -2.54) (xy 0 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start 1.778 1.524)
+				(end 3.302 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.54 -2.54) (xy 2.54 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "R_Network03_1_1"
+			(pin passive line
+				(at -2.54 5.08 270)
+				(length 2.54)
+				(name "common"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at -2.54 -5.08 90)
+				(length 1.27)
+				(name "R1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -5.08 90)
+				(length 1.27)
+				(name "R2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 2.54 -5.08 90)
+				(length 1.27)
+				(name "R3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Device:R_Network05"
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "RN"
+			(at -7.62 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "R_Network05"
+			(at 7.62 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Array_SIP6"
+			(at 9.525 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "http://www.vishay.com/docs/31509/csc.pdf"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "5 resistor network, star topology, bussed resistors, small symbol"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "R network star-topology"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "R?Array?SIP*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "R_Network05_0_1"
+			(rectangle
+				(start -6.35 -3.175)
+				(end 6.35 3.175)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(rectangle
+				(start -5.842 1.524)
+				(end -4.318 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -5.08 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy -5.08 1.524) (xy -5.08 2.286) (xy -2.54 2.286) (xy -2.54 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -5.08 -2.54) (xy -5.08 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start -3.302 1.524)
+				(end -1.778 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -2.54 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy -2.54 1.524) (xy -2.54 2.286) (xy 0 2.286) (xy 0 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -2.54 -2.54) (xy -2.54 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start -0.762 1.524)
+				(end 0.762 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 0 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 1.524) (xy 0 2.286) (xy 2.54 2.286) (xy 2.54 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 -2.54) (xy 0 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start 1.778 1.524)
+				(end 3.302 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 2.54 2.286)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.54 1.524) (xy 2.54 2.286) (xy 5.08 2.286) (xy 5.08 1.524)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.54 -2.54) (xy 2.54 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start 4.318 1.524)
+				(end 5.842 -2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 5.08 -2.54) (xy 5.08 -3.81)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "R_Network05_1_1"
+			(pin passive line
+				(at -5.08 5.08 270)
+				(length 2.54)
+				(name "common"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at -5.08 -5.08 90)
+				(length 1.27)
+				(name "R1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at -2.54 -5.08 90)
+				(length 1.27)
+				(name "R2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -5.08 90)
+				(length 1.27)
+				(name "R3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 2.54 -5.08 90)
+				(length 1.27)
+				(name "R4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "5"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 5.08 -5.08 90)
+				(length 1.27)
+				(name "R5"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "6"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Mechanical:MountingHole"
+		(pin_names
+			(offset 1.016)
+		)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "H"
+			(at 0 5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole"
+			(at 0 3.175 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "mounting hole"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "MountingHole*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "MountingHole_0_1"
+			(circle
+				(center 0 0)
+				(radius 1.27)
+				(stroke
+					(width 1.27)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Switch:SW_SPDT"
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "SW"
+			(at 0 5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SW_SPDT"
+			(at 0 -5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 -7.62 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Switch, single pole double throw"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "switch single-pole double-throw spdt ON-ON"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "SW_SPDT_0_1"
+			(circle
+				(center -2.032 0)
+				(radius 0.4572)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.651 0.254) (xy 1.651 2.286)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 2.032 2.54)
+				(radius 0.4572)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 2.032 -2.54)
+				(radius 0.4572)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "SW_SPDT_1_1"
+			(rectangle
+				(start -3.175 3.81)
+				(end 3.175 -3.81)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(pin passive line
+				(at 5.08 2.54 180)
+				(length 2.54)
+				(name "A"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at -5.08 0 0)
+				(length 2.54)
+				(name "B"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 5.08 -2.54 180)
+				(length 2.54)
+				(name "C"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "Transistor_FET:IRF9540N"
+		(pin_names
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "Q"
+			(at 5.08 1.905 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "IRF9540N"
+			(at 5.08 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
+			(at 5.08 -1.905 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "http://www.irf.com/product-info/datasheets/data/irf9540n.pdf"
+			(at 5.08 -3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Description" "-23A Id, -100V Vds, 117mOhm Rds, P-Channel HEXFET Power MOSFET, TO-220"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "P-Channel MOSFET HEXFET"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "TO?220*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "IRF9540N_0_1"
+			(polyline
+				(pts
+					(xy 0.254 1.905) (xy 0.254 -1.905)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.254 0) (xy -2.54 0)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.762 2.286) (xy 0.762 1.27)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.762 1.778) (xy 3.302 1.778) (xy 3.302 -1.778) (xy 0.762 -1.778)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.762 0.508) (xy 0.762 -0.508)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0.762 -1.27) (xy 0.762 -2.286)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 1.651 0)
+				(radius 2.794)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.286 0) (xy 1.27 0.381) (xy 1.27 -0.381) (xy 2.286 0)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.54 2.54) (xy 2.54 1.778)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center 2.54 1.778)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(circle
+				(center 2.54 -1.778)
+				(radius 0.254)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type outline)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.54 -2.54) (xy 2.54 0) (xy 0.762 0)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 2.794 -0.508) (xy 2.921 -0.381) (xy 3.683 -0.381) (xy 3.81 -0.254)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 3.302 -0.381) (xy 2.921 0.254) (xy 3.683 0.254) (xy 3.302 -0.381)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "IRF9540N_1_1"
+			(pin input line
+				(at -5.08 0 0)
+				(length 2.54)
+				(name "G"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 2.54 5.08 270)
+				(length 2.54)
+				(name "D"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 2.54 -5.08 90)
+				(length 2.54)
+				(name "S"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "power:+5V"
+		(power global)
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "#PWR"
+			(at 0 -3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 0 3.556 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "global power"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "+5V_0_1"
+			(polyline
+				(pts
+					(xy -0.762 1.27) (xy 0 2.54)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 2.54) (xy 0.762 1.27)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(polyline
+				(pts
+					(xy 0 0) (xy 0 2.54)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "+5V_1_1"
+			(pin power_in line
+				(at 0 0 90)
+				(length 0)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "power:GND"
+		(power global)
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "#PWR"
+			(at 0 -6.35 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 0 -3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "global power"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "GND_0_1"
+			(polyline
+				(pts
+					(xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "GND_1_1"
+			(pin power_in line
+				(at 0 0 270)
+				(length 0)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	(symbol "power:PWR_FLAG"
+		(power global)
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+			(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "#FLG"
+			(at 0 1.905 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 0 3.81 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Special symbol for telling ERC where power comes from"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "flag power"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "PWR_FLAG_0_0"
+			(pin power_out line
+				(at 0 0 90)
+				(length 0)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(symbol "PWR_FLAG_0_1"
+			(polyline
+				(pts
+					(xy 0 0) (xy 0 1.27) (xy -1.016 1.905) (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27)
+				)
+				(stroke
+					(width 0)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+	)
+	(symbol (lib_id "Device:C") (at 19.05 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "5e6446a5-f8ae-5a50-9dc7-529cad0b807b")
+		(property "Reference" "C2" (at 19.685 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 19.685 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 20.0152 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 19.05 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 19.05 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "5ab18f3f-61fa-53da-b673-192298ad9d74"))
+		(pin "2" (uuid "686f4174-4712-5120-b458-074365591037"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C2") (unit 1))))
+	)
+	(wire (pts (xy 19.05 43.18) (xy 19.05 38.1)) (stroke (width 0) (type default)) (uuid "a2f88445-94d9-54e5-828c-f74951c1d34e"))
+	(symbol (lib_id "power:+5V") (at 19.05 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "dbde6b3e-fdf1-528a-b3d3-a2b4fad20135")
+		(property "Reference" "#PWR019" (at 19.05 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 19.05 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 19.05 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 19.05 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "658e5faf-ffee-55ef-9d26-cce3c209732c"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR019") (unit 1))))
+	)
+	(wire (pts (xy 19.05 50.8) (xy 19.05 55.88)) (stroke (width 0) (type default)) (uuid "51a7e1ef-3e44-5965-acc3-0d58a017be71"))
+	(symbol (lib_id "power:GND") (at 19.05 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "e1f8076b-94e7-50dc-a434-bc8b47aa6093")
+		(property "Reference" "#PWR020" (at 19.05 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 19.05 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 19.05 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 19.05 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "c60c046b-997b-55a1-8c44-0e218908e81f"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR020") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 33.02 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "f271ad09-c3b3-5e2f-982e-903db742f017")
+		(property "Reference" "C3" (at 33.655 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 33.655 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 33.9852 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 33.02 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 33.02 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "3d75b6bd-8adf-55d3-92ac-73cb9ab211ca"))
+		(pin "2" (uuid "4ed8d810-de9f-537e-8afe-4bc14c320045"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C3") (unit 1))))
+	)
+	(wire (pts (xy 33.02 43.18) (xy 33.02 38.1)) (stroke (width 0) (type default)) (uuid "575f0669-4abf-5743-8a92-997e6f6ef786"))
+	(symbol (lib_id "power:+5V") (at 33.02 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b61354e1-376a-5ad1-8130-edc5a2e62802")
+		(property "Reference" "#PWR021" (at 33.02 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 33.02 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 33.02 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 33.02 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "d5cd7728-c3f9-53b9-92bf-945d427357c5"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR021") (unit 1))))
+	)
+	(wire (pts (xy 33.02 50.8) (xy 33.02 55.88)) (stroke (width 0) (type default)) (uuid "ee48ae31-5b7a-5a05-91b8-e1347930f857"))
+	(symbol (lib_id "power:GND") (at 33.02 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "1f263c74-4123-5d90-9c5f-4e3f7acfbb2b")
+		(property "Reference" "#PWR022" (at 33.02 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 33.02 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 33.02 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 33.02 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "776a2c42-e4c6-560d-9126-baa41ee16d75"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR022") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 46.99 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "0badc476-e40a-53f4-b3d6-ee1cc1971f1b")
+		(property "Reference" "C4" (at 47.625 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 47.625 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 47.9552 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 46.99 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 46.99 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "4573f745-7a06-5c89-beb7-5d285dbac18b"))
+		(pin "2" (uuid "2a5c9990-61b7-550f-b2b8-78435c79f24f"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C4") (unit 1))))
+	)
+	(wire (pts (xy 46.99 43.18) (xy 46.99 38.1)) (stroke (width 0) (type default)) (uuid "e0c9ffd4-206b-5089-a53f-750946d65cf8"))
+	(symbol (lib_id "power:+5V") (at 46.99 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "70d4e9f3-5044-5470-9e18-81cd6ec67f21")
+		(property "Reference" "#PWR023" (at 46.99 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 46.99 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 46.99 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 46.99 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "c187c757-e6d3-53f8-8a2f-ab2e348286c9"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR023") (unit 1))))
+	)
+	(wire (pts (xy 46.99 50.8) (xy 46.99 55.88)) (stroke (width 0) (type default)) (uuid "97e05582-9ae1-518d-963e-3412683e66f7"))
+	(symbol (lib_id "power:GND") (at 46.99 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b698254d-4d9d-5fc5-abc6-c958b6055310")
+		(property "Reference" "#PWR024" (at 46.99 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 46.99 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 46.99 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 46.99 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "492bc24e-a58b-5487-bd50-f457cf301b35"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR024") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 60.96 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "188aa660-5832-5ee0-b560-17255ae07e28")
+		(property "Reference" "C5" (at 61.595 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 61.595 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 61.9252 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 60.96 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 60.96 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "ccbb1d03-4571-5365-86a5-f439990bb9b0"))
+		(pin "2" (uuid "7fc721fa-467c-5185-ae5c-96f5a0fd7806"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C5") (unit 1))))
+	)
+	(wire (pts (xy 60.96 43.18) (xy 60.96 38.1)) (stroke (width 0) (type default)) (uuid "fb6bb276-ce61-5e9f-ac65-37f01cda6290"))
+	(symbol (lib_id "power:+5V") (at 60.96 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "25d8a306-bba6-5fc5-bfec-898f376c2223")
+		(property "Reference" "#PWR025" (at 60.96 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 60.96 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 60.96 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 60.96 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "45f11970-46b4-536e-8942-d28fa026a257"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR025") (unit 1))))
+	)
+	(wire (pts (xy 60.96 50.8) (xy 60.96 55.88)) (stroke (width 0) (type default)) (uuid "be09b929-2960-58d6-a81f-f5e04dff87fc"))
+	(symbol (lib_id "power:GND") (at 60.96 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "783e0fd0-7553-5393-983b-b58d66ac2485")
+		(property "Reference" "#PWR026" (at 60.96 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 60.96 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 60.96 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 60.96 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "0206c2fb-a1bc-5d79-820d-b7c3fbc5b81d"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR026") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 74.93 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "47fc281c-02c5-5bc9-bc12-42ada4941a70")
+		(property "Reference" "C6" (at 75.565 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 75.565 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 75.8952 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 74.93 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 74.93 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "657cdb99-f0d8-58d4-b719-f67430a70ae8"))
+		(pin "2" (uuid "09c615e1-e292-5488-a004-52d9a342b19e"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C6") (unit 1))))
+	)
+	(wire (pts (xy 74.93 43.18) (xy 74.93 38.1)) (stroke (width 0) (type default)) (uuid "fd2b2738-e2f1-565a-a200-1405cbbd29e7"))
+	(symbol (lib_id "power:+5V") (at 74.93 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "3865eeba-f5e5-51ed-8de3-f86282861355")
+		(property "Reference" "#PWR027" (at 74.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 74.93 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 74.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 74.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "77b8969c-ecb3-5239-b7fd-fd116bb90fb0"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR027") (unit 1))))
+	)
+	(wire (pts (xy 74.93 50.8) (xy 74.93 55.88)) (stroke (width 0) (type default)) (uuid "955f4486-4372-5398-a8c6-026ca2ebe97e"))
+	(symbol (lib_id "power:GND") (at 74.93 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "f13dcfbe-9a77-543a-bebf-28d23c7db742")
+		(property "Reference" "#PWR028" (at 74.93 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 74.93 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 74.93 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 74.93 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "7f71e1d2-86e6-51e0-a751-9b90d33d44b1"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR028") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 88.9 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "5b467d96-4d6e-55c8-80e0-854879fd09d3")
+		(property "Reference" "C7" (at 89.535 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 89.535 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 89.8652 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 88.9 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 88.9 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "8401fd9c-abf2-58d9-8685-28d11655df12"))
+		(pin "2" (uuid "86412707-a59d-5c7e-a72c-bcfe60dade14"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C7") (unit 1))))
+	)
+	(wire (pts (xy 88.9 43.18) (xy 88.9 38.1)) (stroke (width 0) (type default)) (uuid "8fb6fe33-4cdc-531f-8224-7971d639316b"))
+	(symbol (lib_id "power:+5V") (at 88.9 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "11fbf4d1-ecee-5a35-b231-3c6f91c0f102")
+		(property "Reference" "#PWR029" (at 88.9 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 88.9 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 88.9 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 88.9 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "ef0f0426-f85d-58f9-bfdd-29f867d12cc5"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR029") (unit 1))))
+	)
+	(wire (pts (xy 88.9 50.8) (xy 88.9 55.88)) (stroke (width 0) (type default)) (uuid "a5292824-8ad2-5730-8dba-f37de2953379"))
+	(symbol (lib_id "power:GND") (at 88.9 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "9b0635a6-f4cc-5d9a-8487-7c7e565bf67f")
+		(property "Reference" "#PWR030" (at 88.9 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 88.9 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 88.9 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 88.9 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "4ab8c4c0-1ebf-55f4-b073-d4f6f7479da4"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR030") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 102.87 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "fc293501-1e50-5eb0-a72d-ca9f1421fcf0")
+		(property "Reference" "C8" (at 103.505 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 103.505 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 103.8352 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 102.87 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 102.87 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "c3e4e1f7-5dd7-5af6-9b1c-81bd609c8d70"))
+		(pin "2" (uuid "eb48025b-5219-5dfd-bcb7-117c81d0f928"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C8") (unit 1))))
+	)
+	(wire (pts (xy 102.87 43.18) (xy 102.87 38.1)) (stroke (width 0) (type default)) (uuid "015935c4-c591-534a-8e8c-fcd3b2dd4648"))
+	(symbol (lib_id "power:+5V") (at 102.87 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "840f40f8-3699-51a6-bbf3-becb5f088e3f")
+		(property "Reference" "#PWR031" (at 102.87 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 102.87 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 102.87 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 102.87 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "c432fd6a-5228-541a-8a8f-93235a0a127c"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR031") (unit 1))))
+	)
+	(wire (pts (xy 102.87 50.8) (xy 102.87 55.88)) (stroke (width 0) (type default)) (uuid "f2dabfd2-4e50-56a0-a833-163566bb2236"))
+	(symbol (lib_id "power:GND") (at 102.87 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "5bc698d6-5d63-5f1e-9651-64284ac0a477")
+		(property "Reference" "#PWR032" (at 102.87 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 102.87 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 102.87 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 102.87 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "37c2b8f4-50aa-5a30-81c6-724e768ca883"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR032") (unit 1))))
+	)
+	(symbol (lib_id "Device:C") (at 116.84 46.99 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "58d61642-15bc-5381-b2ed-e5246f48ec2e")
+		(property "Reference" "C9" (at 117.475 44.45 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "0.1uF" (at 117.475 49.53 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "s5bus:C025-050X050" (at 117.8052 50.8 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 116.84 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 116.84 46.99 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "e6260385-7f29-5fba-8a6f-e56cf2f0d792"))
+		(pin "2" (uuid "40deab0f-c8fb-56ee-87c6-7a68a837e1fb"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C9") (unit 1))))
+	)
+	(wire (pts (xy 116.84 43.18) (xy 116.84 38.1)) (stroke (width 0) (type default)) (uuid "e233c373-d0fa-56af-bdfe-2d7dc380dd52"))
+	(symbol (lib_id "power:+5V") (at 116.84 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "cb60d7e5-989a-526c-a60f-970862e53b8a")
+		(property "Reference" "#PWR033" (at 116.84 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 116.84 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 116.84 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 116.84 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "65c86208-c710-56c3-a167-7d52f5a84a0d"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR033") (unit 1))))
+	)
+	(wire (pts (xy 116.84 50.8) (xy 116.84 55.88)) (stroke (width 0) (type default)) (uuid "883e4b4c-60c1-5b87-8c50-340ecaece04f"))
+	(symbol (lib_id "power:GND") (at 116.84 55.88 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "889c7e0f-45e9-5f5f-99af-074ec616a791")
+		(property "Reference" "#PWR034" (at 116.84 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 116.84 59.69 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 116.84 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 116.84 55.88 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "bc0c244a-e077-5a95-9da1-9efc8edb511d"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR034") (unit 1))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 130.81 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "7c0d39ab-8cdd-56b4-b82d-176cf5219b13")
+		(property "Reference" "H1" (at 130.81 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 130.81 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 130.81 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 130.81 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 130.81 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H1") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 140.97 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "732131d2-46f8-5663-8b6f-7767639af37e")
+		(property "Reference" "H2" (at 140.97 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 140.97 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 140.97 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 140.97 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 140.97 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H2") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 151.13 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "a8f671ba-16f8-559f-91c5-3a4c3be9dad8")
+		(property "Reference" "H3" (at 151.13 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 151.13 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 151.13 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 151.13 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 151.13 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H3") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 161.29 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "2fc69354-095f-50a8-82f2-da3ca0f9699c")
+		(property "Reference" "H4" (at 161.29 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 161.29 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 161.29 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 161.29 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 161.29 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H4") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 171.45 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "7519193a-bd3b-5ef8-837c-fec3f7b37066")
+		(property "Reference" "H5" (at 171.45 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 171.45 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 171.45 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 171.45 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 171.45 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H5") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 181.61 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "4f2fe135-d6cf-5802-86dc-102e9f4d530b")
+		(property "Reference" "H6" (at 181.61 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 181.61 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 181.61 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 181.61 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 181.61 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H6") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 191.77 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "760d533d-2219-5ad5-8ea8-5d81d22fc93f")
+		(property "Reference" "H7" (at 191.77 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 191.77 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 191.77 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 191.77 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 191.77 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H7") (unit 0))))
+	)
+	(symbol (lib_id "Mechanical:MountingHole") (at 201.93 38.1 0) (unit 0) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "38a0e2ab-9571-59bb-8ea2-086e882eabb0")
+		(property "Reference" "H8" (at 201.93 33.02 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "M3" (at 201.93 34.925 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3" (at 201.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 201.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 201.93 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "H8") (unit 0))))
+	)
+	(symbol (lib_id "Device:R_Network05") (at 217.17 48.26 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "18be12db-4a24-5460-9157-c9e30258c706")
+		(property "Reference" "RN3" (at 224.42 48.2775 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Value" "10k" (at 224.42 48.8775 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(property "Footprint" "Resistor_THT:R_Array_SIP6" (at 226.695 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 217.17 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 217.17 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "1077a2b6-bf83-5283-8064-03985f0aca9e"))
+		(pin "2" (uuid "fc0c9206-a80c-557a-9270-c6901d387a90"))
+		(pin "3" (uuid "a29b87d8-a2fb-550c-ae53-e77a65ffdb51"))
+		(pin "4" (uuid "2f16815a-680a-5d13-8caf-593eb9d23749"))
+		(pin "5" (uuid "1cd61d81-b3d5-5a1f-8f9d-40bcc321b114"))
+		(pin "6" (uuid "bd94c1d9-3d4c-55da-a438-64890cbcfd45"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "RN3") (unit 1))))
+	)
+	(wire (pts (xy 212.09 43.18) (xy 212.09 38.1)) (stroke (width 0) (type default)) (uuid "2885351a-0812-5ac1-acfc-32c2b9d94764"))
+	(symbol (lib_id "power:GND") (at 212.09 38.1 180) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "417487cf-cf7f-5bac-a85f-7950d4d1545b")
+		(property "Reference" "#PWR035" (at 212.09 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 212.09 34.29 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 212.09 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 212.09 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "33374eb3-be0a-5198-a3db-976d8bd5ca44"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR035") (unit 1))))
+	)
+	(wire (pts (xy 212.09 53.34) (xy 212.09 58.42)) (stroke (width 0) (type default)) (uuid "90f79784-92bc-5349-9dd3-d3fb7d153252"))
+	(hierarchical_label "N0" (shape passive) (at 212.09 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "e5c38b14-e07a-5945-8618-3a3a5c8cf182"))
+	(wire (pts (xy 214.63 53.34) (xy 214.63 58.42)) (stroke (width 0) (type default)) (uuid "74665ce4-ad26-5cf7-b4a2-94bf96a90c4b"))
+	(hierarchical_label "N1" (shape passive) (at 214.63 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "3124db8d-40ba-5c82-884c-b4fa105a8c41"))
+	(wire (pts (xy 217.17 53.34) (xy 217.17 58.42)) (stroke (width 0) (type default)) (uuid "eebf7b9d-5df2-5db8-a5a4-083ce66e4650"))
+	(hierarchical_label "N2" (shape passive) (at 217.17 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "304e0131-6d92-52de-8496-e3f5ab075754"))
+	(wire (pts (xy 219.71 53.34) (xy 219.71 58.42)) (stroke (width 0) (type default)) (uuid "fc49eaef-11ac-5c27-b3a0-116aa27d15fd"))
+	(hierarchical_label "TPA" (shape passive) (at 219.71 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "8ef57de2-bdb0-5a26-8b7a-5a50e3d138aa"))
+	(wire (pts (xy 222.25 53.34) (xy 222.25 58.42)) (stroke (width 0) (type default)) (uuid "8162ab92-996e-56f4-8458-92248e73da05"))
+	(hierarchical_label "TPB" (shape passive) (at 222.25 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "b9cab2f8-ac3c-58ee-a0f7-668148298e0f"))
+	(symbol (lib_id "Device:R_Network03") (at 238.76 48.26 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "e87bd29c-c968-5e6e-8cf5-faba54804245")
+		(property "Reference" "RN4" (at 243.47 48.2775 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Value" "10k" (at 243.47 48.8775 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(property "Footprint" "Resistor_THT:R_Array_SIP4" (at 245.745 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 238.76 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 238.76 48.26 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "546cc850-8786-54f4-ad04-0bb893acfab3"))
+		(pin "2" (uuid "8c26bea9-a51a-54b5-b705-913befe6b101"))
+		(pin "3" (uuid "c7bf9dfb-9702-5c0b-b28c-c145bfd647c9"))
+		(pin "4" (uuid "2e3aecd7-bbda-5eea-8c6f-3e1b0143538e"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "RN4") (unit 1))))
+	)
+	(wire (pts (xy 236.22 43.18) (xy 236.22 38.1)) (stroke (width 0) (type default)) (uuid "cf06a193-3d55-56e8-97eb-213452eb916f"))
+	(symbol (lib_id "power:+5V") (at 236.22 38.1 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "c936bec6-6e9b-5f29-8e52-f19f5214cb62")
+		(property "Reference" "#PWR036" (at 236.22 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 236.22 34.544 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 236.22 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 236.22 38.1 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "df22610a-41fc-5c9d-a804-4fddc2cfd01f"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR036") (unit 1))))
+	)
+	(wire (pts (xy 236.22 53.34) (xy 236.22 58.42)) (stroke (width 0) (type default)) (uuid "3d791164-9671-5a45-a8b2-9d32ad86314d"))
+	(hierarchical_label "-VMA" (shape passive) (at 236.22 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "168470a5-447e-5d12-b5ea-6c811f36d0e5"))
+	(wire (pts (xy 238.76 53.34) (xy 238.76 58.42)) (stroke (width 0) (type default)) (uuid "985a7bfe-3913-5fa7-b259-4d1ad3364993"))
+	(hierarchical_label "-MRD" (shape passive) (at 238.76 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "de4a6eae-cf05-5c2e-990c-3b94dd10562c"))
+	(wire (pts (xy 241.3 53.34) (xy 241.3 58.42)) (stroke (width 0) (type default)) (uuid "e355da41-6b58-5c42-a5e3-17e599c48bdc"))
+	(hierarchical_label "-MRW" (shape passive) (at 241.3 58.42 270) (effects (font (size 1.27 1.27)) (justify right)) (uuid "bbb08fff-5543-5696-895a-8e083ef6affb"))
+	(symbol (lib_id "Connector:Screw_Terminal_01x02") (at 92.71 127 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "fc7e27cc-6ea8-56bd-9351-61d8da89486e")
+		(property "Reference" "J9" (at 92.71 124.46 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "POWER IN" (at 92.71 132.08 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal" (at 92.71 127 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 92.71 127 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 92.71 127 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "8d121024-c73d-53dd-9293-f57ed10ba9f7"))
+		(pin "2" (uuid "ec2a7a8f-f567-503b-a775-a5a60196aa3c"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "J9") (unit 1))))
+	)
+	(wire (pts (xy 87.63 129.54) (xy 82.55 129.54)) (stroke (width 0) (type default)) (uuid "779acb78-680c-5fdb-a29a-516cab0dcaf6"))
+	(symbol (lib_id "power:GND") (at 82.55 129.54 270) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "8a516b4d-2918-5b81-9389-cecccb81f825")
+		(property "Reference" "#PWR037" (at 82.55 129.54 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 76.95 128.64 90) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 82.55 129.54 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 82.55 129.54 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "a932c289-5c7c-5aa1-b38b-0d91a23527e1"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR037") (unit 1))))
+	)
+	(symbol (lib_id "Switch:SW_SPDT") (at 34.29 137.16 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "d809639f-3562-5162-a320-f4fa9e74964e")
+		(property "Reference" "SW1" (at 34.29 132.08 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "POWER" (at 34.29 142.24 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "s5bus:SW_Toggle_SPDT_E-Switch_100_M6" (at 34.29 137.16 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 34.29 144.78 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 34.29 137.16 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "99060f2f-7c45-5e4f-b388-c01e393365d6"))
+		(pin "2" (uuid "b5a11339-efcd-5cfd-9f28-dc8ac9df3f75"))
+		(pin "3" (uuid "b48e5a61-92ea-5536-b1ce-85e2adae96e8"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "SW1") (unit 1))))
+	)
+	(no_connect (at 39.37 134.62) (uuid "d239fb9d-5172-5d84-94a6-1db7663231e6"))
+	(symbol (lib_id "Device:Polyfuse") (at 57.15 139.7 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b9d4fa6d-e716-5bf4-935e-ab161cddbe0b")
+		(property "Reference" "F1" (at 57.15 142.24 270) (effects (font (size 1.27 1.27))))
+		(property "Value" "4A" (at 57.15 137.16 270) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "Fuse:Fuse_Bourns_MF-RHT400" (at 62.23 138.43 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 57.15 139.7 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 57.15 139.7 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "6b8937aa-2833-594b-bec2-2d8001231cef"))
+		(pin "2" (uuid "5eda8b9c-b95c-5ff7-a381-6cea4173efeb"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "F1") (unit 1))))
+	)
+	(symbol (lib_id "Transistor_FET:IRF9540N") (at 78.74 148.59 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "6393815a-a69b-5932-baa0-86e6cc6017a9")
+		(property "Reference" "Q1" (at 83.82 146.685 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Value" "IPP80P03P4L-04" (at 83.82 148.59 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Horizontal_TabDown" (at 83.82 150.495 0) (effects (font (size 1.27 1.27)) (justify left) (hide yes)))
+		(property "Datasheet" "" (at 83.82 152.4 0) (effects (font (size 1.27 1.27)) (justify left) (hide yes)))
+		(property "Description" "" (at 78.74 148.59 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "12cd42cb-bcd8-5293-a107-b65ecf76ab85"))
+		(pin "2" (uuid "db581417-6203-5003-b7bf-62b29c1f339b"))
+		(pin "3" (uuid "08311124-9695-5981-a3b0-e43acbac6573"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "Q1") (unit 1))))
+	)
+	(wire (pts (xy 81.28 153.67) (xy 81.28 158.75)) (stroke (width 0) (type default)) (uuid "bf51e24a-ad1e-5acf-b08d-867482675db8"))
+	(symbol (lib_id "power:+5V") (at 81.28 158.75 180) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "9004d277-6354-56b9-acc8-51d4106748fc")
+		(property "Reference" "#PWR038" (at 81.28 158.75 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 81.28 162.306 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 81.28 158.75 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 81.28 158.75 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "9e96e7c1-58da-52ee-ac2d-46e56b417624"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR038") (unit 1))))
+	)
+	(symbol (lib_id "Device:R") (at 114.3 176.53 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "164f70bd-8dc8-5873-a943-5bf455abadb9")
+		(property "Reference" "R2" (at 116.216 176.23 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Value" "10k" (at 116.216 176.83 0) (effects (font (size 1.27 1.27)) (justify left top)))
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" (at 112.522 176.53 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 114.3 176.53 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 114.3 176.53 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "1de67b1e-3027-598c-ae34-f4d1742c45ab"))
+		(pin "2" (uuid "d8982c92-fb41-57a3-86d3-280b0569b492"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "R2") (unit 1))))
+	)
+	(wire (pts (xy 114.3 180.34) (xy 114.3 185.42)) (stroke (width 0) (type default)) (uuid "9a500ed2-3cbb-58b1-b44f-0a37c3bb3fb5"))
+	(symbol (lib_id "power:GND") (at 114.3 185.42 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "df17c60d-924f-52e6-b5a6-81e00dc6334f")
+		(property "Reference" "#PWR039" (at 114.3 185.42 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 114.3 189.23 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 114.3 185.42 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 114.3 185.42 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "d6e1cdba-bcaa-5888-ac2f-50e9ea2a9404"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR039") (unit 1))))
+	)
+	(symbol (lib_id "Device:C_Polarized") (at 29.21 92.71 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "4daf8e92-84a4-5f33-ad61-1793eedfcd60")
+		(property "Reference" "C1" (at 32.396 91.521 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Value" "220uF 16V" (at 29.845 95.25 0) (effects (font (size 1.27 1.27)) (justify left)))
+		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm" (at 30.1752 96.52 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 29.21 92.71 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 29.21 92.71 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "19196239-0152-5c1a-acb8-1d14366c95f2"))
+		(pin "2" (uuid "c24bf089-df67-50d0-8bdc-10543ec67e2d"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "C1") (unit 1))))
+	)
+	(wire (pts (xy 29.21 88.9) (xy 29.21 83.82)) (stroke (width 0) (type default)) (uuid "75d5fbb4-947e-5dd7-85c8-722c26174250"))
+	(symbol (lib_id "power:+5V") (at 29.21 83.82 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b4ac4b6f-be5f-57be-9219-ea3b7d313a38")
+		(property "Reference" "#PWR040" (at 29.21 83.82 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 29.21 80.264 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 29.21 83.82 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 29.21 83.82 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "1f1d591d-8bd4-51b9-b6da-a6f88617ee98"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR040") (unit 1))))
+	)
+	(wire (pts (xy 29.21 96.52) (xy 29.21 101.6)) (stroke (width 0) (type default)) (uuid "0c0f6e4b-23bd-59c5-8c58-78901e98f1ab"))
+	(symbol (lib_id "power:GND") (at 29.21 101.6 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "19a4565a-da03-52fc-8ba8-ed8b51f70148")
+		(property "Reference" "#PWR041" (at 29.21 101.6 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 29.21 105.41 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 29.21 101.6 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 29.21 101.6 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "47aef50c-055c-5999-8b05-c06da97f2ab4"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR041") (unit 1))))
+	)
+	(symbol (lib_id "Device:R") (at 73.66 81.28 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "a8c7d55f-6e4e-5e21-84b9-96c2460727c6")
+		(property "Reference" "R1" (at 73.66 79.248 270) (effects (font (size 1.27 1.27))))
+		(property "Value" "470" (at 71.12 82.896 270) (effects (font (size 1.27 1.27)) (justify left top)))
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal" (at 73.66 83.058 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 73.66 81.28 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 73.66 81.28 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "c3c5caf2-9d7d-57e5-b516-9aa705400a83"))
+		(pin "2" (uuid "ac862f9b-d1e9-5dfb-a67c-930b6907ab56"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "R1") (unit 1))))
+	)
+	(wire (pts (xy 69.85 81.28) (xy 64.77 81.28)) (stroke (width 0) (type default)) (uuid "4c864768-5885-5491-8ab8-61e1e902c893"))
+	(symbol (lib_id "power:+5V") (at 64.77 81.28 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "6dbbea39-a364-5296-a3a7-b00502383291")
+		(property "Reference" "#PWR042" (at 64.77 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 59.17 80.38 270) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 64.77 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 64.77 81.28 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "2f2e2270-1565-5c65-83b6-529464ec9a09"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR042") (unit 1))))
+	)
+	(symbol (lib_id "Device:LED") (at 92.71 88.9 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "6e5a717d-86b2-5ee4-9d95-35a44807c829")
+		(property "Reference" "D1" (at 95.896 90.251 270) (effects (font (size 1.27 1.27)) (justify left bottom)))
+		(property "Value" "PWR" (at 95.896 90.851 270) (effects (font (size 1.27 1.27)) (justify left top)))
+		(property "Footprint" "LED_THT:LED_D5.0mm" (at 92.71 88.9 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 92.71 88.9 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 92.71 88.9 270) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "e1f3dd77-3147-593a-a969-78511a7e2879"))
+		(pin "2" (uuid "b0f575ef-7778-57e1-ae16-ffde03b5fe31"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "D1") (unit 1))))
+	)
+	(wire (pts (xy 92.71 92.71) (xy 92.71 97.79)) (stroke (width 0) (type default)) (uuid "015be084-e1bf-57d6-9382-92fd9d6b214b"))
+	(symbol (lib_id "power:GND") (at 92.71 97.79 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b78bc9a0-d434-5d2c-8a21-64c31819340f")
+		(property "Reference" "#PWR043" (at 92.71 97.79 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 92.71 101.6 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 92.71 97.79 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 92.71 97.79 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "f2ed28e1-ad96-58ae-b073-4f148b334026"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR043") (unit 1))))
+	)
+	(wire (pts (xy 60.96 139.7) (xy 81.28 139.7)) (stroke (width 0) (type default)) (uuid "ccf5ee28-5956-58e8-9c7d-bc9eef4da959"))
+	(wire (pts (xy 81.28 139.7) (xy 81.28 143.51)) (stroke (width 0) (type default)) (uuid "2e180386-d445-5a29-94d6-c531c1090409"))
+	(wire (pts (xy 81.28 139.7) (xy 83.82 139.7)) (stroke (width 0) (type default)) (uuid "3c012e73-e324-5135-9aa5-9a5f3b94e782"))
+	(junction (at 81.28 139.7) (diameter 0) (color 0 0 0 0) (uuid "aca6f780-4d09-503d-8540-95dffdf02abb"))
+	(hierarchical_label "+5V_FUSED" (shape passive) (at 83.82 139.7 0) (effects (font (size 1.27 1.27)) (justify left)) (uuid "6a3bbba8-79f3-5fc2-8657-f51a31d52641"))
+	(wire (pts (xy 25.4 127) (xy 25.4 137.16)) (stroke (width 0) (type default)) (uuid "1d219fb9-39fe-5011-b9f0-d7892fdd3c7b"))
+	(wire (pts (xy 25.4 127) (xy 87.63 127)) (stroke (width 0) (type default)) (uuid "6d4c9ea7-8228-5202-84f7-dce142fa4194"))
+	(wire (pts (xy 25.4 137.16) (xy 29.21 137.16)) (stroke (width 0) (type default)) (uuid "68d47b75-da9f-5a4e-8c25-4b996f9e7dca"))
+	(wire (pts (xy 25.4 127) (xy 22.86 127)) (stroke (width 0) (type default)) (uuid "82a7228a-a58e-5df0-b730-161d07095edb"))
+	(junction (at 25.4 127) (diameter 0) (color 0 0 0 0) (uuid "93b13d67-cfe7-534f-92e8-1a3e47aca0b4"))
+	(hierarchical_label "+5V_IN" (shape passive) (at 22.86 127 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "388573bf-33df-5fcf-b3a5-a744c10d46fe"))
+	(wire (pts (xy 39.37 139.7) (xy 53.34 139.7)) (stroke (width 0) (type default)) (uuid "ad3dfe3b-3281-5caa-8c32-c188122c9aa0"))
+	(hierarchical_label "+5V_SW" (shape passive) (at 40.64 139.7 0) (effects (font (size 1.27 1.27)) (justify left)) (uuid "82a743d9-c62c-51cb-98cc-b682ab55f7de"))
+	(wire (pts (xy 77.47 81.28) (xy 92.71 81.28)) (stroke (width 0) (type default)) (uuid "7de0a55d-388b-5e48-8709-bcbf74d3e179"))
+	(wire (pts (xy 92.71 81.28) (xy 92.71 85.09)) (stroke (width 0) (type default)) (uuid "65d3e371-d812-5b2d-ae4b-b8eabd1bc115"))
+	(wire (pts (xy 92.71 81.28) (xy 95.25 81.28)) (stroke (width 0) (type default)) (uuid "9b0851cf-a1bc-53ca-93fd-80548b5ad8a5"))
+	(junction (at 92.71 81.28) (diameter 0) (color 0 0 0 0) (uuid "eff1ad56-fd48-53c1-9838-14d3c6431a84"))
+	(hierarchical_label "LED_PWR" (shape passive) (at 95.25 81.28 0) (effects (font (size 1.27 1.27)) (justify left)) (uuid "70be33b9-0bee-547f-8043-e8cf657ba0f1"))
+	(wire (pts (xy 64.77 148.59) (xy 64.77 168.91)) (stroke (width 0) (type default)) (uuid "9dc66ddf-eb84-5f4f-a6e4-8006e2795e80"))
+	(wire (pts (xy 64.77 148.59) (xy 73.66 148.59)) (stroke (width 0) (type default)) (uuid "339dcf43-2a34-50e6-8532-e629d8d85a3e"))
+	(wire (pts (xy 64.77 168.91) (xy 114.3 168.91)) (stroke (width 0) (type default)) (uuid "7e16a780-0c7a-535f-854c-8c2fe215b514"))
+	(wire (pts (xy 114.3 168.91) (xy 114.3 172.72)) (stroke (width 0) (type default)) (uuid "abd0bbec-b8fa-5db5-9523-2a960283757f"))
+	(wire (pts (xy 64.77 148.59) (xy 62.23 148.59)) (stroke (width 0) (type default)) (uuid "211d2918-fe18-506e-b9a7-ac7faa60a9fa"))
+	(junction (at 64.77 148.59) (diameter 0) (color 0 0 0 0) (uuid "dfa54e71-31ef-55ad-8c47-bbbfe6747011"))
+	(hierarchical_label "Q1_GATE" (shape passive) (at 62.23 148.59 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "f0394bf5-d969-59a2-b397-292161db11e8"))
+	(wire (pts (xy 20.32 200.66) (xy 27.94 200.66)) (stroke (width 0) (type default)) (uuid "c6e9431b-99ee-551a-a6ac-197f6876d095"))
+	(symbol (lib_id "power:+5V") (at 20.32 200.66 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "d4ef32a0-d0be-56f5-a5db-14eb08b8d135")
+		(property "Reference" "#PWR044" (at 20.32 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "+5V" (at 20.32 197.104 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 20.32 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 20.32 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "e25792b4-0afe-5f17-b1fd-61ca63770c42"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR044") (unit 1))))
+	)
+	(symbol (lib_id "power:PWR_FLAG") (at 27.94 200.66 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "3a76b136-dd53-545f-93d0-8f222f9f50bd")
+		(property "Reference" "#FLG01" (at 27.94 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "PWR_FLAG" (at 27.94 196.85 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 27.94 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 27.94 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "41c2db75-e2df-51e4-8fcb-482ba97111b7"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#FLG01") (unit 1))))
+	)
+	(wire (pts (xy 35.56 200.66) (xy 43.18 200.66)) (stroke (width 0) (type default)) (uuid "4c3d1036-c3ce-5a99-b6ad-5831c5c9df8b"))
+	(symbol (lib_id "power:GND") (at 35.56 200.66 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "b65a6ff7-a06b-5035-9d9c-0dfbf45bff90")
+		(property "Reference" "#PWR045" (at 35.56 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 35.56 204.47 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 35.56 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 35.56 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "9f160f8f-1586-598e-bdba-88e45f56ec41"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#PWR045") (unit 1))))
+	)
+	(symbol (lib_id "power:PWR_FLAG") (at 43.18 200.66 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "c4dcc024-932b-51ac-a196-0ae19c97a0e1")
+		(property "Reference" "#FLG02" (at 43.18 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "PWR_FLAG" (at 43.18 196.85 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 43.18 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 43.18 200.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(pin "1" (uuid "20caa2ae-a573-54ef-b630-a9c7eedc0df1"))
+		(instances (project "s5bus-d-schematic" (path "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1" (reference "#FLG02") (unit 1))))
+	)
+	(text "PWR_FLAGs: the bus supplies +5V and GND." (exclude_from_sim no) (at 55.88 199.39 0) (effects (font (size 1.5 1.5)) (justify left top)) (uuid "1e07c4cd-61a6-5194-8fb5-66e1d8d71c3f"))
+	(text "POWER IN, SWITCH, FUSE, REVERSE PROTECTION, BULK CAPACITOR, POWER LED" (exclude_from_sim no) (at 15.24 12.7 0) (effects (font (size 2.5 2.5) (bold yes)) (justify left top)) (uuid "69dc236b-13b5-5436-a5d1-66a3742cc2e8"))
+	(text "J9: +5V (pin 1) and GND (pin 2). SW1 power switch (ON = common to pin 3; pin 1 open), F1 4 A polyfuse. Q1 P-MOSFET,\ndrain to the supply, source to the cards, gate to GND (R2): on when the supply is right, off when it is reversed.\nC1 220 uF bulk; C2-C9 0.1 uF, one at each slot. No regulator." (exclude_from_sim no) (at 15.24 17.78 0) (effects (font (size 1.5 1.5)) (justify left top)) (uuid "9dcc51e2-953c-5698-84bf-a5b9c5144e7c"))
+	(embedded_fonts no)
+)

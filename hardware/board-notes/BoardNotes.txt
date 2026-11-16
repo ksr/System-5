@@ -1,0 +1,76 @@
+Board size 5.50 x 3.75
+
+Main Connector placement 	0.2 x 1.875
+
+Layer 41 and 42 no use polygon are 3.00 x 0.15 on left and right bottom corners  to prevent contact with card supports
+
+LED Placement - flat section inward facing
+5.2 x
+0.3	Power	- Label PWR 5.4 x .45
+1.0	XXXX	- Label xxx 5.4 x xxx	
+1.7
+2.4
+3.1
+
+LED type 5MM
+Resistors 207/7
+Bypass capacitors C025-050x050
+Tantalum capacitor placement .45 x 3.45 (+) closer to VCC
+
+NAME Label .05 x .05
+FORMAT: KSR -- XXX#-A
+XXX = Board name
+# = board design (different types of similar function)
+A = Revision level
+
+All writing on layer 25
+Silk Screen uses layers 20, 21, 25
+
+Verify Process
+Do ERC Check
+Verify GND and VCC Connected at bus
+Verify unconnected input pins on pin list
+
+Build Process
+Run CAM JOBS
+      gerb274x.cam
+      excellon.com
+Run Script
+      doc
+
+Update file names and order number inside readme file
+
+
+
+BUS
+
+1	+5V				 _______________
+2 	Data 0				|		|					
+3	Data 1				|		|
+4	Data 2				|		|
+5	Data 3				|Component	|
+6	Data 4				|Side		|
+7	Data 5				|		|
+8	Data 6				|1………....30     |		
+9	Data 7				-----------------
+10	Q
+11	TPA
+12	TPB
+13	-MRD
+14	-MRW
+15	Address 0
+16	Address 1
+17	Address 2
+18	Address 3
+19	Address 4
+20	Address 5
+21	Address 6
+22	Address 7
+23	-Interupt
+24	N2
+25	-EF
+26	-VMA
+27	-RESET
+28	N1
+29	N0
+30	GND

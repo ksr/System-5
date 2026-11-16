@@ -1,0 +1,60 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-28T12:54:12",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472",
+            "violations": []
+        },
+        {
+            "path": "/CPU/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472/6360b5bb-f244-5a80-903a-5c808ceced18",
+            "violations": []
+        },
+        {
+            "path": "/Control/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472/8f74a8bf-c27c-5115-9cb9-afe27a5f20f2",
+            "violations": []
+        },
+        {
+            "path": "/Boot/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472/c21a5a7d-02b0-5f42-8099-2a5cf3f2ba3c",
+            "violations": []
+        },
+        {
+            "path": "/Flags/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472/e36c20e8-477a-51f3-9622-b38b8f459bc6",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/64884d64-9a75-5dae-bcb2-10506f72d472/82333098-11dd-5f49-9724-1453acce185e",
+            "violations": []
+        }
+    ],
+    "source": "cpu-rev-a-schematic.kicad_sch"
+}

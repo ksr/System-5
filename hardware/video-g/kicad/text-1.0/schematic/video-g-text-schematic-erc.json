@@ -1,0 +1,70 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-02T03:08:38",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa",
+            "violations": []
+        },
+        {
+            "path": "/Decode/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/ff3f285c-36ed-544d-89fe-a7ad40348d28",
+            "violations": []
+        },
+        {
+            "path": "/CRTC + RAM/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/68ae0e22-9133-5642-bdc8-36afb071a9e1",
+            "violations": []
+        },
+        {
+            "path": "/Clock + pipeline/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/bfa5488a-a187-580e-8ebf-76eaf372f370",
+            "violations": []
+        },
+        {
+            "path": "/Video out/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/a6c2805e-e4a4-55c4-82c0-8b5ac7c48b35",
+            "violations": []
+        },
+        {
+            "path": "/Keyboard + status/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/989f7c94-23bf-5134-917c-6458f772d602",
+            "violations": []
+        },
+        {
+            "path": "/Ribbon to GFX/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/b73fb5d4-2e93-5966-abb4-3755eb6cc64c",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/85d75d2d-6c1f-5966-b02a-2b4de5990efa/0fe905f3-617b-5882-b6ab-e255b852c404",
+            "violations": []
+        }
+    ],
+    "source": "video-g-text-schematic.kicad_sch"
+}

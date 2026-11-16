@@ -1,0 +1,21 @@
+board   : hardware/memory/eagle/rev-b/fusion-export/mem3-b.brd
+gerbers : hardware/memory/eagle/rev-b/fab/mem3b.zip (7 files)
+
+0. SHIFT: the board file is offset from the CAM output by 1.2954, 0.8636 mm (51, 34 mil); applied to every board item
+
+1. HOLES: board 606 (436 pads, 170 vias, 0 holes), drill file mem3-b.drd 606; board holes not in the drill file 0; drill hits not on the board 0
+   drill sizes (mm: count): 0.610: 170, 0.813: 358, 1.016: 78
+   (Top gerber -> board: not mirrored, offset 0.4, 0.3 mil)
+
+2. TRACKS Top: board 918 wires, gerber mem3-b.cmp 918 strokes + 606 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 918
+   (Bottom gerber -> board: MIRRORED in X, offset 5694.1, 0.3 mil)
+
+2. TRACKS Bottom: board 629 wires, gerber mem3-b.sol 629 strokes + 606 flashes + 0 regions; wires with no matching stroke 0; unmatched strokes inside pads (oval/long pads) 0; other unmatched strokes 0
+   wire widths (mm: count): 0.2540: 629
+
+3. PLANES: none
+
+4. PARTS: board has 48 elements
+
+RESULT: PASS - the board file is the design in this gerber set

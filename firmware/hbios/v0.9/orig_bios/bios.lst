@@ -1,0 +1,1541 @@
+RC/asm v2.2
+by Michael H. Riley
+
+1802 -> Native
+2 Classes read.
+193 Patterns read.
+    1 0000:             
+    2 0000:             
+    3 0000:             
+    4 0000:             
+    5 0000:             ; *******************************************************************
+    6 0000:             ; *** This software is copyright 2004 by Michael H Riley ***
+    7 0000:             ; *** You have permission to use, modify, copy, and distribute ***
+    8 0000:             ; *** this software so long as this copyright notice is retained. ***
+    9 0000:             ; *** This software may not be used in commercial applications ***
+   10 0000:             ; *** without express written permission from the author. ***
+   11 0000:             ; *******************************************************************
+   12 0000:             
+   13 0000:             
+   14 0000:             
+   15 0000:             
+   16 0000:             
+   17 0000:             
+   18 0000:             data: equ 0
+   19 0000:             scall: equ r4
+   20 0000:             sret: equ r5
+   21 0000:             
+   22 0000:                        org 0f800h
+   23 f800:             ; *** Check if character is numeric
+   24 f800:             ; *** D - char to check
+   25 f800:             ; *** Returns DF=1 if numeric
+   26 f800:             ; *** DF=0 if not
+   27 f800: e2          isnum: sex r2 ; be sure x points to stack
+   28 f801: 73                     stxd ; save number
+   29 f802: ff 30                  smi '0' ; check for bottom of numbers
+   30 f804: 3b 0d                  bnf isnotnum ; jump if not a number
+   31 f806: ff 0a                  smi 10 ; check high end
+   32 f808: 33 0d                  bdf isnotnum ; jump if not a number
+   33 f80a: f8 01                  ldi 1 ; numer is numeric
+   34 f80c: c8                     lskp
+   35 f80d: f8 00       isnotnum: ldi 0 ; signal not a number
+   36 f80f: f6                     shr ; shift result into DF
+   37 f810: 60                     irx ; recover original value
+   38 f811: f0                     ldx
+   39 f812: d5                     sep sret ; and return to caller
+   40 f813:             
+   41 f813:             ; *** rf - pointer to ascii string
+   42 f813:             ; *** returns: rf - first non-numeric character
+   43 f813:             ; *** RD - number
+   44 f813:             ; *** DF = 1 if first character non-numeric
+   45 f813: f8 00       atoi: ldi 0 ; clear answer
+   46 f815: bd                     phi rd
+   47 f816: ad                     plo rd
+   48 f817: 0f                     ldn rf ; get first value
+   49 f818: d4                     sep scall ; check if numeric
+   50 f819: f8 00                  dw isnum
+   51 f81b: 33 25                  bdf atoicnt ; jump if so
+   52 f81d: fb 2d                  xri '-' ; check for minus
+   53 f81f: 32 25                  bz atoicnt ; jump if so
+   54 f821: f8 01                  ldi 1 ; signal number error
+   55 f823: f6                     shr
+   56 f824: d5                     sep sret ; return to caller
+   57 f825: e2          atoicnt: sex r2 ; make sure x points to stack
+   58 f826: 8c                     glo rc ; save consumed registers
+   59 f827: 73                     stxd
+   60 f828: 9c                     ghi rc
+   61 f829: 73                     stxd
+   62 f82a: 8e                     glo re
+   63 f82b: 73                     stxd
+   64 f82c: ae                     plo re ; signify positive number
+   65 f82d: 0f                     ldn rf ; get first bytr
+   66 f82e: fb 2d                  xri '-' ; check for negative
+   67 f830: 3a 36                  bnz atoilp ; jump if not negative
+   68 f832: f8 01                  ldi 1 ; signify negative number
+   69 f834: ae                     plo re
+   70 f835: 1f                     inc rf ; move past - sign
+   71 f836: 0f          atoilp: ldn rf ; get byte from input
+   72 f837: ff 30                  smi '0' ; convert to binary
+   73 f839: 3b 6a                  bnf atoidn ; jump if below numbers
+   74 f83b: ff 0a                  smi 10 ; check for above numbers
+   75 f83d: 33 6a                  bdf atoidn ; jump if above numbers
+   76 f83f: 8d                     glo rd ; multiply by 2
+   77 f840: ac                     plo rc ; keep a copy
+   78 f841: fe                     shl
+   79 f842: ad                     plo rd
+   80 f843: 9d                     ghi rd
+   81 f844: bc                     phi rc
+   82 f845: 7e                     shlc
+   83 f846: bd                     phi rd
+   84 f847: 8d                     glo rd ; multiply by 4
+   85 f848: fe                     shl
+   86 f849: ad                     plo rd
+   87 f84a: 9d                     ghi rd
+   88 f84b: 7e                     shlc
+   89 f84c: bd                     phi rd
+   90 f84d: 8c                     glo rc ; multiply by 5
+   91 f84e: 52                     str r2
+   92 f84f: 8d                     glo rd
+   93 f850: f4                     add
+   94 f851: ad                     plo rd
+   95 f852: 9c                     ghi rc
+   96 f853: 52                     str r2
+   97 f854: 9d                     ghi rd
+   98 f855: 74                     adc
+   99 f856: bd                     phi rd
+  100 f857: 8d                     glo rd ; multiply by 10
+  101 f858: fe                     shl
+  102 f859: ad                     plo rd
+  103 f85a: 9d                     ghi rd
+  104 f85b: 7e                     shlc
+  105 f85c: bd                     phi rd
+  106 f85d: 4f                     lda rf ; get byte from buffer
+  107 f85e: ff 30                  smi '0' ; convert to binary
+  108 f860: 52                     str r2 ; prepare for addition
+  109 f861: 8d                     glo rd ; add in new digit
+  110 f862: f4                     add
+  111 f863: ad                     plo rd
+  112 f864: 9d                     ghi rd
+  113 f865: 7c 00                  adci 0
+  114 f867: bd                     phi rd
+  115 f868: 30 36                  br atoilp ; loop back for next character
+  116 f86a: c4          atoidn: nop
+  117 f86b: 60                     irx ; recover consumed registers
+  118 f86c: 72                     ldxa
+  119 f86d: ae                     plo re
+  120 f86e: 72                     ldxa
+  121 f86f: bc                     phi rc
+  122 f870: f0                     ldx
+  123 f871: ac                     plo rc
+  124 f872: f8 00                  ldi 0 ; signal valid number
+  125 f874: f6                     shr
+  126 f875: d5                     sep sret ; return to caller
+  127 f876:             
+  128 f876:             ; **** convert binary number to ascii
+  129 f876:             ; **** RD - number to convert
+  130 f876:             ; **** RF - buffer to store
+  131 f876:             ; **** Returns: RF - last postion+1
+  132 f876: 30 8e       uintout: br positive
+  133 f878: e2          intout: sex r2 ; point X to stack
+  134 f879: 9d                     ghi rd ; get high of number
+  135 f87a: fa 80                  ani 128 ; mask all bit sign bit
+  136 f87c: 32 8e                  bz positive ; jump if number is positive
+  137 f87e: f8 2d                  ldi '-' ; need a minus sign
+  138 f880: 5f                     str rf ; store into output
+  139 f881: 1f                     inc rf
+  140 f882: 8d                     glo rd ; get low byte
+  141 f883: 52                     str r2 ; store it
+  142 f884: f8 00                  ldi 0 ; need to subtract from 0
+  143 f886: f7                     sm
+  144 f887: ad                     plo rd ; put back
+  145 f888: 9d                     ghi rd ; get high byte
+  146 f889: 52                     str r2 ; place into memory
+  147 f88a: f8 00                  ldi 0 ; still subtracting from zero
+  148 f88c: 77                     smb
+  149 f88d: bd                     phi rd ; and put back
+  150 f88e: 87          positive: glo r7 ; save consumed registers
+  151 f88f: 73                     stxd
+  152 f890: 97                     ghi r7
+  153 f891: 73                     stxd
+  154 f892: 88                     glo r8 ; save consumed registers
+  155 f893: 73                     stxd
+  156 f894: 98                     ghi r8
+  157 f895: 73                     stxd
+  158 f896: 89                     glo r9 ; save consumed registers
+  159 f897: 73                     stxd
+  160 f898: 99                     ghi r9
+  161 f899: 73                     stxd
+  162 f89a: f8 f8                  ldi high numbers ; point to numbers
+  163 f89c: b9                     phi r9
+  164 f89d: f8 ef                  ldi low numbers
+  165 f89f: a9                     plo r9
+  166 f8a0: 49                     lda r9 ; get first division
+  167 f8a1: b7                     phi r7
+  168 f8a2: 49                     lda r9
+  169 f8a3: a7                     plo r7
+  170 f8a4: f8 00                  ldi 0 ; leading zero flag
+  171 f8a6: 73                     stxd ; store onto stack
+  172 f8a7: f8 00       nxtiter: ldi 0 ; star count at zero
+  173 f8a9: a8                     plo r8 ; place into low of r8
+  174 f8aa: 87          divlp: glo r7 ; get low of number to subtrace
+  175 f8ab: 52                     str r2 ; place into memory
+  176 f8ac: 8d                     glo rd ; get low of number
+  177 f8ad: f7                     sm ; subtract
+  178 f8ae: b8                     phi r8 ; place into temp space
+  179 f8af: 97                     ghi r7 ; get high of subtraction
+  180 f8b0: 52                     str r2 ; place into memory
+  181 f8b1: 9d                     ghi rd ; get high of number
+  182 f8b2: 77                     smb ; perform subtract
+  183 f8b3: 3b bb                  bnf nomore ; jump if subtraction was too large
+  184 f8b5: bd                     phi rd ; store result
+  185 f8b6: 98                     ghi r8
+  186 f8b7: ad                     plo rd
+  187 f8b8: 18                     inc r8 ; increment count
+  188 f8b9: 30 aa                  br divlp ; and loop back
+  189 f8bb: 60          nomore: irx ; point back to leading zero flag
+  190 f8bc: 88                     glo r8
+  191 f8bd: 3a c7                  bnz nonzero ; jump if not zero
+  192 f8bf: 02                     ldn r2 ; get flag
+  193 f8c0: 3a c5                  bnz allow0 ; jump if no longer zero
+  194 f8c2: 22                     dec r2 ; keep leading zero flag
+  195 f8c3: 30 ce                  br findnxt ; skip output
+  196 f8c5: f8 00       allow0: ldi 0 ; recover the zero
+  197 f8c7: fc 30       nonzero: adi 30h ; convert to ascii
+  198 f8c9: 5f                     str rf ; store into buffer
+  199 f8ca: 1f                     inc rf
+  200 f8cb: f8 01                  ldi 1 ; need to set leading flag
+  201 f8cd: 73                     stxd ; store it
+  202 f8ce: 27          findnxt: dec r7 ; subtract 1 for zero check
+  203 f8cf: 87                     glo r7 ; check for end
+  204 f8d0: 32 e0                  bz intdone ; jump if done
+  205 f8d2: 49                     lda r9 ; get next number
+  206 f8d3: b7                     phi r7
+  207 f8d4: 49                     lda r9
+  208 f8d5: a7                     plo r7
+  209 f8d6: ff 01                  smi 1 ; see if at last number
+  210 f8d8: 3a a7                  bnz nxtiter ; jump if not
+  211 f8da: 60                     irx ; set leading flag
+  212 f8db: f8 01                  ldi 1
+  213 f8dd: 73                     stxd
+  214 f8de: 30 a7                  br nxtiter
+  215 f8e0: 60          intdone: irx ; put x back where it belongs
+  216 f8e1: 60                     irx ; recover consumed registers
+  217 f8e2: 72                     ldxa
+  218 f8e3: b9                     phi r9
+  219 f8e4: 72                     ldxa
+  220 f8e5: a9                     plo r9
+  221 f8e6: 72                     ldxa
+  222 f8e7: b8                     phi r8
+  223 f8e8: 72                     ldxa
+  224 f8e9: a8                     plo r8
+  225 f8ea: 72                     ldxa
+  226 f8eb: b7                     phi r7
+  227 f8ec: f0                     ldx
+  228 f8ed: a7                     plo r7
+  229 f8ee: d5                     sep sret ; return to caller
+  230 f8ef:             
+  231 f8ef: 27 10 03 e8 
+            00 64 00 0a 
+            00 01       numbers: db 027h,010h,3,0e8h,0,100,0,10,0,1
+  232 f8f9:             
+  233 f8f9:             
+  234 f8f9:                        org 0f900h
+  235 f900:             buffer: equ 03
+  236 f900: f8 f9       minimon: ldi high start ; setup main pc
+  237 f902: b6                     phi r6
+  238 f903: f8 10                  ldi low start
+  239 f905: a6                     plo r6
+  240 f906: f8 00                  ldi 0 ; setup stack
+  241 f908: b2                     phi r2
+  242 f909: f8 ff                  ldi 0ffh
+  243 f90b: a2                     plo r2
+  244 f90c: e2                     sex r2
+  245 f90d: c0 ff 3f               lbr f_initcall
+  246 f910: d4          start: sep scall ; initialize baud setting
+  247 f911: ff 2d                  dw f_setbd
+  248 f913:             
+  249 f913: f8 f9       mainlp: ldi high prompt ; get address of prompt
+  250 f915: bf                     phi rf
+  251 f916: f8 c6                  ldi low prompt
+  252 f918: af                     plo rf
+  253 f919: d4                     sep scall ; display prompt
+  254 f91a: ff 09                  dw f_msg
+  255 f91c: d4                     sep scall
+  256 f91d: f9 b5                  dw loadbuf
+  257 f91f: d4                     sep scall ; get input from user
+  258 f920: ff 0f                  dw f_input
+  259 f922: d4                     sep scall
+  260 f923: f9 bc                  dw docrlf
+  261 f925: d4                     sep scall
+  262 f926: f9 b5                  dw loadbuf
+  263 f928: 4f                     lda rf ; get first byte
+  264 f929: bc                     phi rc ; save it
+  265 f92a: d4                     sep scall ; obtain address
+  266 f92b: ff 45                  dw f_hexin
+  267 f92d: 9d                     ghi rd ; move to address var
+  268 f92e: ba                     phi ra
+  269 f92f: 8d                     glo rd
+  270 f930: aa                     plo ra
+  271 f931:             
+  272 f931: 9c                     ghi rc ; retrieve command
+  273 f932: ff 21                  smi 33
+  274 f934: 32 7b                  bz storesp
+  275 f936: ff 1c                  smi 28 ; look for copy command
+  276 f938: 32 8d                  bz copy ; jump if found
+  277 f93a: ff 02                  smi 2
+  278 f93c: 32 48                  bz examine
+  279 f93e: ff 01                  smi 1
+  280 f940: 3a 13                  bnz mainlp
+  281 f942: 9a          run: ghi ra ; move to address var
+  282 f943: b0                     phi r0
+  283 f944: 8a                     glo ra
+  284 f945: a0                     plo r0
+  285 f946: e0                     sex r0
+  286 f947: d0                     sep r0
+  287 f948:             
+  288 f948: f8 08       examine: ldi 8 ; set count to 128 bytes
+  289 f94a: ac                     plo rc
+  290 f94b: 9a          exloop1: ghi ra ; get address
+  291 f94c: bd                     phi rd ; transfer for output
+  292 f94d: 8a                     glo ra
+  293 f94e: ad                     plo rd
+  294 f94f: d4                     sep scall
+  295 f950: f9 b5                  dw loadbuf
+  296 f952: d4                     sep scall ; put address into output
+  297 f953: ff 4b                  dw f_hexout4
+  298 f955: f8 3a                  ldi ':' ; want a colon
+  299 f957: 5f                     str rf
+  300 f958: 1f                     inc rf
+  301 f959: f8 10                  ldi 16 ; 16 bytes per line
+  302 f95b: ab                     plo rb ; put into secondary counter
+  303 f95c: f8 20       exloop2: ldi ' ' ; output a space
+  304 f95e: 5f                     str rf
+  305 f95f: 1f                     inc rf
+  306 f960: 4a                     lda ra ; get next byte from memory
+  307 f961: ad                     plo rd ; prepare for output
+  308 f962: d4                     sep scall ; convert for output
+  309 f963: ff 48                  dw f_hexout2
+  310 f965: 2b                     dec rb ; decrment line count
+  311 f966: 8b                     glo rb ; get count
+  312 f967: 3a 5c                  bnz exloop2 ; loop back if not done
+  313 f969: f8 00                  ldi 0 ; need terminator
+  314 f96b: 5f                     str rf
+  315 f96c: d4                     sep scall
+  316 f96d: f9 b5                  dw loadbuf
+  317 f96f: d4                     sep scall ; output the line
+  318 f970: ff 09                  dw f_msg
+  319 f972: d4                     sep scall
+  320 f973: f9 bc                  dw docrlf
+  321 f975: 2c                     dec rc ; decrement line count
+  322 f976: 8c                     glo rc ; get count
+  323 f977: 3a 4b                  bnz exloop1 ; loop back if not all lines printed
+  324 f979: 30 13                  br mainlp ; return to main loop
+  325 f97b:             
+  326 f97b: 0f          storesp: ldn rf ; get byte from input
+  327 f97c: 32 13                  bz mainlp ; jump if found
+  328 f97e: ff 21                  smi 33 ; check for less than space
+  329 f980: 33 85                  bdf storec ; jump if not space
+  330 f982: 1f                     inc rf ; point to next character
+  331 f983: 30 7b                  br storesp ; and keep moving past spaces
+  332 f985: d4          storec: sep scall ; convert next number
+  333 f986: ff 45                  dw f_hexin
+  334 f988: 8d                     glo rd ; get converted byt
+  335 f989: 5a                     str ra ; store into memory
+  336 f98a: 1a                     inc ra ; point to next position
+  337 f98b: 30 7b                  br storesp ; and do next character
+  338 f98d:             
+  339 f98d: 9a          copy: ghi ra ; move source
+  340 f98e: b8                     phi r8
+  341 f98f: 8a                     glo ra
+  342 f990: a8                     plo r8
+  343 f991: d4                     sep scall ; move past spaces
+  344 f992: ff 15                  dw f_ltrim
+  345 f994: d4                     sep scall ; get destination address
+  346 f995: ff 45                  dw f_hexin
+  347 f997: 9d                     ghi rd ; transfer to r9
+  348 f998: b9                     phi r9
+  349 f999: 8d                     glo rd
+  350 f99a: a9                     plo r9
+  351 f99b: d4                     sep scall ; move past spaces
+  352 f99c: ff 15                  dw f_ltrim
+  353 f99e: d4                     sep scall ; get source address
+  354 f99f: ff 45                  dw f_hexin
+  355 f9a1: 9d                     ghi rd ; transfer to rc
+  356 f9a2: bc                     phi rc
+  357 f9a3: 8d                     glo rd
+  358 f9a4: ac                     plo rc
+  359 f9a5: 9c          movelp: ghi rc ; check for zero
+  360 f9a6: 3a ad                  bnz domove
+  361 f9a8: 8c                     glo rc
+  362 f9a9: 3a ad                  bnz domove
+  363 f9ab: 30 b3                  br done
+  364 f9ad: 48          domove: lda r8
+  365 f9ae: 59                     str r9
+  366 f9af: 19                     inc r9
+  367 f9b0: 2c                     dec rc
+  368 f9b1: 30 a5                  br movelp
+  369 f9b3: 30 13       done: br mainlp
+  370 f9b5:             
+  371 f9b5: f8 00       loadbuf: ldi high buffer
+  372 f9b7: bf                     phi rf
+  373 f9b8: f8 03                  ldi low buffer
+  374 f9ba: af                     plo rf
+  375 f9bb: d5                     sep sret
+  376 f9bc:             
+  377 f9bc: f8 f9       docrlf: ldi high crlf
+  378 f9be: bf                     phi rf
+  379 f9bf: f8 cc                  ldi low crlf
+  380 f9c1: af                     plo rf
+  381 f9c2: d4                     sep scall
+  382 f9c3: ff 09                  dw f_msg
+  383 f9c5: d5                     sep sret
+  384 f9c6:             
+  385 f9c6:             
+  386 f9c6: 54 45 53 54 
+            3e 00       prompt: db 'TEST>',0
+  387 f9cc:             
+  388 f9cc:             
+  389 f9cc:             
+  390 f9cc: 0a 0d 00    crlf: db 10,13,0
+  391 f9cf:             
+  392 f9cf:             ; ***************************************
+  393 f9cf:             ; *** Type inline message ***
+  394 f9cf:             ; ***************************************
+  395 f9cf: 46          typeinmsg: lda r6 ; load byte from message
+  396 f9d0: c2 ff 6c               lbz return ; return if last byte
+  397 f9d3: d4                     sep scall ; call type routine
+  398 f9d4: ff 03                  dw f_type
+  399 f9d6: 30 cf                  br typeinmsg ; loop until a zero found
+  400 f9d8:             
+  401 f9d8:             
+  402 f9d8:                        org 0fa00h
+  403 fa00:             ; ***************************************************************
+  404 fa00:             ; *** Function to convert hex input characters to binary ***
+  405 fa00:             ; *** RF - Pointer to characters ***
+  406 fa00:             ; *** Returns - RF - First character that is not alphanumeric ***
+  407 fa00:             ; *** RD - Converted number ***
+  408 fa00:             ; ***************************************************************
+  409 fa00: f8 00       hexin: ldi 0 ; set initial total
+  410 fa02: bd                     phi rd
+  411 fa03: ad                     plo rd
+  412 fa04: 4f          tobinlp: lda rf ; get input character
+  413 fa05: ff 30                  smi '0' ; convert to binary
+  414 fa07: fa df                  ani 0dfh ; convert to uc
+  415 fa09: 3b 3c                  bnf tobindn ; jump if termination
+  416 fa0b: 73                     stxd
+  417 fa0c: fa 10                  ani 16 ; check for alpha
+  418 fa0e: 60                     irx ; point back
+  419 fa0f: 32 16                  bz isnumeric
+  420 fa11: f0                     ldx ; recover byte
+  421 fa12: ff 07                  smi 7 ; offset
+  422 fa14: 30 1c                  br tobingo ; and continue
+  423 fa16: f0          isnumeric: ldx ; recover byte
+  424 fa17: ff 0a                  smi 10 ; check for end of numbers
+  425 fa19: 33 3c                  bdf tobindn ; jump if end
+  426 fa1b: f0                     ldx ; recover byte
+  427 fa1c: 73          tobingo: stxd ; save number
+  428 fa1d: ff 10                  smi 16 ; check for valid range
+  429 fa1f: 3b 23                  bnf tobingd ; jump if good
+  430 fa21: 60                     irx ; remove number from stack
+  431 fa22: d5                     sep sret ; return to caller
+  432 fa23: f8 04       tobingd: ldi 4 ; need to multiply by 16
+  433 fa25: 73          tobinglp: stxd
+  434 fa26: 8d                     glo rd ; multiply by 2
+  435 fa27: fe                     shl
+  436 fa28: ad                     plo rd
+  437 fa29: 9d                     ghi rd
+  438 fa2a: 7e                     shlc
+  439 fa2b: bd                     phi rd
+  440 fa2c: 60                     irx
+  441 fa2d: f8 01                  ldi 1
+  442 fa2f: f5                     sd
+  443 fa30: 3a 25                  bnz tobinglp
+  444 fa32: 60                     irx ; point to new number
+  445 fa33: 8d                     glo rd ; and add to total
+  446 fa34: f4                     add
+  447 fa35: ad                     plo rd
+  448 fa36: 9d                     ghi rd
+  449 fa37: 7c 00                  adci 0
+  450 fa39: bd                     phi rd
+  451 fa3a: 30 04                  br tobinlp ; loop back for next character
+  452 fa3c: d5          tobindn: sep sret ; return to caller
+  453 fa3d:             
+  454 fa3d:             ; *********************************************
+  455 fa3d:             ; *** Convert a binary number to hex output ***
+  456 fa3d:             ; *** RD - Number to convert ***
+  457 fa3d:             ; *** RF - Buffer for output ***
+  458 fa3d:             ; *** Returns: RF - next buffer position ***
+  459 fa3d:             ; *** RD - consumed ***
+  460 fa3d:             ; *********************************************
+  461 fa3d: 8d          hexout2: glo rd ; move low byte to high
+  462 fa3e: bd                     phi rd
+  463 fa3f: f8 02                  ldi 2 ; 2 nybbles to display
+  464 fa41: c8                     lskp ; skip over the 4
+  465 fa42: f8 04       hexout4: ldi 4 ; 4 nybbles to display
+  466 fa44: 73          hexoutlp: stxd ; save the count
+  467 fa45: f8 00                  ldi 0 ; zero the temp var
+  468 fa47: ae                     plo re
+  469 fa48: f8 04                  ldi 4 ; perform 4 shift
+  470 fa4a: 73          hexoutl2: stxd ; save count
+  471 fa4b: 8d                     glo rd ; perform shift
+  472 fa4c: fe                     shl
+  473 fa4d: ad                     plo rd
+  474 fa4e: 9d                     ghi rd
+  475 fa4f: 7e                     shlc
+  476 fa50: bd                     phi rd
+  477 fa51: 8e                     glo re
+  478 fa52: 7e                     shlc
+  479 fa53: ae                     plo re
+  480 fa54: 60                     irx ; point back to count
+  481 fa55: f8 01                  ldi 1 ; need to decrement it
+  482 fa57: f5                     sd
+  483 fa58: 3a 4a                  bnz hexoutl2 ; jump if more shifts needed
+  484 fa5a: 8e                     glo re ; get nybble
+  485 fa5b: ff 0a                  smi 10 ; compare to 10
+  486 fa5d: 33 6b                  bdf hexoutal ; jump if alpha
+  487 fa5f: 8e                     glo re ; get value
+  488 fa60: fc 30                  adi 30h ; convert to ascii
+  489 fa62: 5f          hexoutl3: str rf ; store value into buffer
+  490 fa63: 1f                     inc rf
+  491 fa64: 60                     irx ; point to count
+  492 fa65: f8 01                  ldi 1 ; need to subtract 1 from it
+  493 fa67: f5                     sd
+  494 fa68: 3a 44                  bnz hexoutlp ; loop if not done
+  495 fa6a: d5                     sep sret ; return to caller
+  496 fa6b: 8e          hexoutal: glo re ; get value
+  497 fa6c: fc 37                  adi 55 ; convert to ascii
+  498 fa6e: 30 62                  br hexoutl3 ; and continue
+  499 fa70:             
+  500 fa70:             
+  501 fa70: d3                   sep r3 ; jump to called routine
+  502 fa71: ae          call: plo re ; Save D
+  503 fa72: 96                   ghi r6 ; save last R[6] to stack
+  504 fa73: e2                   sex r2
+  505 fa74: 73                   stxd
+  506 fa75: 86                   glo r6
+  507 fa76: 73                   stxd
+  508 fa77: 93                   ghi r3 ; copy R[3] to R[6]
+  509 fa78: b6                   phi r6
+  510 fa79: 83                   glo r3
+  511 fa7a: a6                   plo r6
+  512 fa7b: 46                   lda r6 ; get subroutine address
+  513 fa7c: b3                   phi r3 ; and put into r3
+  514 fa7d: 46                   lda r6
+  515 fa7e: a3                   plo r3
+  516 fa7f: 8e                   glo re ; recover D
+  517 fa80: 30 70                br call-1 ; transfer control to subroutine
+  518 fa82:             
+  519 fa82: d3                   sep r3 ; transfer control back to coller
+  520 fa83: ae          ret: plo re ; Save D
+  521 fa84: 96                   ghi r6 ; copy R[6] to R[3]
+  522 fa85: b3                   phi r3
+  523 fa86: 86                   glo r6
+  524 fa87: a3                   plo r3
+  525 fa88: e2                   sex r2
+  526 fa89: 60                   irx ; point to old R[6]
+  527 fa8a: 72                   ldxa
+  528 fa8b: a6                   plo r6
+  529 fa8c: f0                   ldx
+  530 fa8d: b6                   phi r6
+  531 fa8e: 8e                   glo re
+  532 fa8f: 30 82                br ret-1 ; and perform return to caller
+  533 fa91:             ;
+  534 fa91:             ; MOVER.ASM - Function Move Programs Into Low memory
+  535 fa91:             ; For Execution.
+  536 fa91:             ;
+  537 fa91:             ; Normal Entry PC = 3, RF = Program Header
+  538 fa91:             ;
+  539 fa91:             ; Exit: Starts Program at specified address
+  540 fa91:             ; With P=0,X=0,IE=1
+  541 fa91:             ;
+  542 fa91:             ; This module written by Richard Peters
+  543 fa91:             ;*********************************************************
+  544 fa91:             ; HEADER DEFINITION ANY ADDRESS
+  545 fa91:             ; OFFSET
+  546 fa91:             ; 00 = Program RAM Start Address
+  547 fa91:             ; +02 = Program RAM End Address
+  548 fa91:             ; +04 = Program Execution Address
+  549 fa91:             ; +06 = Accual PROGRAM Bytes
+  550 fa91:             ;*********************************************************
+  551 fa91:                        org 0fadah
+  552 fada: e0          mover: sex r0
+  553 fadb: 4f                     lda rf
+  554 fadc: b0                     phi r0
+  555 fadd: 4f                     lda rf
+  556 fade: a0                     plo r0
+  557 fadf: 4f                     lda rf
+  558 fae0: b1                     phi r1
+  559 fae1: 4f                     lda rf
+  560 fae2: a1                     plo r1
+  561 fae3: 11                     inc r1
+  562 fae4: 4f                     lda rf
+  563 fae5: ba                     phi ra
+  564 fae6: 4f                     lda rf
+  565 fae7: aa                     plo ra
+  566 fae8: 4f          moverlp: lda rf
+  567 fae9: 50                     str r0
+  568 faea: 10                     inc r0
+  569 faeb: 81                     glo r1
+  570 faec: 50                     str r0
+  571 faed: 80                     glo r0
+  572 faee: f5                     sd
+  573 faef: 3a e8                  bnz moverlp
+  574 faf1: 91                     ghi r1
+  575 faf2: 50                     str r0
+  576 faf3: 90                     ghi r0
+  577 faf4: f5                     sd
+  578 faf5: 3a e8                  bnz moverlp
+  579 faf7: f8 03                  ldi 3
+  580 faf9: 50                     str r0
+  581 fafa: 70                     ret
+  582 fafb: 9a                     ghi ra
+  583 fafc: b0                     phi r0
+  584 fafd: 8a                     glo ra
+  585 fafe: a0                     plo r0
+  586 faff: d0                     sep r0
+  587 fb00:             
+  588 fb00:                        org 0fb00h
+  589 fb00: f8 fb       resetide: ldi high waitrdy ; get address of subs
+  590 fb02: bf                     phi rf ; place into rf
+  591 fb03: f8 a4                  ldi low waitrdy
+  592 fb05: af                     plo rf
+  593 fb06: e2                     sex r2 ; point x to stack
+  594 fb07: 79                     mark ; save current P and X
+  595 fb08: df                     sep rf ; call wait for RDY routine
+  596 fb09: 22                     dec r2 ; compensate for RET increment
+  597 fb0a: f8 00                  ldi 0 ; code to select master
+  598 fb0c: 73                     stxd ; write to stack
+  599 fb0d: f8 06                  ldi 6 ; select device register
+  600 fb0f: 52                     str r2 ; write to stack
+  601 fb10: 62                     out 2 ; write select port
+  602 fb11: 63                     out 3 ; write device code
+  603 fb12: 22                     dec r2 ; point back
+  604 fb13: f8 02                  ldi 2 ; function to perform soft reset
+  605 fb15: 73                     stxd ; write to stack
+  606 fb16: f8 0e                  ldi 00eh ; set interupt port
+  607 fb18: 52                     str r2 ; write to stack
+  608 fb19: 62                     out 2 ; write select port
+  609 fb1a: 63                     out 3 ; write reset code
+  610 fb1b: 22                     dec r2 ; point back
+  611 fb1c: f8 a4                  ldi low waitrdy
+  612 fb1e: af                     plo rf
+  613 fb1f: 79                     mark ; save current P and X
+  614 fb20: df                     sep rf ; call wait for RDY routine
+  615 fb21: 22                     dec r2 ; compensate for RET increment
+  616 fb22: f8 ef                  ldi 0efh ; command to set features
+  617 fb24: 73                     stxd ; store on stack
+  618 fb25: f8 07                  ldi 7 ; command register address
+  619 fb27: 73                     stxd ; store on stack
+  620 fb28: f8 01                  ldi 1 ; enable 8-bit mode
+  621 fb2a: 73                     stxd ; store on stack
+  622 fb2b: 52                     str r2 ; also is feature register address
+  623 fb2c: 62                     out 2 ; selec feacture register
+  624 fb2d: 63                     out 3 ; select 8-bit mode
+  625 fb2e: 62                     out 2 ; select command register
+  626 fb2f: 63                     out 3 ; issue set feature command
+  627 fb30: 22                     dec r2 ; compensate for last out
+  628 fb31: f8 a4                  ldi low waitrdy
+  629 fb33: af                     plo rf
+  630 fb34: 79                     mark ; save current P and X
+  631 fb35: df                     sep rf ; call wait for RDY routine
+  632 fb36: 22                     dec r2 ; compensate for ret increment
+  633 fb37: d5                     sep sret ; return to caller
+  634 fb38:             
+  635 fb38:             
+  636 fb38: 8c          wrtide: glo rc ; save consumed registers
+  637 fb39: 73                     stxd
+  638 fb3a: 9c                     ghi rc
+  639 fb3b: 73                     stxd
+  640 fb3c: 87                     glo r7
+  641 fb3d: 73                     stxd
+  642 fb3e: 97                     ghi r7
+  643 fb3f: 73                     stxd
+  644 fb40: f8 fb                  ldi high waitrdy ; get address of subs
+  645 fb42: bc                     phi rc ; place into rf
+  646 fb43: f8 a4                  ldi low waitrdy
+  647 fb45: ac                     plo rc
+  648 fb46: e2                     sex r2 ; point x to stack
+  649 fb47: 79                     mark ; save current P and X
+  650 fb48: dc                     sep rc ; call wait for RDY routine
+  651 fb49: 22                     dec r2 ; compensate for RET increment
+  652 fb4a: f8 30                  ldi 030h ; command for sector write
+  653 fb4c: 79                     mark ; save current P and X
+  654 fb4d: dc                     sep rc ; now call command sequence
+  655 fb4e: 22                     dec r2 ; compensate for RET increment
+  656 fb4f: f8 02                  ldi 2 ; high byte of 512
+  657 fb51: b7                     phi r7 ; place into count
+  658 fb52: f8 00                  ldi 0 ; low byte of 512
+  659 fb54: a7                     plo r7 ; place into low of count
+  660 fb55: f8 00                  ldi 0 ; need data register
+  661 fb57: 52                     str r2 ; place on stack
+  662 fb58: 62                     out 2 ; select data register
+  663 fb59: 22                     dec r2 ; move pointer
+  664 fb5a: ef                     sex rf ; set data pointer
+  665 fb5b: 63          wrtloop: out 3 ; write to ide controller
+  666 fb5c: 27                     dec r7 ; decrement byte count
+  667 fb5d: 87                     glo r7 ; check for completion
+  668 fb5e: 3a 5b                  bnz wrtloop ; jump if not
+  669 fb60: 97                     ghi r7 ; need to check high byte
+  670 fb61: 3a 5b                  bnz wrtloop ; jump if more to go
+  671 fb63: e2                     sex r2 ; point x to stack
+  672 fb64: 79                     mark ; save current P and X
+  673 fb65: dc                     sep rc ; call waitrdy routine
+  674 fb66: 22                     dec r2 ; compensate for RET increment
+  675 fb67: ae          ideret: plo re
+  676 fb68: 60                     irx ; recover consumed registers
+  677 fb69: 72                     ldxa
+  678 fb6a: b7                     phi r7
+  679 fb6b: 72                     ldxa
+  680 fb6c: a7                     plo r7
+  681 fb6d: 72                     ldxa
+  682 fb6e: bc                     phi rc
+  683 fb6f: f0                     ldx
+  684 fb70: ac                     plo rc
+  685 fb71: 8e                     glo re
+  686 fb72: d5                     sep sret ; and return to caller
+  687 fb73:             
+  688 fb73: 8c          rdide: glo rc ; save consumed registers
+  689 fb74: 73                     stxd
+  690 fb75: 9c                     ghi rc
+  691 fb76: 73                     stxd
+  692 fb77: 87                     glo r7
+  693 fb78: 73                     stxd
+  694 fb79: 97                     ghi r7
+  695 fb7a: 73                     stxd
+  696 fb7b: f8 fb                  ldi high waitrdy ; get address of subs
+  697 fb7d: bc                     phi rc ; place into rf
+  698 fb7e: f8 a4                  ldi low waitrdy
+  699 fb80: ac                     plo rc
+  700 fb81: e2                     sex r2 ; point x to stack
+  701 fb82: 79                     mark ; save current P and X
+  702 fb83: dc                     sep rc ; call wait for RDY routine
+  703 fb84: 22                     dec r2 ; compensate for RET increment
+  704 fb85: f8 20                  ldi 020h ; command for sector read
+  705 fb87: 79                     mark ; save current P and X
+  706 fb88: dc                     sep rc ; now call command sequence
+  707 fb89: 22                     dec r2 ; compensate for RET increment
+  708 fb8a: f8 02                  ldi 2 ; high byte of 512
+  709 fb8c: b7                     phi r7 ; place into count
+  710 fb8d: f8 00                  ldi 0 ; lo byte of 512
+  711 fb8f: a7                     plo r7 ; place into low of count
+  712 fb90: 52                     str r2 ; place on stack
+  713 fb91: 62                     out 2 ; select data register
+  714 fb92: 22                     dec r2 ; move pointer
+  715 fb93: ef                     sex rf ; set data pointer
+  716 fb94: 6b          rdloop: inp 3 ; read from ide controller
+  717 fb95: 1f                     inc rf ; point to next position
+  718 fb96: 27                     dec r7 ; decrement byte count
+  719 fb97: 87                     glo r7 ; check for completion
+  720 fb98: 3a 94                  bnz rdloop ; jump if not
+  721 fb9a: 97                     ghi r7 ; need to check high byte
+  722 fb9b: 3a 94                  bnz rdloop ; jump if more to go
+  723 fb9d: f8 00                  ldi 0 ; signify read complete
+  724 fb9f: e2                     sex r2
+  725 fba0: 30 67                  br ideret ; return to caller
+  726 fba2:             
+  727 fba2: 60          beforerdy: irx ; move pointer to SAV location
+  728 fba3: 70                     ret ; and return to caller
+  729 fba4: e2          waitrdy: sex r2
+  730 fba5: f8 07                  ldi 07h ; need status register
+  731 fba7: 52                     str r2 ; store onto stack
+  732 fba8: 62                     out 2 ; write ide selection port
+  733 fba9: 22                     dec r2 ; point x back to free spot
+  734 fbaa: 6b          rdyloop: inp 3 ; read status port
+  735 fbab: fa c0                  ani 0c0h ; mask for BSY and RDY
+  736 fbad: ff 40                  smi 040h ; want only RDY bit
+  737 fbaf: 3a aa                  bnz rdyloop ; loop back until drive is ready
+  738 fbb1: 02                     ldn r2 ; get status byte
+  739 fbb2: 60                     irx ; move pointer to SAV location
+  740 fbb3: 70                     ret ; and return to caller
+  741 fbb4:             ; RF will point to wrtcmd, which is next needed after first waitrdy
+  742 fbb4: e2          wrtcmd: sex r2
+  743 fbb5: 73                     stxd ; write passed command to stack
+  744 fbb6: f8 07                  ldi 7 ; command register
+  745 fbb8: 73                     stxd ; write to stack
+  746 fbb9: 98                     ghi r8 ; get device
+  747 fbba: 73                     stxd ; write to stack
+  748 fbbb: f8 06                  ldi 6 ; head/device register
+  749 fbbd: 73                     stxd ; write to stack
+  750 fbbe: 88                     glo r8 ; get high of lba
+  751 fbbf: 73                     stxd ; write to stack
+  752 fbc0: f8 05                  ldi 5 ; cylinder high register
+  753 fbc2: 73                     stxd ; write to stack
+  754 fbc3: 97                     ghi r7 ; get mid of lba
+  755 fbc4: 73                     stxd ; write to stack
+  756 fbc5: f8 04                  ldi 4 ; cylinder lo register
+  757 fbc7: 73                     stxd ; write to stack
+  758 fbc8: 87                     glo r7 ; get lo of lba
+  759 fbc9: 73                     stxd ; write to stack
+  760 fbca: f8 03                  ldi 3 ; sector start register
+  761 fbcc: 73                     stxd ; write to stack
+  762 fbcd: f8 01                  ldi 1 ; read one sector
+  763 fbcf: 73                     stxd ; write to stack
+  764 fbd0: f8 02                  ldi 2 ; sector count register register
+  765 fbd2: 52                     str r2 ; write to stack
+  766 fbd3: 62                     out 2 ; select sector count register
+  767 fbd4: 63                     out 3 ; write sector count
+  768 fbd5: 62                     out 2 ; select lba lo register
+  769 fbd6: 63                     out 3 ; write low of lba
+  770 fbd7: 62                     out 2 ; select lba mid register
+  771 fbd8: 63                     out 3 ; write mid of lba
+  772 fbd9: 62                     out 2 ; select lba high register
+  773 fbda: 63                     out 3 ; write high of lba
+  774 fbdb: 62                     out 2 ; select head/device register
+  775 fbdc: 63                     out 3 ; write device
+  776 fbdd: 62                     out 2 ; select command register
+  777 fbde: 63                     out 3 ; write the write command
+  778 fbdf: 22                     dec r2 ; point back to free register
+  779 fbe0: 6b          drqloop: inp 3 ; read status register
+  780 fbe1: fa 08                  ani 8 ; mask for DRQ bit
+  781 fbe3: 32 e0                  bz drqloop ; loop until found
+  782 fbe5: 30 a2                  br beforerdy ; return, readying waitrdy again
+  783 fbe7:             ; the branch to beforerdy, allows us to use waitrdy again
+  784 fbe7:             
+  785 fbe7:                     org 0fc00h
+  786 fc00:             
+  787 fc00:             timalc:
+  788 fc00:             
+  789 fc00: d5                     sep sret
+  790 fc01:             
+  791 fc01:             type:
+  792 fc01: c0 f2 03                    lbr 0f203h
+  793 fc04:             read:
+  794 fc04: c0 f2 00                    lbr 0f200h
+  795 fc07:             
+  796 fc07: f8 fa       initcall: ldi high ret
+  797 fc09: 22                     dec r2
+  798 fc0a: 22                     dec r2
+  799 fc0b: b5                     phi r5
+  800 fc0c: f8 83                  ldi low ret
+  801 fc0e: a5                     plo r5
+  802 fc0f: f8 fa                  ldi high call
+  803 fc11: b4                     phi r4
+  804 fc12: f8 71                  ldi low call
+  805 fc14: a4                     plo r4
+  806 fc15: d5                     sep r5
+  807 fc16:             
+  808 fc16:                      org 0fd00h
+  809 fd00:             ; **** Strcmp compares the strings pointing to by R(D) and R(F)
+  810 fd00:             ; **** Returns:
+  811 fd00:             ; **** R(F) = R(D) 0
+  812 fd00:             ; **** R(F) < R(D) -1 (255)
+  813 fd00:             ; **** R(F) > R(D) 1
+  814 fd00: 4d          strcmp: lda rd ; get next byte in string
+  815 fd01: fa ff                ani 0ffh ; check for zero
+  816 fd03: 32 13                bz strcmpe ; found end of first string
+  817 fd05: 73                   stxd ; store into memory
+  818 fd06: 60                   irx
+  819 fd07: 4f                   lda rf ; get byte from first string
+  820 fd08: f7                   sm ; subtract 2nd byte from it
+  821 fd09: 32 00                bz strcmp ; so far a match, keep looking
+  822 fd0b: 3b 10                bnf strcmp1 ; jump if first string is smaller
+  823 fd0d: f8 01                ldi 1 ; indicate first string is larger
+  824 fd0f: c8                   lskp ; and return to caller
+  825 fd10: f8 ff       strcmp1: ldi 255 ; return -1, first string is smaller
+  826 fd12: d5                   sep sret ; return to calelr
+  827 fd13: 4f          strcmpe: lda rf ; get byte from second string
+  828 fd14: 32 19                bz strcmpm ; jump if also zero
+  829 fd16: f8 01                ldi 1 ; first string is smaller (returns -1)
+  830 fd18: d5                   sep sret ; return to caller
+  831 fd19: f8 00       strcmpm: ldi 0 ; strings are a match
+  832 fd1b: d5                   sep sret ; return to caller
+  833 fd1c:             
+  834 fd1c:             ; **** ltrim trims leading white space from string pointed to by R[F]
+  835 fd1c:             ; **** Returns:
+  836 fd1c:             ; **** R(F) pointing to non-whitespace portion of string
+  837 fd1c: 0f          ltrim: ldn rf ; get next byte from string
+  838 fd1d: c2 ff 6c             lbz return ; return if at end of string
+  839 fd20: ff 21                smi ' '+1 ; looking for anthing <= space
+  840 fd22: c3 ff 6c             lbdf return ; found first non white-space
+  841 fd25: 1f                   inc rf ; point to next character
+  842 fd26: 30 1c                br ltrim ; keep looking
+  843 fd28:             
+  844 fd28:             ; **** strcpy copies string pointed to by R[F] to R[D]
+  845 fd28: 4f          strcpy: lda rf ; get byte from source string
+  846 fd29: 5d                   str rd ; store into destination
+  847 fd2a: c2 ff 6c             lbz return ; return if copied terminator
+  848 fd2d: 1d                   inc rd ; increment destination pointer
+  849 fd2e: 30 28                br strcpy ; continue looping
+  850 fd30:             
+  851 fd30:             ; **** memcpy copies R[C] bytes from R[F] to R[D]
+  852 fd30: 8c          memcpy: glo rc ; get low count byte
+  853 fd31: 3a 37                bnz memcpy1 ; jump if not zero
+  854 fd33: 9c                   ghi rc ; get high count byte
+  855 fd34: c2 ff 6c             lbz return ; return if zero
+  856 fd37: 4f          memcpy1: lda rf ; get byte from source
+  857 fd38: 5d                   str rd ; store into destination
+  858 fd39: 1d                   inc rd ; point to next destination position
+  859 fd3a: 2c                   dec rc ; decrement count
+  860 fd3b: 30 30                br memcpy ; and continue copy
+  861 fd3d:             
+  862 fd3d:             ; *** RC:RB = RF * RD (RB is low word)
+  863 fd3d:             ; *** R(X) must point to suitable stack
+  864 fd3d: f8 00       mul16: ldi 0 ; zero out total
+  865 fd3f: bb                     phi rb
+  866 fd40: ab                     plo rb
+  867 fd41: bc                     phi rc
+  868 fd42: ac                     plo rc
+  869 fd43: e2                     sex r2 ; make sure X points to stack
+  870 fd44: 8d          mulloop: glo rd ; get low of multiplier
+  871 fd45: 3a 4b                  bnz mulcont ; continue multiplying if nonzero
+  872 fd47: 9d                     ghi rd ; check hi byte as well
+  873 fd48: 3a 4b                  bnz mulcont
+  874 fd4a: d5                     sep sret ; return to caller
+  875 fd4b: 9d          mulcont: ghi rd ; shift multiplier
+  876 fd4c: f6                     shr
+  877 fd4d: bd                     phi rd
+  878 fd4e: 8d                     glo rd
+  879 fd4f: 76                     shrc
+  880 fd50: ad                     plo rd
+  881 fd51: 3b 65                  bnf mulcont2 ; loop if no addition needed
+  882 fd53: 8f                     glo rf ; add F to C:B
+  883 fd54: 52                     str r2
+  884 fd55: 8b                     glo rb
+  885 fd56: f4                     add
+  886 fd57: ab                     plo rb
+  887 fd58: 9f                     ghi rf
+  888 fd59: 52                     str r2
+  889 fd5a: 9b                     ghi rb
+  890 fd5b: 74                     adc
+  891 fd5c: bb                     phi rb
+  892 fd5d: 8c                     glo rc ; carry into high word
+  893 fd5e: 7c 00                  adci 0
+  894 fd60: ac                     plo rc
+  895 fd61: 9c                     ghi rc
+  896 fd62: 7c 00                  adci 0
+  897 fd64: bc                     phi rc
+  898 fd65: 8f          mulcont2: glo rf ; shift first number
+  899 fd66: fe                     shl
+  900 fd67: af                     plo rf
+  901 fd68: 9f                     ghi rf
+  902 fd69: 7e                     shlc
+  903 fd6a: bf                     phi rf
+  904 fd6b: 30 44                  br mulloop ; loop until done
+  905 fd6d:             
+  906 fd6d:             ; *** RB = RF/RD
+  907 fd6d:             ; *** RF = Remainder
+  908 fd6d:             ; *** uses R8 and R9
+  909 fd6d: f8 00       div16: ldi 0 ; clear answer
+  910 fd6f: bb                     phi rb
+  911 fd70: ab                     plo rb
+  912 fd71: b8                     phi r8 ; set additive
+  913 fd72: a8                     plo r8
+  914 fd73: 18                     inc r8
+  915 fd74: 8d                     glo rd ; check for divide by 0
+  916 fd75: 3a 7f                  bnz d16lp1
+  917 fd77: 9d                     ghi rd
+  918 fd78: 3a 7f                  bnz d16lp1
+  919 fd7a: f8 ff                  ldi 0ffh ; return 0ffffh as div/0 error
+  920 fd7c: bb                     phi rb
+  921 fd7d: ab                     plo rb
+  922 fd7e: d5                     sep sret
+  923 fd7f: 9d          d16lp1: ghi rd ; get high byte from r7
+  924 fd80: fa 80                  ani 128 ; check high bit
+  925 fd82: 3a 92                  bnz divst ; jump if set
+  926 fd84: 8d                     glo rd ; lo byte of divisor
+  927 fd85: fe                     shl ; multiply by 2
+  928 fd86: ad                     plo rd ; and put back
+  929 fd87: 9d                     ghi rd ; get high byte of divisor
+  930 fd88: 7e                     shlc ; continue multiply by 2
+  931 fd89: bd                     phi rd ; and put back
+  932 fd8a: 88                     glo r8 ; multiply additive by 2
+  933 fd8b: fe                     shl
+  934 fd8c: a8                     plo r8
+  935 fd8d: 98                     ghi r8
+  936 fd8e: 7e                     shlc
+  937 fd8f: b8                     phi r8
+  938 fd90: 30 7f                  br d16lp1 ; loop until high bit set in divisor
+  939 fd92: 88          divst: glo r8 ; get low of divisor
+  940 fd93: 3a 99                  bnz divgo ; jump if still nonzero
+  941 fd95: 98                     ghi r8 ; check hi byte too
+  942 fd96: c2 ff 6c               lbz return ; jump if done
+  943 fd99: 9f          divgo: ghi rf ; copy dividend
+  944 fd9a: b9                     phi r9
+  945 fd9b: 8f                     glo rf
+  946 fd9c: a9                     plo r9
+  947 fd9d: 8d                     glo rd ; get lo of divisor
+  948 fd9e: 73                     stxd ; place into memory
+  949 fd9f: 60                     irx ; point to memory
+  950 fda0: 8f                     glo rf ; get low byte of dividend
+  951 fda1: f7                     sm ; subtract
+  952 fda2: af                     plo rf ; put back into r6
+  953 fda3: 9d                     ghi rd ; get hi of divisor
+  954 fda4: 73                     stxd ; place into memory
+  955 fda5: 60                     irx ; point to byte
+  956 fda6: 9f                     ghi rf ; get hi of dividend
+  957 fda7: 77                     smb ; subtract
+  958 fda8: bf                     phi rf ; and put back
+  959 fda9: 33 b1                  bdf divyes ; branch if no borrow happened
+  960 fdab: 99                     ghi r9 ; recover copy
+  961 fdac: bf                     phi rf ; put back into dividend
+  962 fdad: 89                     glo r9
+  963 fdae: af                     plo rf
+  964 fdaf: 30 bd                  br divno ; jump to next iteration
+  965 fdb1: 88          divyes: glo r8 ; get lo of additive
+  966 fdb2: 73                     stxd ; place in memory
+  967 fdb3: 60                     irx ; point to byte
+  968 fdb4: 8b                     glo rb ; get lo of answer
+  969 fdb5: f4                     add ; and add
+  970 fdb6: ab                     plo rb ; put back
+  971 fdb7: 98                     ghi r8 ; get hi of additive
+  972 fdb8: 73                     stxd ; place into memory
+  973 fdb9: 60                     irx ; point to byte
+  974 fdba: 9b                     ghi rb ; get hi byte of answer
+  975 fdbb: 74                     adc ; and continue addition
+  976 fdbc: bb                     phi rb ; put back
+  977 fdbd: 9d          divno: ghi rd ; get hi of divisor
+  978 fdbe: f6                     shr ; divide by 2
+  979 fdbf: bd                     phi rd ; put back
+  980 fdc0: 8d                     glo rd ; get lo of divisor
+  981 fdc1: 76                     shrc ; continue divide by 2
+  982 fdc2: ad                     plo rd
+  983 fdc3: 98                     ghi r8 ; get hi of divisor
+  984 fdc4: f6                     shr ; divide by 2
+  985 fdc5: b8                     phi r8 ; put back
+  986 fdc6: 88                     glo r8 ; get lo of divisor
+  987 fdc7: 76                     shrc ; continue divide by 2
+  988 fdc8: a8                     plo r8
+  989 fdc9: 30 92                  br divst ; next iteration
+  990 fdcb:             
+  991 fdcb:             ; *****************************************************
+  992 fdcb:             ; *** Serial output with 0C translation to <ESC>[2J ***
+  993 fdcb:             ; *****************************************************
+  994 fdcb: ae          tty: plo re ; save character
+  995 fdcc: ff 0c                  smi 0ch ; compare against formfeed
+  996 fdce: 32 d4                  bz ttyff ; jump if formfeed
+  997 fdd0: 8e                     glo re ; recover byte
+  998 fdd1: c0 fc 01    ttyend: lbr type ; and display character
+  999 fdd4: f8 1b       ttyff: ldi 01bh ; <ESC>
+ 1000 fdd6: d4                     sep scall ; display it
+ 1001 fdd7: fc 01                  dw type
+ 1002 fdd9: f8 5b                  ldi '['
+ 1003 fddb: d4                     sep scall ; display it
+ 1004 fddc: fc 01                  dw type
+ 1005 fdde: f8 32                  ldi '2'
+ 1006 fde0: d4                     sep scall ; display it
+ 1007 fde1: fc 01                  dw type
+ 1008 fde3: f8 4a                  ldi 'J'
+ 1009 fde5: 30 d1                  br ttyend
+ 1010 fde7:             
+ 1011 fde7:                      org 0fe00h
+ 1012 fe00:             ; **** Write sector to disk, R(6) points to data
+ 1013 fe00:             ; **** R(6) must point to an even 256 byte boundary
+ 1014 fe00:             ; **** RC.0 = sector
+ 1015 fe00:             ; **** Returns: D - write status
+ 1016 fe00: f8 00       wrtsec: ldi low data ; get address of scratchpad
+ 1017 fe02: fc 04                adi 4 ; point to end of command
+ 1018 fe04: af                   plo rf ; register to use to write temp data
+ 1019 fe05: f8 00                ldi high data ; get high address of scratchpad
+ 1020 fe07: bf                   phi rf ; write to register
+ 1021 fe08: ef                   sex rf ; point data register to command buffer
+ 1022 fe09: f8 03                ldi 3 ; data register address
+ 1023 fe0b: 73                   stxd ; write to command
+ 1024 fe0c: f8 a4                ldi 0a4h ; command to initiate writing
+ 1025 fe0e: 73                   stxd ; write to command
+ 1026 fe0f: f8 00                ldi 0 ; command register address
+ 1027 fe11: 73                   stxd ; write to command
+ 1028 fe12: 8c                   glo rc ; get sector
+ 1029 fe13: 73                   stxd ; write to command
+ 1030 fe14: f8 02                ldi 2 ; sector register address
+ 1031 fe16: 5f                   str rf ; write to command port
+ 1032 fe17: 62                   out 2 ; write sector register to selector
+ 1033 fe18: 63                   out 3 ; send sector
+ 1034 fe19: 62                   out 2 ; write command register to selector
+ 1035 fe1a: 63                   out 3 ; send write command
+ 1036 fe1b: 62                   out 2 ; select data port
+ 1037 fe1c: e6                   sex r6 ; point data register to data
+ 1038 fe1d: 35 1d       wrtlp: b2 $
+ 1039 fe1f: 63                   out 3
+ 1040 fe20: 86                   glo r6
+ 1041 fe21: 3a 1d                bnz wrtlp
+ 1042 fe23:             
+ 1043 fe23:             ;wrtgo: ldi 255 ; set timeout timer
+ 1044 fe23:             ;wrtlp: bn2 wrtrdy ; jump if byte is ready to write
+ 1045 fe23:             ; smi 1 ; subtract 1 from timeout
+ 1046 fe23:             ; bnz wrtlp ; loop back if still more time
+ 1047 fe23:             ; br dskstat ; get disk status
+ 1048 fe23:             ;wrtrdy: out 3 ; write byte to controller
+ 1049 fe23:             ; glo r6 ; get number of bytes
+ 1050 fe23:             ; bnz wrtgo ; jump if more bytes to write
+ 1051 fe23: f8 00       dskstat: ldi 0 ; status port
+ 1052 fe25: 5f                   str rf ; write to scratchpad
+ 1053 fe26: ef                   sex rf ; point data register to scratchpad
+ 1054 fe27: 62                   out 2 ; select status port
+ 1055 fe28: 2f                   dec rf ; point to scratch area
+ 1056 fe29: 6b          statlp: inp 3 ; read status
+ 1057 fe2a: f6                   shr ; shift busy bit into DF
+ 1058 fe2b: 33 29                bdf statlp ; loop until no longer busy
+ 1059 fe2d: fe                   shl ; shift back into position
+ 1060 fe2e: d5                   sep sret ; return status code
+ 1061 fe2f:             
+ 1062 fe2f:             ; **** Read sector from disk, R(6) points to buffer
+ 1063 fe2f:             ; **** R(6) must point to an even 256 byte boundary
+ 1064 fe2f:             ; **** RC.0 = sector
+ 1065 fe2f:             ; **** Returns: D - read status
+ 1066 fe2f: f8 00       rdsec: ldi low data ; get address of scratchpad
+ 1067 fe31: fc 04                adi 4 ; point to end of command
+ 1068 fe33: af                   plo rf ; register to use to write temp data
+ 1069 fe34: f8 00                ldi high data ; get high address of scratchpad
+ 1070 fe36: bf                   phi rf ; write to register
+ 1071 fe37: ef                   sex rf ; point data register to command buffer
+ 1072 fe38: f8 03                ldi 3 ; data register address
+ 1073 fe3a: 73                   stxd ; write to command
+ 1074 fe3b: f8 84                ldi 084h ; command to initiate reading
+ 1075 fe3d: 73                   stxd ; write to command
+ 1076 fe3e: f8 00                ldi 0 ; command register address
+ 1077 fe40: 73                   stxd ; write to command
+ 1078 fe41: 8c                   glo rc ; get sector
+ 1079 fe42: 73                   stxd ; write to command
+ 1080 fe43: f8 02                ldi 2 ; sector register address
+ 1081 fe45: 5f                   str rf ; write to command port
+ 1082 fe46: 62                   out 2 ; write sector register to selector
+ 1083 fe47: 63                   out 3 ; send sector
+ 1084 fe48: 62                   out 2 ; write command register to selector
+ 1085 fe49: 63                   out 3 ; send write command
+ 1086 fe4a: 62                   out 2 ; select data port
+ 1087 fe4b: e6                   sex r6 ; point data register to data
+ 1088 fe4c: 35 4c       rdlp: b2 $
+ 1089 fe4e: 6b                   inp 3
+ 1090 fe4f: 60                   irx
+ 1091 fe50: 86                   glo r6
+ 1092 fe51: 3a 4c                bnz rdlp
+ 1093 fe53:             ;rdgo: ldi 255 ; set timeout value
+ 1094 fe53:             ;rdlp: bn2 rdeady ; jump if byte ready to read
+ 1095 fe53:             ; smi 1 ; subtract 1 from timeout
+ 1096 fe53:             ; bnz rdlp ; check again if time left
+ 1097 fe53:             ; br dskstat ; error occured, return status
+ 1098 fe53:             ;rdeady: inp 3 ; read byte from controller
+ 1099 fe53:             ; irx ; increment pointer
+ 1100 fe53:             ; glo r6 ; get pointer
+ 1101 fe53:             ; bnz rdgo ; loop until 256 bytes read
+ 1102 fe53: 30 23                br dskstat ; jump to get status
+ 1103 fe55:             
+ 1104 fe55:             ; **** Select Drive
+ 1105 fe55:             ; **** RC.0 = drive (1=drive 1,2=drive 2,4=drive 3,8=drive 4)
+ 1106 fe55: f8 00       drvsel: ldi low data ; get address of scratchpad
+ 1107 fe57: fc 04                adi 4 ; point to end of command
+ 1108 fe59: af                   plo rf ; register to use to write temp data
+ 1109 fe5a: f8 00                ldi high data ; get high address of scratchpad
+ 1110 fe5c: bf                   phi rf ; write to register
+ 1111 fe5d: ef                   sex rf ; point data register to command buffer
+ 1112 fe5e: 8c                   glo rc ; get requested drive
+ 1113 fe5f: 73                   stxd ; store into command buffer
+ 1114 fe60: f8 04                ldi 4 ; drive select register
+ 1115 fe62: 5f                   str rf ; store into command buffer
+ 1116 fe63: 62                   out 2 ; write drive select to selector
+ 1117 fe64: 63                   out 3 ; write drive select register
+ 1118 fe65: d5                   sep sret ; return to caller
+ 1119 fe66:             
+ 1120 fe66:             ; **** Restore to track 0
+ 1121 fe66: f8 00       trk0: ldi low data ; get address of scratchpad
+ 1122 fe68: fc 04                adi 4 ; point to end of command
+ 1123 fe6a: af                   plo rf ; register to use to write temp data
+ 1124 fe6b: f8 00                ldi high data ; get high address of scratchpad
+ 1125 fe6d: bf                   phi rf ; write to register
+ 1126 fe6e: ef                   sex rf ; point data register to command buffer
+ 1127 fe6f: f8 09                ldi 09 ; command to do a disk restore
+ 1128 fe71: 73                   stxd ; write to command buffer
+ 1129 fe72: f8 00                ldi 0 ; command port
+ 1130 fe74: 5f                   str rf ; write to command port
+ 1131 fe75: 62                   out 2 ; write command register to selector
+ 1132 fe76: 63                   out 3 ; issue restore command
+ 1133 fe77: 30 23                br dskstat ; branch to get diskstat
+ 1134 fe79:             
+ 1135 fe79:             ; **** Seek to track
+ 1136 fe79:             ; **** RC.0 = track
+ 1137 fe79:             ; **** Returns: D - read status
+ 1138 fe79: f8 00       seek: ldi low data ; get address of scratchpad
+ 1139 fe7b: fc 04                adi 4 ; point to end of command
+ 1140 fe7d: af                   plo rf ; register to use to write temp data
+ 1141 fe7e: f8 00                ldi high data ; get high address of scratchpad
+ 1142 fe80: bf                   phi rf ; write to register
+ 1143 fe81: ef                   sex rf ; point data register to command buffer
+ 1144 fe82: f8 19                ldi 19h ; command to do a disk seek
+ 1145 fe84: 73                   stxd ; write to command buffer
+ 1146 fe85: f8 00                ldi 0 ; command port
+ 1147 fe87: 73                   stxd ; write to command buffer
+ 1148 fe88: 8c                   glo rc ; get passed track
+ 1149 fe89: 73                   stxd ; write to command buffer
+ 1150 fe8a: f8 03                ldi 3 ; data register selector
+ 1151 fe8c: 5f                   str rf ; write to command port
+ 1152 fe8d: 62                   out 2 ; write data port to selector
+ 1153 fe8e: 63                   out 3 ; write track to data register
+ 1154 fe8f: 62                   out 2 ; write command port to selector
+ 1155 fe90: 63                   out 3 ; output the command
+ 1156 fe91: 30 23                br dskstat ; branch to get command status
+ 1157 fe93:             
+ 1158 fe93:             ; **** Boot drive 0, track 0, sector 0 ****
+ 1159 fe93: f8 9a       boot: ldi low boot1 ; get address of boot routine
+ 1160 fe95: a5                   plo r5 ; place into r5
+ 1161 fe96: f8 fe                ldi high boot1 ; get high part
+ 1162 fe98: b5                   phi r5 ; and place into register
+ 1163 fe99: d5                   sep r5 ; transfer to new program counter
+ 1164 fe9a: f8 71       boot1: ldi low call ; get address of bios table
+ 1165 fe9c: a3                   plo r3 ; place into r3
+ 1166 fe9d: f8 fa                ldi high call ; high portion
+ 1167 fe9f: b3                   phi r3 ; place into register
+ 1168 fea0: f8 0c                ldi 12 ; function to seek to track 0
+ 1169 fea2: d3                   sep r3 ; perform seek
+ 1170 fea3: f8 01                ldi 01 ; high portion of disk buffer address
+ 1171 fea5: b6                   phi r6 ; place into r6
+ 1172 fea6: a0                   plo r0 ; place into start register as well
+ 1173 fea7: f8 00                ldi 00 ; address of disk buffer
+ 1174 fea9: a6                   plo r6 ; place into r6
+ 1175 feaa: a0                   plo r0 ; place into start register as well
+ 1176 feab: ac                   plo rc ; also place 0 into sector number
+ 1177 feac: f8 0b                ldi 11 ; bios function to read disk sector
+ 1178 feae: d3                   sep r3 ; read the sector
+ 1179 feaf: d0                   sep r0 ; transfer control to read sector
+ 1180 feb0:             
+ 1181 feb0:             ; **** Find last available memory address
+ 1182 feb0:             ; **** Returns: RF - last writable address
+ 1183 feb0: f8 00       freemem: ldi 0 ; start from beginning of memory
+ 1184 feb2: bf                     phi rf ; place into register
+ 1185 feb3: af                     plo rf
+ 1186 feb4: e2                     sex r2 ; be sure x points to stack
+ 1187 feb5: 0f          fmemlp: ldn rf ; get byte
+ 1188 feb6: ae                     plo re ; save a copy
+ 1189 feb7: fb ff                  xri 255 ; flip the bits
+ 1190 feb9: 5f                     str rf ; place into memory
+ 1191 feba: 0f                     ldn rf ; retrieve from memory
+ 1192 febb: 73                     stxd ; place into memory
+ 1193 febc: 60                     irx ; point to previous value
+ 1194 febd: 8e                     glo re
+ 1195 febe: f7                     sm ; and compare
+ 1196 febf: 32 ca                  bz fmemdn ; jump if not different
+ 1197 fec1: 8e                     glo re ; recover byte
+ 1198 fec2: 5f                     str rf ; write back into memory
+ 1199 fec3: 1f                     inc rf ; point to next position
+ 1200 fec4: 8f                     glo rf ; check for possible wrap around
+ 1201 fec5: 3a b5                  bnz fmemlp ; jump if not
+ 1202 fec7: 9f                     ghi rf
+ 1203 fec8: 3a b5                  bnz fmemlp
+ 1204 feca: 2f          fmemdn: dec rf ; point back to last writable memory
+ 1205 fecb: d5                     sep sret ; and return to caller
+ 1206 fecc:             
+ 1207 fecc: f8 fe       bootide: ldi high bootret ; prepare for seetin call
+ 1208 fece: b6                     phi r6
+ 1209 fecf: f8 dc                  ldi low bootret
+ 1210 fed1: a6                     plo r6
+ 1211 fed2: f8 00                  ldi 0 ; setup temp stack
+ 1212 fed4: b2                     phi r2
+ 1213 fed5: f8 f0                  ldi 0f0h
+ 1214 fed7: a2                     plo r2
+ 1215 fed8: e2                     sex r2
+ 1216 fed9: c0 ff 3f               lbr f_initcall
+ 1217 fedc: d4          bootret: sep scall ; reset ide drive
+ 1218 fedd: ff 36                  dw f_iderst
+ 1219 fedf: f8 00                  ldi 0 ; prepare to read sector 0
+ 1220 fee1: a7                     plo r7
+ 1221 fee2: b7                     phi r7
+ 1222 fee3: a8                     plo r8
+ 1223 fee4: af                     plo rf
+ 1224 fee5: f8 e0                  ldi 0e0h
+ 1225 fee7: b8                     phi r8
+ 1226 fee8: f8 01                  ldi 1
+ 1227 feea: bf                     phi rf
+ 1228 feeb: d4                     sep scall
+ 1229 feec: ff 3c                  dw f_ideread
+ 1230 feee: f8 01                  ldi 1
+ 1231 fef0: b0                     phi r0
+ 1232 fef1: f8 00                  ldi 0
+ 1233 fef3: a0                     plo r0
+ 1234 fef4: d0                     sep r0
+ 1235 fef5:             
+ 1236 fef5:                        org 0ff00h
+ 1237 ff00: c0 fe cc    f_boot: lbr bootide
+ 1238 ff03: c0 fd cb    f_type: lbr tty
+ 1239 ff06: c0 fc 04    f_read: lbr read
+ 1240 ff09: c0 ff 6d    f_msg: lbr typemsg
+ 1241 ff0c: c0 ff 6c    f_typex: lbr return
+ 1242 ff0f: c0 ff 76    f_input: lbr input256
+ 1243 ff12: c0 fd 00    f_strcmp: lbr strcmp
+ 1244 ff15: c0 fd 1c    f_ltrim: lbr ltrim
+ 1245 ff18: c0 fd 28    f_strcpy: lbr strcpy
+ 1246 ff1b: c0 fd 30    f_memcpy: lbr memcpy
+ 1247 ff1e: c0 fe 00    f_wrtsec: lbr wrtsec
+ 1248 ff21: c0 fe 2f    f_rdsec: lbr rdsec
+ 1249 ff24: c0 fe 66    f_seek0: lbr trk0
+ 1250 ff27: c0 fe 79    f_seek: lbr seek
+ 1251 ff2a: c0 fe 55    f_drive: lbr drvsel
+ 1252 ff2d: c0 fc 00    f_setbd: lbr timalc
+ 1253 ff30: c0 fd 3d    f_mul16: lbr mul16
+ 1254 ff33: c0 fd 6d    f_div16: lbr div16
+ 1255 ff36: c0 fb 00    f_iderst: lbr resetide
+ 1256 ff39: c0 fb 38    f_idewrt: lbr wrtide
+ 1257 ff3c: c0 fb 73    f_ideread: lbr rdide
+ 1258 ff3f: c0 fc 07    f_initcall: lbr initcall
+ 1259 ff42: c0 fe cc    f_ideboot: lbr bootide
+ 1260 ff45: c0 fa 00    f_hexin: lbr hexin
+ 1261 ff48: c0 fa 3d    f_hexout2: lbr hexout2
+ 1262 ff4b: c0 fa 42    f_hexout4: lbr hexout4
+ 1263 ff4e: c0 fc 01    f_tty: lbr type
+ 1264 ff51: c0 fa da    f_mover: lbr mover
+ 1265 ff54: c0 f9 00    f_minimon: lbr minimon
+ 1266 ff57: c0 fe b0    f_freemem: lbr freemem
+ 1267 ff5a: c0 f8 00    f_isnum: lbr isnum
+ 1268 ff5d: c0 f8 13    f_atoi: lbr atoi
+ 1269 ff60: c0 f8 76    f_uintout: lbr uintout
+ 1270 ff63: c0 f8 78    f_intout: lbr intout
+ 1271 ff66: c0 f9 cf    f_inmsg: lbr typeinmsg
+ 1272 ff69: c0 ff 7c    f_inputl: lbr input
+ 1273 ff6c:             
+ 1274 ff6c: d5          return: sep sret ; return to caller
+ 1275 ff6d:             
+ 1276 ff6d:             ; ***************************************
+ 1277 ff6d:             ; *** Type message pointed to by R[F] ***
+ 1278 ff6d:             ; ***************************************
+ 1279 ff6d: 4f          typemsg: lda rf ; load byte from message
+ 1280 ff6e: c2 ff 6c               lbz return ; return if last byte
+ 1281 ff71: d4                     sep scall ; call type routine
+ 1282 ff72: ff 03                  dw f_type
+ 1283 ff74: 30 6d                  br typemsg ; loop until a zero found
+ 1284 ff76:             
+ 1285 ff76: f8 01       input256: ldi 1 ; allow 256 input bytes
+ 1286 ff78: bc                     phi rc
+ 1287 ff79: f8 00                  ldi 0
+ 1288 ff7b: ac                     plo rc
+ 1289 ff7c: 8a          input: glo ra ; save RA
+ 1290 ff7d: 73                     stxd
+ 1291 ff7e: 9a                     ghi ra
+ 1292 ff7f: 73                     stxd
+ 1293 ff80: f8 00                  ldi 0 ; byte count
+ 1294 ff82: aa                     plo ra ; store into counter
+ 1295 ff83: d4          inplp: sep scall ; call input function
+ 1296 ff84: ff 06                  dw f_read
+ 1297 ff86: ae                     plo re ; save char
+ 1298 ff87: ff 03                  smi 3 ; check for <CTRL><C>
+ 1299 ff89: 32 c7                  bz inpterm ; terminate input
+ 1300 ff8b: ff 05                  smi 5 ; check for <BS>
+ 1301 ff8d: 32 a7                  bz isbs ; jump if so
+ 1302 ff8f: ff 05                  smi 5 ; check for <CR>
+ 1303 ff91: 32 bd                  bz inpdone ; jump if so
+ 1304 ff93: 8c                     glo rc ; check count
+ 1305 ff94: 3a a0                  bnz inpcnt ; jump if can continue
+ 1306 ff96: 9c                     ghi rc ; check high of count
+ 1307 ff97: 3a a0                  bnz inpcnt
+ 1308 ff99: f8 08                  ldi 8 ; performa backspace
+ 1309 ff9b: d4                     sep scall
+ 1310 ff9c: fc 01                  dw type
+ 1311 ff9e: 30 ad                  br bs2 ; remove char from screen
+ 1312 ffa0: 8e          inpcnt: glo re
+ 1313 ffa1: 5f                     str rf ; store into output
+ 1314 ffa2: 1f                     inc rf ; point to next position
+ 1315 ffa3: ff 08                  smi 08 ; look for backspace
+ 1316 ffa5: 3a b9                  bnz nobs ; jump if not a backspace
+ 1317 ffa7: 8a          isbs: glo ra ; get input count
+ 1318 ffa8: 32 83                  bz inplp ; disregard if string is empty
+ 1319 ffaa: 2a                     dec ra ; decrement the count
+ 1320 ffab: 2f                     dec rf ; decrement buffer position
+ 1321 ffac: 1c                     inc rc ; increment allowed characters
+ 1322 ffad: f8 20       bs2: ldi 32 ; display a space
+ 1323 ffaf: d4                     sep scall
+ 1324 ffb0: fc 01                  dw type
+ 1325 ffb2: f8 08                  ldi 8 ; then backspace again
+ 1326 ffb4: d4                     sep scall
+ 1327 ffb5: fc 01                  dw type
+ 1328 ffb7: 30 83                  br inplp ; and loop back for more
+ 1329 ffb9: 1a          nobs: inc ra ; increment input count
+ 1330 ffba: 2c                     dec rc ; decrement character count
+ 1331 ffbb: 30 83                  br inplp ; and then loop back
+ 1332 ffbd: f8 00       inpdone: ldi 0 ; need a zero terminator
+ 1333 ffbf: f6                     shr ; reset DF flag, to show valid input
+ 1334 ffc0: 5f          inpdone2: str rf ; store into buffer
+ 1335 ffc1: 60                     irx ; recover RA
+ 1336 ffc2: 72                     ldxa
+ 1337 ffc3: ba                     phi ra
+ 1338 ffc4: f0                     ldx
+ 1339 ffc5: aa                     plo ra
+ 1340 ffc6: d5                     sep sret ; return to caller
+ 1341 ffc7: f8 01       inpterm: ldi 1 ; signal <CTRL><C> exit
+ 1342 ffc9: f6                     shr
+ 1343 ffca: f8 00                  ldi 0 ; finish
+ 1344 ffcc: 30 c0                  br inpdone2
+ 1345 ffce:             
+ 1346 ffce:             
+ 1347 ffce:             ; *****************************************************
+ 1348 ffce:             ; *** Function to implement a stack based call ***
+ 1349 ffce:             ; *** RX is assumed to be the stack pointer ***
+ 1350 ffce:             ; *** R3 is assumed to be the main PC ***
+ 1351 ffce:             ; *** R6 will hold return address ***
+ 1352 ffce:             ; *** usage is: sep R4 ***
+ 1353 ffce:             ; *** dw call_addr ***
+ 1354 ffce:             ; *****************************************************
+ 1355 ffce:                      org 0ffe0h
+ 1356 ffe0: c0 fa 71             lbr call
+ 1357 ffe3:                      org 0fff1h
+ 1358 fff1: c0 fa 83             lbr ret
+
+f8c5h: ALLOW0           - <   196>    193    193 
+f813h: ATOI             - <    45>   1268 
+f825h: ATOICNT          - <    57>     51     51     53     53 
+f86ah: ATOIDN           - <   116>     73     73     75     75 
+f836h: ATOILP           - <    71>     67     67    115    115 
+fba2h: BEFORERDY        - <   727>    782    782 
+fe93h: BOOT             - <  1159> 
+fe9ah: BOOT1            - <  1164>   1159   1161 
+fecch: BOOTIDE          - <  1207>   1237   1259 
+fedch: BOOTRET          - <  1217>   1207   1209 
+ffadh: BS2              - <  1322>   1311   1311 
+0003h: BUFFER           - <   235>    371    373 
+fa71h: CALL             - <   502>    517    517    802    804   1164   1166 
+         1356 
+f98dh: COPY             - <   339>    276    276 
+f9cch: CRLF             - <   390>    377    379 
+fd7fh: D16LP1           - <   923>    916    916    918    918    938    938 
+0000h: DATA             - <    18>   1016   1019   1066   1069   1106   1109 
+         1121   1124   1138   1141 
+fd6dh: DIV16            - <   909>   1254 
+fd99h: DIVGO            - <   943>    940    940 
+f8aah: DIVLP            - <   174>    188    188 
+fdbdh: DIVNO            - <   977>    964    964 
+fd92h: DIVST            - <   939>    925    925    989    989 
+fdb1h: DIVYES           - <   965>    959    959 
+f9bch: DOCRLF           - <   377>    260    320 
+f9adh: DOMOVE           - <   364>    360    360    362    362 
+f9b3h: DONE             - <   369>    363    363 
+fbe0h: DRQLOOP          - <   779>    781    781 
+fe55h: DRVSEL           - <  1106>   1251 
+fe23h: DSKSTAT          - <  1051>   1102   1102   1133   1133   1156   1156 
+f948h: EXAMINE          - <   288>    278    278 
+f94bh: EXLOOP1          - <   290>    323    323 
+f95ch: EXLOOP2          - <   303>    312    312 
+f8ceh: FINDNXT          - <   202>    195    195 
+fecah: FMEMDN           - <  1204>   1196   1196 
+feb5h: FMEMLP           - <  1187>   1201   1201   1203   1203 
+feb0h: FREEMEM          - <  1183>   1266 
+ff5dh: F_ATOI           - <  1268> 
+ff00h: F_BOOT           - <  1237> 
+ff33h: F_DIV16          - <  1254> 
+ff2ah: F_DRIVE          - <  1251> 
+ff57h: F_FREEMEM        - <  1266> 
+ff45h: F_HEXIN          - <  1260>    266    333    346    354 
+ff48h: F_HEXOUT2        - <  1261>    309 
+ff4bh: F_HEXOUT4        - <  1262>    297 
+ff42h: F_IDEBOOT        - <  1259> 
+ff3ch: F_IDEREAD        - <  1257>   1229 
+ff36h: F_IDERST         - <  1255>   1218 
+ff39h: F_IDEWRT         - <  1256> 
+ff3fh: F_INITCALL       - <  1258>    245   1216 
+ff66h: F_INMSG          - <  1271> 
+ff0fh: F_INPUT          - <  1242>    258 
+ff69h: F_INPUTL         - <  1272> 
+ff63h: F_INTOUT         - <  1270> 
+ff5ah: F_ISNUM          - <  1267> 
+ff15h: F_LTRIM          - <  1244>    344    352 
+ff1bh: F_MEMCPY         - <  1246> 
+ff54h: F_MINIMON        - <  1265> 
+ff51h: F_MOVER          - <  1264> 
+ff09h: F_MSG            - <  1240>    254    318    382 
+ff30h: F_MUL16          - <  1253> 
+ff21h: F_RDSEC          - <  1248> 
+ff06h: F_READ           - <  1239>   1296 
+ff27h: F_SEEK           - <  1250> 
+ff24h: F_SEEK0          - <  1249> 
+ff2dh: F_SETBD          - <  1252>    247 
+ff12h: F_STRCMP         - <  1243> 
+ff18h: F_STRCPY         - <  1245> 
+ff4eh: F_TTY            - <  1263> 
+ff03h: F_TYPE           - <  1238>    398   1282 
+ff0ch: F_TYPEX          - <  1241> 
+ff60h: F_UINTOUT        - <  1269> 
+ff1eh: F_WRTSEC         - <  1247> 
+fa00h: HEXIN            - <   409>   1260 
+fa3dh: HEXOUT2          - <   461>   1261 
+fa42h: HEXOUT4          - <   465>   1262 
+fa6bh: HEXOUTAL         - <   496>    486    486 
+fa4ah: HEXOUTL2         - <   470>    483    483 
+fa62h: HEXOUTL3         - <   489>    498    498 
+fa44h: HEXOUTLP         - <   466>    494    494 
+fb67h: IDERET           - <   675>    725    725 
+fc07h: INITCALL         - <   796>   1258 
+ffa0h: INPCNT           - <  1312>   1305   1305   1307   1307 
+ffbdh: INPDONE          - <  1332>   1303   1303 
+ffc0h: INPDONE2         - <  1334>   1344   1344 
+ff83h: INPLP            - <  1295>   1318   1318   1328   1328   1331   1331 
+ffc7h: INPTERM          - <  1341>   1299   1299 
+ff7ch: INPUT            - <  1289>   1272 
+ff76h: INPUT256         - <  1285>   1242 
+f8e0h: INTDONE          - <   215>    204    204 
+f878h: INTOUT           - <   133>   1270 
+ffa7h: ISBS             - <  1317>   1301   1301 
+f80dh: ISNOTNUM         - <    35>     30     30     32     32 
+f800h: ISNUM            - <    27>     50   1267 
+fa16h: ISNUMERIC        - <   423>    419    419 
+f9b5h: LOADBUF          - <   371>    256    262    295    316 
+fd1ch: LTRIM            - <   837>    842    842   1244 
+f913h: MAINLP           - <   249>    280    280    324    324    327    327 
+          369    369 
+fd30h: MEMCPY           - <   852>    860    860   1246 
+fd37h: MEMCPY1          - <   856>    853    853 
+f900h: MINIMON          - <   236>   1265 
+f9a5h: MOVELP           - <   359>    368    368 
+fadah: MOVER            - <   552>   1264 
+fae8h: MOVERLP          - <   566>    573    573    578    578 
+fd3dh: MUL16            - <   864>   1253 
+fd4bh: MULCONT          - <   875>    871    871    873    873 
+fd65h: MULCONT2         - <   898>    881    881 
+fd44h: MULLOOP          - <   870>    904    904 
+ffb9h: NOBS             - <  1329>   1316   1316 
+f8bbh: NOMORE           - <   189>    183    183 
+f8c7h: NONZERO          - <   197>    191    191 
+f8efh: NUMBERS          - <   231>    162    164 
+f8a7h: NXTITER          - <   172>    210    210    214    214 
+f88eh: POSITIVE         - <   150>    132    132    136    136 
+f9c6h: PROMPT           - <   386>    249    251 
+fb73h: RDIDE            - <   688>   1257 
+fb94h: RDLOOP           - <   716>    720    720    722    722 
+fe4ch: RDLP             - <  1088>   1092   1092 
+fe2fh: RDSEC            - <  1066>   1248 
+fbaah: RDYLOOP          - <   734>    737    737 
+fc04h: READ             - <   793>   1239 
+fb00h: RESETIDE         - <   589>   1255 
+fa83h: RET              - <   520>    532    532    796    800   1358   1358 
+ff6ch: RETURN           - <  1274>    396    838    840    847    855    942 
+         1241   1280 
+f942h: RUN              - <   281> 
+0004h: SCALL            - <    19>     49    246    253    255    257    259 
+          261    265    294    296    308    315    317    319    332    343 
+          345    351    353    381    397   1000   1003   1006   1217   1228 
+         1281   1295   1309   1323   1326 
+fe79h: SEEK             - <  1138>   1250 
+0005h: SRET             - <    20>     39     56    126    229    375    383 
+          431    452    495    633    686    789    826    830    832    874 
+          922   1060   1118   1205   1274   1340 
+f910h: START            - <   246>    236    238 
+fe29h: STATLP           - <  1056>   1058   1058 
+f985h: STOREC           - <   332>    329    329 
+f97bh: STORESP          - <   326>    274    274    331    331    337    337 
+fd00h: STRCMP           - <   814>    821    821   1243 
+fd10h: STRCMP1          - <   825>    822    822 
+fd13h: STRCMPE          - <   827>    816    816 
+fd19h: STRCMPM          - <   831>    828    828 
+fd28h: STRCPY           - <   845>    849    849   1245 
+fc00h: TIMALC           - <   787>   1252 
+fa3ch: TOBINDN          - <   452>    415    415    425    425 
+fa23h: TOBINGD          - <   432>    429    429 
+fa25h: TOBINGLP         - <   433>    443    443 
+fa1ch: TOBINGO          - <   427>    422    422 
+fa04h: TOBINLP          - <   412>    451    451 
+fe66h: TRK0             - <  1121>   1249 
+fdcbh: TTY              - <   994>   1238 
+fdd1h: TTYEND           - <   998>   1009   1009 
+fdd4h: TTYFF            - <   999>    996    996 
+fc01h: TYPE             - <   791>    998   1001   1004   1007   1263   1310 
+         1324   1327 
+f9cfh: TYPEINMSG        - <   395>    399    399   1271 
+ff6dh: TYPEMSG          - <  1279>   1240   1283   1283 
+f876h: UINTOUT          - <   132>   1269 
+fba4h: WAITRDY          - <   729>    589    591    611    628    644    646 
+          696    698 
+fbb4h: WRTCMD           - <   742> 
+fb38h: WRTIDE           - <   636>   1256 
+fb5bh: WRTLOOP          - <   665>    668    668    670    670 
+fe1dh: WRTLP            - <  1038>   1041   1041 
+fe00h: WRTSEC           - <  1016>   1247 
+
+1358 Lines assembled
+0 Errors
+156 Labels
+Object Code:1589 bytes
+

@@ -1,0 +1,33 @@
+2513u.bin 2513 upper case image found on the net
+2513l.bin 2513 lower case image found on the net
+
+	each contains 4 duplicate images of ROM
+	ROM should only be 512bytes (64*8) but is 2048bytes
+
+	Note 2513l character positions are inverted 
+	FF is in location 00
+	FE is in location 01
+	...
+	00 is in location FF
+	Rows are OK
+
+
+
+upper is proper 2513 upper case image
+lower is proper 2513 lower case image
+
+2513_combined = lower + upper concatenated
+
+flip.c used to cleanup 2513l
+
+makerom.c produces left justified (upper 5 bits) ascii character generator rom
+first 0x20 location blank etc
+
+
+2026-10-08 (Claude, for the 6845 Rev B card):
+goodfont = makerom.c's output from 2513_combined, byte for byte. It is the 6845 Rev B character EPROM:
+128 characters in ASCII order (00-1F blank, 20-3F punctuation and digits, 40-5F @A-Z, 60-7F lower case),
+8 rows each, address = character * 8 + row, dots left-justified in bits 7-3 (Rev B's 74166 takes the
+2732's O3-O7; O7 is the leftmost dot). Rev B wires character bit 6 to the 2732's A9 and ties A10/A11 low,
+so burn goodfont at 000h. makerom2.c's output (96 characters, upper case only, rows moved down one) and
+the raw 2513 images do not fit Rev B.

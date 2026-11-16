@@ -1,0 +1,17 @@
+IDE/CF Rev A: the Fusion export against what survives of the 2005 CAM run (checked 2026-10-07)
+
+board   : hardware/ide-cf/eagle/rev-a/fusion-export/ide1-a.brd
+CAM set : hardware/ide-cf/eagle/rev-a/fab/ide1-a.dri (drill info, 2/01/2005 01:39 PM), ide1-a.gpi, ide1-a.plc
+
+No copper layers (.cmp/.sol) or drill file (.drd) survive, here or in ~/Documents/Projects/elf-1, elf-2 or 1802,
+so the hole-by-hole and track-by-track check of tools/verify_fab_vs_brd.py cannot run. What can be compared is the
+drill tally Eagle wrote into the .dri when it made the production drill file:
+
+  drill size   .dri (2005)   board   kind on the board
+  0.0240 inch       115        115   vias
+  0.0320 inch       126        126   pads
+  0.0400 inch       100        100   pads
+  total             341        341
+
+RESULT: MATCH (drill tally by size). Any added or removed via or pad, or a changed pad drill, would show here.
+Positions and copper are not checked.

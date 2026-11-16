@@ -1,0 +1,17 @@
+(kicad_sch
+	(version 20260306)
+	(generator "elf-gen-schematic")
+	(generator_version "1.0")
+	(uuid "e1990e82-685a-580d-82cf-acb114be7fa8")
+	(paper "A4")
+	(title_block (title "System-5 bus backplane (2009): Power") (date "2026-10-26") (rev "2009") (company "System-5")
+		(comment 1 "Sheet 3 of the System-5 bus backplane (2009) schematic")
+		(comment 2 "Drawn from the board netlist by tools/kicad/sch/gen_schematic.py")
+		(comment 3 "Eagle source: hardware/bus/eagle/rev-2009 (from Eagle's 2009 backups)")
+		(comment 4 "The bus: docs/manual/bus.md"))
+	(lib_symbols
+	)
+	(text "POWER" (exclude_from_sim no) (at 15.24 12.7 0) (effects (font (size 2.5 2.5) (bold yes)) (justify left top)) (uuid "dfed94e1-883d-5a3e-8ffc-82922c0207de"))
+	(text "VCC (the drawing's 5V) and GND: slot pins 1 and 30. X1: on the copper pin 2 touches GND, pin 1 nothing (the +5V track stops short of it)." (exclude_from_sim no) (at 15.24 17.78 0) (effects (font (size 1.5 1.5)) (justify left top)) (uuid "80b76b8b-ef7a-5a3b-8fa7-29cd3959278b"))
+	(embedded_fonts no)
+)

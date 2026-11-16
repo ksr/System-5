@@ -1,0 +1,361 @@
+RC/asm v2.2
+by Michael H. Riley
+
+1802 -> Native
+2 Classes read.
+193 Patterns read.
+    1 0000:             
+    2 0000:             
+    3 0000:             
+    4 0000:             
+    5 0000:             
+    6 0000:             minimon: equ 0ff54h
+    7 0000:             crtca: equ 0c800h ; CRTC Address register
+    8 0000:             crtcd: equ crtca+1 ; CRTC Data register
+    9 0000:             cur_h: equ 14 ; Cursor postion high
+   10 0000:             cur_l: equ 15 ; Cursor postion low
+   11 0000:             
+   12 0000:             vmem: equ 0c000h ; Start of video memory
+   13 0000:             vmem_end: equ 0c800h ; End of video memory
+   14 0000:             vmem_ch: equ vmem_end-2
+   15 0000:             vmem_cl: equ vmem_end-1
+   16 0000:             space: equ 020h ; Ascii Space
+   17 0000:             
+   18 0000:             
+   19 0000:             JUMPTBL: equ 0ff00h
+   20 0000:             basic_start: equ 0f700h
+   21 0000:             basic_end: equ 0feffh
+   22 0000:             basic_dest: equ 00100h
+   23 0000:             ;expline23: equ vmem+(80*23)
+   24 0000:             line23: equ vmem+(64*15)
+   25 0000:             basmon: equ 0f500h
+   26 0000:             
+   27 0000:                             org 0f000h
+   28 f000: f8 f0       boot: ldi high boot ;Trigger Boot rom remap
+   29 f002: b0                          phi r0 ;
+   30 f003: f8 c8                       ldi high crtca ; Register E set to CRTC Address register
+   31 f005: be                          phi re ;
+   32 f006: f8 00                       ldi low crtca ;
+   33 f008: ae                          plo re ;
+   34 f009: f8 c8                       ldi high crtcd ; Register F set to CRTC Data register
+   35 f00b: bf                          phi rf ;
+   36 f00c: f8 01                       ldi low crtcd ;
+   37 f00e: af                          plo rf ;
+   38 f00f: f8 f0                       ldi high vtable ; Register D set to vtable (CRTC parameters)
+   39 f011: bd                          phi rd ;
+   40 f012: f8 42                       ldi low vtable ;
+   41 f014: ad                          plo rd ;
+   42 f015: f8 00                       ldi 00 ; Register C set to 0000
+   43 f017: bc                          phi rc ; Register C will be a counter used to point to the CRTC data register
+   44 f018: ac                          plo rc ;
+   45 f019:             ;
+   46 f019:             ; Load Video Paramters into CRTC
+   47 f019:             ;
+   48 f019: 8c          vload: glo rc ; Main loop, get counter register
+   49 f01a: 5e                          str re ; Store into CRTC address register
+   50 f01b: 4d                          lda rd ; Get video paramter
+   51 f01c: 5f                          str rf ; Store into CRTC data register
+   52 f01d: 1c                          inc rc ; Increment counter
+   53 f01e: 8c                          glo rc ; Has counter reached 010h
+   54 f01f: fb 10                       xri 010h ;
+   55 f021: 3a 19                       bnz vload ; If not load next CRTC Video paramter
+   56 f023:             ;
+   57 f023:             ; Clear Video memory (with space charachter)
+   58 f023:             ;
+   59 f023:             
+   60 f023: f8 c0                       ldi high vmem ; Register F set to start of Video memory
+   61 f025: bf                          phi rf ;
+   62 f026: f8 00                       ldi low vmem ;
+   63 f028: af                          plo rf ;
+   64 f029: f8 20       clear: ldi space ; Load D space character
+   65 f02b: 5f                          str rf ; Sstore in Video memory
+   66 f02c: 1f                          inc rf ; Increment Register F to next video memory location
+   67 f02d: 9f                          ghi rf ; Check if past end of video memory
+   68 f02e: fb c8                       xri high vmem_end ; Logical XOR D with value
+   69 f030: 3a 29                       bnz clear ; Short branch on D!=0
+   70 f032:             ;
+   71 f032:             ; Store cursor position in memory
+   72 f032:             ;
+   73 f032: f8 c7                       ldi high vmem_ch
+   74 f034: bf                          phi rf
+   75 f035: f8 fe                       ldi low vmem_ch
+   76 f037: af                          plo rf
+   77 f038: f8 c3                       ldi 0c3h ;;;
+   78 f03a: 5f                          str rf
+   79 f03b: 1f                          inc rf
+   80 f03c: f8 c0                       ldi 0c0h ;;;
+   81 f03e: 5f                          str rf
+   82 f03f:             ;
+   83 f03f:             ; Initialization complete jump to real start
+   84 f03f:             ;
+   85 f03f: c0 f2 09                    lbr cold_entry ; Long branch
+   86 f042:             ;
+   87 f042:             ; Video Paramters
+   88 f042:             ;
+   89 f042:             ;vtable: db 06dh,050h,055h,028h,01ch,01h,018h,01ah,00h,08h,060h,01fh,00h,00h,07h,30h
+   90 f042:             
+   91 f042: 50          vtable: db 80 ; R0 total number of horiz chars
+   92 f043: 40                           db 64 ; R1 number of horiz chars displayed
+   93 f044: 41                           db 65 ; R2 Horiz sync position (chars)
+   94 f045: 1a                           db 1ah ; R3 VSYNC/HSYNC Widths
+   95 f046: 18                           db 24 ; R4 Vert Total (chars)
+   96 f047: 02                           db 02 ; R5 Vert total Adjust (scan lines)
+   97 f048: 10                           db 16 ; R6 Vert displayed (chars)
+   98 f049: 14                           db 20 ; R7 Vert Sync position (chars)
+   99 f04a: 00                           db 000 ; R8 mode contro;
+  100 f04b: 08                           db 008 ; R9 scan lines/char
+  101 f04c: 40                           db 040h ; R10 cursor start (scan line/char) + blink rate
+  102 f04d: 08                           db 008h ; R11 cursor end (scan line/char)
+  103 f04e: 00                           db 000h ; R12 display addr start high
+  104 f04f: 00                           db 000h ; R13 display addr start low
+  105 f050: 03                           db 003h ; R14 Cursor position high
+  106 f051: c0                           db 0c0h ; R15 Cursor positon low
+  107 f052:             
+  108 f052:             ;
+  109 f052:             ; Input/Output routines
+  110 f052:             ;
+  111 f052:             ; output a character
+  112 f052:             ; Character to output in D
+  113 f052:             ;
+  114 f052: fa 7f       outchar: ani 07fh ; Strip off high bit
+  115 f054: ae                          plo re ; Store Character to output in Register e.0
+  116 f055: fb 7f                       xri 07fh ; Check if character is is 07Fh (??? Why)
+  117 f057: 32 f3                       bz outnochar ; If yes done
+  118 f059:             ;
+  119 f059:             ; conver to lower
+  120 f059:             ;
+  121 f059: 8e                          glo re
+  122 f05a: fa 40                       ani 040h
+  123 f05c: 32 62                       bz cont1 ; less then 0x40
+  124 f05e: 8e                          glo re
+  125 f05f: fa 5f                       ani 05fh
+  126 f061: ae                          plo re
+  127 f062:             ;save registers
+  128 f062: e2          cont1: sex 2
+  129 f063: 8f                          glo rf
+  130 f064: 73                          stxd
+  131 f065: 9f                          ghi rf
+  132 f066: 73                          stxd
+  133 f067: 8e                          glo re
+  134 f068: 73                          stxd
+  135 f069: 9e                          ghi re
+  136 f06a: 73                          stxd
+  137 f06b: 8c                          glo rc
+  138 f06c: 73                          stxd
+  139 f06d: 9c                          ghi rc
+  140 f06e: 73                          stxd
+  141 f06f:             ;
+  142 f06f:             ; Get character position in RC
+  143 f06f:             ;
+  144 f06f: f8 c7                       ldi high vmem_ch ; Register F points to CRTC Address register
+  145 f071: bf                          phi rf ;
+  146 f072: f8 fe                       ldi low vmem_ch ;
+  147 f074: af                          plo rf ;
+  148 f075: 0f                          ldn rf ; Get cursor position high
+  149 f076: bc                          phi rc ; Store in RC.1
+  150 f077: 1f                          inc rf
+  151 f078: 0f                          ldn rf ; Get cursor position low
+  152 f079: ac                          plo rc ; Store in RC.0
+  153 f07a:             
+  154 f07a:             
+  155 f07a: 8e                          glo re ; Check for a control Character below 020h
+  156 f07b: fa e0                       ani 0e0h ;
+  157 f07d: 3a c3                       bnz normal ; Normal character
+  158 f07f: 8e                          glo re ; Check for carriage return 0dh
+  159 f080: fb 0d                       xri 0dh ;
+  160 f082: 32 90                       bz cr ; Process carriage return
+  161 f084: 8e                          glo re ; Check for line feed 0ah
+  162 f085: fb 0a                       xri 0ah ;
+  163 f087: 32 98                       bz lf ; Process line feed
+  164 f089: 8e                          glo re ; Check for backspace
+  165 f08a: fb 08                       xri 08h ;
+  166 f08c: 32 bd                       bz bs ; process backspace
+  167 f08e: 30 e6                       br outdn
+  168 f090:             ;
+  169 f090:             ; Process a carriage return
+  170 f090:             ;
+  171 f090: f8 c3       cr: ldi high line23 ; Set Register C to start of line 23
+  172 f092: bc                          phi rc ;
+  173 f093: f8 c0                       ldi low line23 ;
+  174 f095: ac                          plo rc ;
+  175 f096: 30 c6                       br update ; Update cursor position
+  176 f098:             ;
+  177 f098:             ; Process a line feed >>>>>>redo registers
+  178 f098:             ;
+  179 f098: f8 c0       lf: ldi high vmem ; Set Register E to start of Video memory
+  180 f09a: be                          phi re ;
+  181 f09b: f8 00                       ldi low vmem ;
+  182 f09d: ae                          plo re ;
+  183 f09e: f8 c0                       ldi high vmem+64 ; set Register F to 2nd line of Video memory
+  184 f0a0: bf                          phi rf ;
+  185 f0a1: f8 40                       ldi low vmem+64 ;
+  186 f0a3: af                          plo rf ;
+  187 f0a4:             ; Scrool loop, copy all lines up one
+  188 f0a4: 4f          sloop: lda rf ;
+  189 f0a5: 5e                          str re ;
+  190 f0a6: 1e                          inc re ;
+  191 f0a7: 9f                          ghi rf ;
+  192 f0a8: fb c8                       xri high vmem_end ; Is Register E past end of video memory
+  193 f0aa: 3a a4                       bnz sloop ; No, continue scrool loop
+  194 f0ac:             ; Clear last line, Register D now point to first character position of last line
+  195 f0ac: f8 c3                       ldi high line23
+  196 f0ae: be                          phi re
+  197 f0af: f8 c0                       ldi low line23
+  198 f0b1: ae                          plo re
+  199 f0b2: f8 20       erl: ldi space ; Space Character
+  200 f0b4: 5e                          str re ;
+  201 f0b5: 1e                          inc re ;
+  202 f0b6: 9e                          ghi re ;
+  203 f0b7: fb c8                       xri high vmem_end ; Is register D past end of video memory
+  204 f0b9: 3a b2                       bnz erl ; Continue erasing line
+  205 f0bb:             ; Line feed done, return (Why not update cursor position)
+  206 f0bb: 30 c6                       br update
+  207 f0bd:             ;
+  208 f0bd:             ; Process Back Space
+  209 f0bd:             ;
+  210 f0bd: 2c          bs: dec rc ; Register C is character pointer
+  211 f0be: f8 20                       ldi space ; Clear postion with a space character
+  212 f0c0: 5c                          str rc ;
+  213 f0c1: 30 c6                       br update ; Update Cursor postion
+  214 f0c3:             ;
+  215 f0c3:             ; Process Normal Character
+  216 f0c3:             ;
+  217 f0c3: 8e          normal: glo re ; Register F.1 contains character
+  218 f0c4: 5c                          str rc ; Store at register C, Character pointer
+  219 f0c5: 1c                          inc rc ;
+  220 f0c6:             ;
+  221 f0c6:             ; Update Cursor position
+  222 f0c6:             ;
+  223 f0c6:             update:
+  224 f0c6: f8 c8                       ldi high crtca
+  225 f0c8: bf                          phi rf
+  226 f0c9: f8 00                       ldi low crtca
+  227 f0cb: af                          plo rf
+  228 f0cc: f8 0e                       ldi cur_h ; CRTC High cursor register
+  229 f0ce: 5f                          str rf ; set CRTC Address register
+  230 f0cf: 9c                          ghi rc ; Get High portion of cursor postion
+  231 f0d0: fa 3f                       ani 03fh ; Strip off address, only want zero based character postion
+  232 f0d2: 1f                          inc rf
+  233 f0d3: 5f                          str rf ; Get cursor position high
+  234 f0d4: 2f                          dec rf
+  235 f0d5: f8 0f                       ldi cur_l ; CRTC low cursor register
+  236 f0d7: 5f                          str rf ; set CRTC Address register
+  237 f0d8: 1f                          inc rf
+  238 f0d9: 8c                          glo rc
+  239 f0da: 5f                          str rf ; get cursor positon low
+  240 f0db:             ;
+  241 f0db:             ; Store cursor position in memory
+  242 f0db:             ;
+  243 f0db: f8 c7                       ldi high vmem_ch
+  244 f0dd: bf                          phi rf
+  245 f0de: f8 fe                       ldi low vmem_ch
+  246 f0e0: af                          plo rf
+  247 f0e1: 9c                          ghi rc
+  248 f0e2: 5f                          str rf
+  249 f0e3: 1f                          inc rf
+  250 f0e4: 8c                          glo rc
+  251 f0e5: 5f                          str rf
+  252 f0e6:             ;
+  253 f0e6:             ;restore registers
+  254 f0e6:             ;
+  255 f0e6:             outdn:
+  256 f0e6: 60                          irx
+  257 f0e7: 72                          ldxa
+  258 f0e8: bc                          phi rc
+  259 f0e9: 72                          ldxa
+  260 f0ea: ac                          plo rc
+  261 f0eb: 72                          ldxa
+  262 f0ec: be                          phi re
+  263 f0ed: 72                          ldxa
+  264 f0ee: ae                          plo re
+  265 f0ef: 72                          ldxa
+  266 f0f0: bf                          phi rf
+  267 f0f1: f0                          ldx
+  268 f0f2: af                          plo rf
+  269 f0f3:             ;
+  270 f0f3: d5          outnochar: sep r5 ; Return
+  271 f0f4:             ;
+  272 f0f4:             ;
+  273 f0f4:             ;
+  274 f0f4:                             org 0f100h
+  275 f100: 3e 00       inchar: bn3 inchar ; Wait for an input character
+  276 f102: e2                          sex 2
+  277 f103: 69                          inp 1 ; Read character
+  278 f104: 22                          dec r2 ; Decrement (R2) Save inputed character across call
+  279 f105: d4                          sep r4 ; Output the character
+  280 f106: f2 03                       dw out ;
+  281 f108: 12                          inc r2 ; Increment (R2) restore inputed character
+  282 f109: 02                          ldn r2 ; Get the input Character
+  283 f10a: d5                          sep r5 ; Return
+  284 f10b:             ;
+  285 f10b:             ; Check for a break character
+  286 f10b:             ;
+  287 f10b: 36 12       brk: b3 brkchk ; Character is available
+  288 f10d: f8 00       bno: ldi 00 ; Clear DF
+  289 f10f: fe                          shl ;
+  290 f110: 30 1b                       br brkdone ; Return
+  291 f112:             ;
+  292 f112:             ;
+  293 f112:             ;
+  294 f112:             brkchk:
+  295 f112: e2                          sex 2
+  296 f113: 69                          inp 1 ; Input to (R(X)) and D, N=001
+  297 f114: fb 1b                       xri 01bh ; Check for ESC
+  298 f116: 3a 0d                       bnz bno ; Not a break character
+  299 f118: f8 ff                       ldi 0ffh ; Set DF to 1
+  300 f11a: fe                          shl ; Shift left D
+  301 f11b: d5          brkdone: sep r5 ; Return
+  302 f11c:             
+  303 f11c:                             org 0f200h
+  304 f200: c0 f1 00    in: lbr inchar
+  305 f203: c0 f0 52    out: lbr outchar
+  306 f206: c0 f1 0b    break: lbr brk
+  307 f209: c0 ff 54    cold_entry: lbr minimon
+
+0100h: BASIC_DEST       - <    22> 
+feffh: BASIC_END        - <    21> 
+f700h: BASIC_START      - <    20> 
+f500h: BASMON           - <    25> 
+f10dh: BNO              - <   288>    298    298 
+f000h: BOOT             - <    28>     28 
+f206h: BREAK            - <   306> 
+f10bh: BRK              - <   287>    306 
+f112h: BRKCHK           - <   294>    287 
+f11bh: BRKDONE          - <   301>    290    290 
+f0bdh: BS               - <   210>    166    166 
+f029h: CLEAR            - <    64>     69     69 
+f209h: COLD_ENTRY       - <   307>     85 
+f062h: CONT1            - <   128>    123    123 
+f090h: CR               - <   171>    160    160 
+c800h: CRTCA            - <     7>      8     30     32    224    226 
+c801h: CRTCD            - <     8>     34     36 
+000eh: CUR_H            - <     9>    228 
+000fh: CUR_L            - <    10>    235 
+f0b2h: ERL              - <   199>    204    204 
+f200h: IN               - <   304> 
+f100h: INCHAR           - <   275>    275    304 
+ff00h: JUMPTBL          - <    19> 
+f098h: LF               - <   179>    163    163 
+c3c0h: LINE23           - <    24>    171    173    195    197 
+ff54h: MINIMON          - <     6>    307    307 
+f0c3h: NORMAL           - <   217>    157    157 
+f203h: OUT              - <   305>    280 
+f052h: OUTCHAR          - <   114>    305 
+f0e6h: OUTDN            - <   255>    167    167 
+f0f3h: OUTNOCHAR        - <   270>    117    117 
+f0a4h: SLOOP            - <   188>    193    193 
+0020h: SPACE            - <    16>     64    199    211 
+f0c6h: UPDATE           - <   223>    175    175    206    206    213    213 
+f019h: VLOAD            - <    48>     55     55 
+c000h: VMEM             - <    12>     24     60     62    179    181    183 
+          185 
+c7feh: VMEM_CH          - <    14>     73     75    144    146    243    245 
+c7ffh: VMEM_CL          - <    15> 
+c800h: VMEM_END         - <    13>     14     15     68    192    203 
+f042h: VTABLE           - <    91>     38     40 
+
+307 Lines assembled
+0 Errors
+40 Labels
+Object Code:284 bytes
+

@@ -1,0 +1,50 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-04T20:56:21",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae",
+            "violations": []
+        },
+        {
+            "path": "/Slots/",
+            "uuid_path": "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/a67adab0-200c-5206-9c7e-2e1b8e123341",
+            "violations": []
+        },
+        {
+            "path": "/Pull-ups/",
+            "uuid_path": "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/5346e92b-7f93-51c6-b11f-953e467e2177",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/5d6590f1-d508-5f10-b353-2e08c8c8a0ae/0b9b2db1-f323-53e4-a750-1cb0ec3b16a1",
+            "violations": []
+        }
+    ],
+    "source": "s5bus-d-schematic.kicad_sch"
+}

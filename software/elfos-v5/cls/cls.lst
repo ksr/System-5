@@ -1,0 +1,48 @@
+    1 0000:              ; cls for Elf/OS v5 on System-5: clears the 6845 card's screen.
+    2 0000:              ; Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-14
+    3 0000:              ;
+    4 0000:              ; Mike Riley's cls types ESC [ H ESC [ 2 J, the codes that clear an ANSI terminal. HBIOS's screen is not one: it
+    5 0000:              ; showed "[H[2J" and cleared nothing. This program writes spaces over the screen itself.
+    6 0000:              ;
+    7 0000:              ; HBIOS (1.0.4 and 1.0.5) types on the bottom line of a 64 x 16 screen and scrolls the rest up, so there is no
+    8 0000:              ; "home". The cursor is left where it is, at the start of the bottom line, and the next text appears there.
+    9 0000:              ; The screen is the first 1024 bytes of the 6845 card's video RAM, 7000-73FF. HBIOS keeps its cursor position in
+   10 0000:              ; the last two bytes of that RAM (77FE, 77FF); they are not touched.
+   11 0000:              ;
+   12 0000:              ; Build: python3 software/elfos-v5/build.py  (tools/asm1802.py; it writes cls, the Elf/OS program, and cls.lst)
+   13 0000:              
+   14 7000:             screen:     equ     07000h          ; the 6845 card's video RAM: 16 lines of 64 characters
+   15 7400:             scrend:     equ     07400h          ; one past the last character on the screen
+   16 0000:              
+   17 2000:                          org     2000h
+   18 2000: 30 20                    br      start
+   19 2002:              ; What `ver /bin/cls` shows, laid out as in Mike Riley's programs: the month (with C0h added, as his have it), the
+   20 2002:              ; day, the year, the hour, minute and second, a build number, and a text.
+   21 2002: cb 0e                    db      0c0h + 11, 14
+   22 2004: 07 ea                    dw      2026
+   23 2006: 0c 00 00                 db      12, 0, 0
+   24 2009: 00 01                    dw      1
+   25 200b: 53 79 73 74              db      'System-5 6845 screen', 0
+      200f: 65 6d 2d 35 
+      2013: 20 36 38 34 
+      2017: 35 20 73 63 
+      201b: 72 65 65 6e 
+      201f: 00          
+   26 2020:              
+   27 2020: f8 70        start:      ldi     high screen     ; RF = the first character of the screen
+   28 2022: bf                       phi     rf
+   29 2023: f8 00                    ldi     low screen
+   30 2025: af                       plo     rf
+   31 2026: f8 20        clear:      ldi     ' '
+   32 2028: 5f                       str     rf
+   33 2029: 1f                       inc     rf
+   34 202a: 9f                       ghi     rf              ; until RF is past the last line
+   35 202b: fb 74                    xri     high scrend
+   36 202d: 3a 26                    bnz     clear
+   37 202f: f8 00                    ldi     0               ; the program's return value: no error
+   38 2031: d5                       sep     r5              ; back to Elf/OS
+
+2026: CLEAR
+7000: SCREEN
+7400: SCREND
+2020: START

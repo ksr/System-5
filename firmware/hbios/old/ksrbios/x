@@ -1,0 +1,73 @@
+3c3
+< crtca:		equ	0c800h		; CRTC Address register
+---
+> crtca:		equ	07800h		; CRTC Address register
+8,9c8,9
+< vmem:		equ	0c000h		; Start of video memory
+< vmem_end:	equ     0c800h		; End of video memory
+---
+> vmem:		equ	07000h		; Start of video memory
+> vmem_end:	equ     07800h		; End of video memory
+73c73
+< 		ldi 0c3h	;;;
+---
+> 		ldi 073h	;;;
+87c87,104
+< vtable:		 db 80 ; R0 total number of horiz chars
+---
+> ;vtable:		 db 80 ; R0 total number of horiz chars
+> ;		 db 64 ; R1 number of horiz chars displayed 
+> ;		 db 65 ; R2 Horiz sync position (chars)
+> ;		 db 1ah ; R3 VSYNC/HSYNC Widths
+> ;		 db 24 ; R4 Vert Total (chars)
+> ;		 db 02 ; R5 Vert total Adjust (scan lines)
+> ;		 db 16 ; R6 Vert displayed (chars)
+> ;		 db 20 ; R7 Vert Sync position (chars)
+> ;		 db 000 ; R8 mode contro;
+> ;		 db 008 ; R9 scan lines/char
+> ;		 db 040h ; R10 cursor start (scan line/char) + blink rate
+> ;		 db 008h ; R11 cursor end (scan line/char)
+> ;		 db 000h ; R12 display addr start high
+> ;		 db 000h ; R13 display addr start low
+> ;		 db 003h ; R14 Cursor position high
+> ;		 db 0c0h ; R15 Cursor positon low
+> 
+> vtable:		 db 94 ; R0 total number of horiz chars
+89,92c106,109
+< 		 db 65 ; R2 Horiz sync position (chars)
+< 		 db 1ah ; R3 VSYNC/HSYNC Widths
+< 		 db 24 ; R4 Vert Total (chars)
+< 		 db 02 ; R5 Vert total Adjust (scan lines)
+---
+> 		 db 77 ; R2 Horiz sync position (chars)
+> 		 db 8 ; R3 VSYNC/HSYNC Widths
+> 		 db 28 ; R4 Vert Total (chars)
+> 		 db 2 ; R5 Vert total Adjust (scan lines)
+94,100c111,117
+< 		 db 20 ; R7 Vert Sync position (chars)
+< 		 db 000 ; R8 mode contro;
+< 		 db 008 ; R9 scan lines/char
+< 		 db 040h ; R10 cursor start (scan line/char) + blink rate
+< 		 db 008h ; R11 cursor end (scan line/char)
+< 		 db 000h ; R12 display addr start high
+< 		 db 000h ; R13 display addr start low
+---
+> 		 db 22 ; R7 Vert Sync position (chars)
+> 		 db 0 ; R8 mode contro;
+> 		 db 8 ; R9 scan lines/char
+> 		 db 64 ; R10 cursor start (scan line/char) + blink rate
+> 		 db 8 ; R11 cursor end (scan line/char)
+> 		 db 0 ; R12 display addr start high
+> 		 db 0 ; R13 display addr start low
+103d119
+< 
+115c131
+< ; conver to lower		
+---
+> ; convert to upper
+330a347
+> 
+337c354
+< #endif 
+---
+> #endif

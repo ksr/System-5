@@ -1,0 +1,60 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-30T16:16:45",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097",
+            "violations": []
+        },
+        {
+            "path": "/Decode/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097/6bb56b8e-912b-5300-b614-18c64aad8212",
+            "violations": []
+        },
+        {
+            "path": "/Output/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097/925ae690-1d55-59cf-b7de-4dedc6f1c8eb",
+            "violations": []
+        },
+        {
+            "path": "/Input/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097/851621b6-fa8d-565e-acd4-272c145cd229",
+            "violations": []
+        },
+        {
+            "path": "/Control/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097/3b1f6210-2392-56e4-b6f1-5115a6170a0f",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/45d7c18f-efd8-5071-9b6a-856c7c615097/ba1d98d8-f9c3-53f8-a1e5-9faad908ff26",
+            "violations": []
+        }
+    ],
+    "source": "io-panel-rev-a-schematic.kicad_sch"
+}

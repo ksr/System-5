@@ -1,0 +1,433 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-06T12:04:27",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/f772ea70-53bc-3a46-8ff7-5dbb380b73b2",
+            "violations": [
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 2.57847,
+                                "y": 1.43292
+                            },
+                            "uuid": "9dc36bfc-2ebe-49bf-ff34-c72c54a84dfa"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 2.65467,
+                                "y": 2.49972
+                            },
+                            "uuid": "7d1f4f96-da75-8fe2-8d9e-65106daccca8"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 2.95947,
+                                "y": 1.22972
+                            },
+                            "uuid": "a74ed444-c1eb-7102-e94d-12420b70d488"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC2 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 2.95947,
+                                "y": 1.45832
+                            },
+                            "uuid": "699e940c-bac8-2892-0883-937639ee7028"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC2 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 2.95947,
+                                "y": 1.68692
+                            },
+                            "uuid": "07fd9acc-6e59-f1d5-0dbc-e48e8cf12f8d"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC4 Hidden pin 8 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.01027,
+                                "y": 0.95021
+                            },
+                            "uuid": "62cb0897-a91c-ca63-cbcb-bc7af661d149"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC6 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.08647,
+                                "y": 2.70292
+                            },
+                            "uuid": "40df5b11-88cc-02f9-766a-b5d17a871b5d"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC6 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.08647,
+                                "y": 2.88072
+                            },
+                            "uuid": "b01c188d-fb90-9c19-60c3-f1d372160f23"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC6 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.08647,
+                                "y": 3.05852
+                            },
+                            "uuid": "782f3118-ee1c-8027-8a50-7338de7cb082"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC7 Hidden pin 12 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.18807,
+                                "y": 2.42308
+                            },
+                            "uuid": "bf6d1042-459b-98e5-c9ef-bfe79cb61edd"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC5 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.31507,
+                                "y": 1.25512
+                            },
+                            "uuid": "1b8f20ef-9dd0-3b45-ddf5-8dfe4a19734c"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC2 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.31507,
+                                "y": 1.43292
+                            },
+                            "uuid": "c430cf48-d618-ae5f-e777-0774adec4a2f"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC2 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.31507,
+                                "y": 1.71232
+                            },
+                            "uuid": "5a6cd558-7111-88af-6a2f-2955b1160a7d"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.36587,
+                                "y": 1.12812
+                            },
+                            "uuid": "de371c68-5305-847e-aedc-afeab827ddb7"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC5 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.64527,
+                                "y": 1.22972
+                            },
+                            "uuid": "1c6ebe04-af6a-c6ce-7201-53cd9de4cbdb"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC3 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.69607,
+                                "y": 1.45832
+                            },
+                            "uuid": "c2a66e7a-2971-a5e3-81e4-556025801104"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC3 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.69607,
+                                "y": 1.68692
+                            },
+                            "uuid": "24c02188-f654-7ea2-fb9e-49a7a3613215"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 3.95007,
+                                "y": 1.45832
+                            },
+                            "uuid": "ca961666-fcb9-d47a-0b4b-c8c96a38c30a"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Unconnected wire endpoint",
+                    "items": [
+                        {
+                            "description": "Horizontal Wire, length 0.3302 mm",
+                            "pos": {
+                                "x": 3.7719,
+                                "y": 1.2319
+                            },
+                            "uuid": "f8b86672-2172-fcf4-9248-5e96bdde3170"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "unconnected_wire_endpoint"
+                },
+                {
+                    "description": "Unconnected wire endpoint",
+                    "items": [
+                        {
+                            "description": "Horizontal Wire, length 0.2794 mm",
+                            "pos": {
+                                "x": 3.8227,
+                                "y": 1.6891
+                            },
+                            "uuid": "d2e82bb2-ec64-56cf-1ab7-f2cdd7ef6323"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "unconnected_wire_endpoint"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC1 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.35647,
+                                "y": 2.82992
+                            },
+                            "uuid": "bccbb941-d098-4b1c-b9eb-9c15c06c6f90"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC5 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.38187,
+                                "y": 1.89012
+                            },
+                            "uuid": "41d81407-aa57-11c2-7de3-c33989b5f283"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC5 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.38187,
+                                "y": 2.06792
+                            },
+                            "uuid": "98cb1a18-1ae5-9c78-8f10-e6ba5b2da872"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC6 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.38187,
+                                "y": 2.24572
+                            },
+                            "uuid": "4bdd5d1e-add6-5f27-0951-5d6b1597e834"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC3 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.38187,
+                                "y": 2.44892
+                            },
+                            "uuid": "48ed7c04-9729-7eba-1253-3d810858a0a9"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                },
+                {
+                    "description": "Symbol pin or wire end off connection grid",
+                    "items": [
+                        {
+                            "description": "Symbol IC3 Hidden pin 7 [GND, Power input, Line]",
+                            "pos": {
+                                "x": 4.38187,
+                                "y": 2.65212
+                            },
+                            "uuid": "6fe3afbd-fa77-33a6-2988-ffbf31d6e4fe"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "endpoint_off_grid"
+                }
+            ]
+        },
+        {
+            "path": "/Sheet 1/",
+            "uuid_path": "/f772ea70-53bc-3a46-8ff7-5dbb380b73b2/ae71ea17-7486-8c22-5ec0-7c9f095ea3a9",
+            "violations": []
+        }
+    ],
+    "source": "ide-cf-rev-a.kicad_sch"
+}

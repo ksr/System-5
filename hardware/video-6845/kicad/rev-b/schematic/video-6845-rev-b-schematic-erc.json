@@ -1,0 +1,60 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-28T12:54:35",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab",
+            "violations": []
+        },
+        {
+            "path": "/Decode/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab/d91dc5ea-e64d-5021-afc6-f307b2ac839b",
+            "violations": []
+        },
+        {
+            "path": "/VRAM+CRTC/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab/84e84f30-5b65-5dc3-bdf3-3399182c5543",
+            "violations": []
+        },
+        {
+            "path": "/Clocks/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab/b289ae1f-44ea-5de3-8d8a-e49e3f0577a0",
+            "violations": []
+        },
+        {
+            "path": "/Video/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab/03c6c38d-361c-5224-b443-d8b102336d80",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/fa7a7664-27ce-5a84-ae9a-e433533110ab/ac46ad62-0298-5cf8-9a68-10d2a403cc0a",
+            "violations": []
+        }
+    ],
+    "source": "video-6845-rev-b-schematic.kicad_sch"
+}

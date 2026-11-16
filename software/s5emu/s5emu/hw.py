@@ -1,0 +1,831 @@
+# Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-10-06
+"""Hardware-faithful System-5 (python3 -m s5emu --hw).
+
+Every memory cycle is put on a modelled bus. Each card says whether it drives the data lines; two drivers at once
+are bus contention, and the log records them (`bus` in the debugger).
+
+  Netlist cards  gate level, from the card's KiCad netlist (hardware/<card>/kicad/<rev>/reports/netlist.net):
+                   memory   Rev D (card of record), C, B-built (Ken's reworked board), B-drawn
+                   6845     Rev B (the built card)
+                 One bus cycle = three phases, as the 1802 runs them:
+                   1. TPA high, the high address byte on A0-A7: the address latches (4042 / 74LS373) are transparent
+                   2. TPA low: the latches hold A8-A15
+                   3. the low address byte on A0-A7, -MRD / -MRW as the cycle needs, TPB high (the 6845's E)
+                 then the control and address pins of each bus device (memory chips, the dual-port video RAM's bus
+                 port, the 6845's register interface) decide who reads, writes or drives the bus.
+                 Data never feeds back into a card's logic (checked at load), so a decode is a pure function of
+                 (address, -VMA, -MRD, -MRW, jumpers) and is cached.
+  CPU card       -VMA and the EPROM enable as the CPU Rev A notes describe them (hardware/cpu/eagle/rev-a/ops.html):
+                 a flip-flop reset by -RESET is set by the first access with A15 high. Before that the EPROM answers at
+                 every address (A0-A11) and -VMA is high. After it, in Boot/REMAP mode, the EPROM answers only in its
+                 4K window (SV2/SV4, default F000) and -VMA is high there; Boot-only and No-ROM modes as documented.
+                 Behavioural until the CPU card's netlist exists (Fusion export pending). Assumption: the flip-flop
+                 changes at the end of the cycle, so the first A15 access itself still sees the boot map.
+  IO, IDE        I/O ports only, as in machine.py: they never drive the bus in a memory cycle.
+
+Contention is resolved as the AND of the drivers (a low usually wins a TTL fight); the log keeps every case.
+"""
+import os
+from .machine import Machine, FLOAT, CPUCardROM
+from .netlist import Netlist
+from .logic import Circuit, classify, X
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+MEM_NET = "hardware/memory/kicad/rev-%s/reports/netlist.net"
+
+# Per-revision cards. 'rework' = netlist edits in order (lift / wire / jumper); 'fitted' = parts in their sockets (None = all).
+MEMORY_REVS = {
+    "D": dict(net=MEM_NET % "d", note="Rev D, the 2026 KiCad master: the card of record for hardware emulation (Ken, 2026-10-06)."),
+    "C": dict(net=MEM_NET % "c", note="Rev C (2005): every !CE = Y OR bank select."),
+    "B-built": dict(net=MEM_NET % "b", fitted={"IC1", "IC2", "IC5", "IC6", "IC7", "IC8", "IC9", "IC13", "IC14"},
+                    rework=[("lift", "IC1", "20"), ("wire", "IC1", "20", "IC14", "3"),
+                            ("lift", "IC5", "20"), ("wire", "IC5", "20", "IC14", "6")],
+                    note="Ken's Rev B board (PCB Fab Express FXA5474) from the 2026-10-05 photos: RAM in IC1, EPROM in "
+                         "IC5, muxes IC2/IC13; red wires put the 74LS32 bank selects on IC1/IC5 !CE (hardware/memory/"
+                         "REVIEW.md). Which IC14 pins carry them is the likeliest reading, not yet confirmed; logically "
+                         "a spare gate used as a buffer is the same wire."),
+    "B-drawn": dict(net=MEM_NET % "b", note="Rev B exactly as drawn and ordered, all sockets filled: the 74LS151 strobe "
+                                            "enables the deselected bank (REVIEW.md finding 1)."),
+}
+VIDEO_REVS = {
+    "B": dict(net="hardware/video-6845/kicad/rev-b/reports/netlist.net",
+              rework=[("jumper", "SV1", "1", "SV1", "2")],
+              note="6845 Rev B, Ken's working card (Fusion export 2026-10-08; = the April 2005 CAM files). Its bus side is Rev A's, unchanged. A 74LS85 compares "
+                   "the latched A12-A15 with SV1 and only matches while -VMA is low; in that 4K block A11 = 0 is the "
+                   "IDT7134 (2K used), A11 = 1 the 6845 (RS = A0, so mirrored through x800-xFFF). SV1 1-2 fitted = "
+                   "block 7 (7000), where HBIOS puts the screen: seen in the 2026-10-07 photos."),
+}
+IDE_REVS = {
+    "A": dict(net="hardware/ide-cf/kicad/rev-a/reports/netlist.net",
+              rework=[("jumper", "SV1", "3", "SV1", "4"), ("jumper", "SV2", "5", "SV2", "6")],
+              note="IDE/CF Rev A, the built card (Fusion export 2026-10-06; no copper gerbers survive to check it against). "
+                   "A 74LS138 decodes N0-N2; SV1 picks the register-select port, SV2 the data port. SV1 3-4 (port 2) and "
+                   "SV2 5-6 (port 3): derived from the code, not yet seen on the board - Mike Riley's BIOS reaches the "
+                   "drive only by OUT 2 (register) and OUT 3 / INP 3 (data), and its register codes 0-7 and 0E match "
+                   "the 74LS75 latch (D0-2 = DA0-2, D3 = CS1)."),
+}
+# the drive end of a 40-pin ATA cable, by header pin (standard ATA pinout)
+ATA_PINS = {"17": "DD0", "15": "DD1", "13": "DD2", "11": "DD3", "9": "DD4", "7": "DD5", "5": "DD6", "3": "DD7",
+            "35": "DA0", "33": "DA1", "36": "DA2", "37": "CS0", "38": "CS1", "23": "DIOW", "25": "DIOR"}
+DEFAULT_JUMPERS = "RRRRRRR-EEEEEEE-"
+_JUMPER_MAPS = {}                                        # rev -> map, shared: probing a card takes about a second
+
+
+def jumper_list(j):
+    """'RRRRRRR-EEEEEEE-' or machine.py's list form -> 16 chars"""
+    if j is None: return DEFAULT_JUMPERS
+    if isinstance(j, str): return j.upper()
+    return "".join({"RAM": "R", "ROM": "E", None: "-"}[x] for x in j)
+
+
+class NetlistCard:
+    """one card on the bus, simulated from its netlist. store = {device ref: (read(addr), write(addr, byte))}"""
+    def __init__(self, name, rev, spec, root=ROOT):
+        self.name, self.rev, self.note = name, rev, spec["note"]
+        self.nl = Netlist(os.path.join(root, spec["net"]))
+        for op, *args in spec.get("rework", []): getattr(self.nl, op)(*args)
+        self.c = Circuit(self.nl, spec.get("fitted"))
+        self.devices = self.c.mem; self.store = {}; self.cache = {}
+        self._check_data_path()
+
+    def _check_data_path(self):
+        """device data pins -> bus data bit, and proof that the data lines reach nothing but bus devices and the connector"""
+        bus_d = {self.c.bus.sig["D%d" % i]: i for i in range(8)}
+        devs = {r for r, p in self.nl.parts.items() if classify(p.lib) in ("RAM", "ROM", "DPRAM", "CRTC")}   # fitted or not
+        conn = self.c.bus.ref; self.bitmap = {}
+        for d in self.devices:
+            bits = []
+            for net in d.data:
+                if net not in bus_d: raise ValueError("%s data pin on %s, not a bus data line" % (d.ref, net))
+                bits.append(bus_d[net])
+            self.bitmap[d.ref] = bits
+        for net in bus_d:
+            for ref, _ in self.nl.nets.get(net, []):
+                if ref not in devs and ref != conn:
+                    raise ValueError("bus data line %s also reaches %s: the decode cache would not be valid" % (net, ref))
+
+    # ------------------------------------------------------------------ one bus cycle
+    def _run(self, a, vma, mrd, mrw):
+        c = self.c
+        c.drive(TPA=1, TPB=0, A=a >> 8, VMA=vma, MRD=1, MRW=1); c.settle()
+        c.drive(TPA=0); c.settle()
+        c.drive(A=a & 0xFF, MRD=mrd, MRW=mrw, TPB=1); v = c.settle()
+        acts = []; faults = []
+        for d in self.devices:
+            r = d.access(v)
+            if isinstance(r, str): faults.append(r)
+            elif r: acts.append((d.ref, d.kind, r[0], r[1]))
+        return acts, faults
+
+    def decode(self, a, vma, mrd, mrw):
+        key = (a, vma, mrd, mrw); r = self.cache.get(key)
+        if r is None:
+            acts, faults = self._run(a, vma, mrd, mrw); r = self.cache[key] = (tuple(acts), tuple(faults))
+        return r
+
+    def bus_read(self, a, vma):
+        """-> [(driver name, byte)], [faults]"""
+        acts, faults = self.decode(a, vma, 0, 1); out = []
+        for ref, kind, op, ca in acts:
+            if op != "r": continue
+            b = self.store[ref][0](ca); bits = self.bitmap[ref]
+            out.append(("%s %s" % (self.name, ref), sum(((b >> i) & 1) << bits[i] for i in range(8))))
+        return out, faults
+
+    def bus_write(self, a, vma, v):
+        """-> [receiver names], [faults]"""
+        acts, faults = self.decode(a, vma, 1, 0); out = []
+        for ref, kind, op, ca in acts:
+            if op != "w": continue
+            bits = self.bitmap[ref]
+            self.store[ref][1](ca, sum(((v >> bits[i]) & 1) << i for i in range(8))); out.append("%s %s" % (self.name, ref))
+        return out, faults
+
+    def describe(self):
+        out = ["%s card %s: %s" % (self.name, self.rev, os.path.relpath(self.nl.path, ROOT)), "  " + self.note]
+        out += ["  rework: " + e for e in self.nl.edits]
+        if self.c.empty: out.append("  empty sockets: " + " ".join(self.c.empty))
+        if self.c.unmodelled:
+            out.append("  off the bus path (checked from the netlist, not simulated): " +
+                       " ".join("%s %s" % (r, self.nl.parts[r].value) for r in self.c.unmodelled))
+        return "\n".join(out)
+
+
+class NetlistMemoryCard(NetlistCard):
+    def __init__(self, rev="D", jumpers=None, root=ROOT):
+        if rev not in MEMORY_REVS: raise ValueError("memory revision %r: one of %s" % (rev, ", ".join(MEMORY_REVS)))
+        super().__init__("mem", rev, MEMORY_REVS[rev], root)
+        self.chips = self.devices
+        self.contents = {m.ref: bytearray(0x8000) if m.kind == "RAM" else bytearray([FLOAT]) * 0x8000 for m in self.chips}
+        for ref, mem in self.contents.items():
+            self.store[ref] = (mem.__getitem__, mem.__setitem__)
+        self.rom = None                                  # (machine.py's MemoryCard has a flat .rom; this card has chips)
+        self.set_jumpers(jumpers)
+
+    # ------------------------------------------------------------------ jumpers
+    def jumper_map(self):
+        """{net: [(chip ref, kind, 4K block), ...]}: what grounding each header net enables, found by trying each one
+        on the netlist. Nets that change nothing (a rework took the chip off its mux) are left out."""
+        if self.rev in _JUMPER_MAPS: return _JUMPER_MAPS[self.rev]
+        hdr = {r for r, p in self.nl.parts.items() if "MA08" in p.lib}
+        cands = sorted({net for (r, _), (net, _) in self.nl.pins.items() if r in hdr and net not in Circuit.POWER})
+        saved = self.c.forced; self.c.forced = {}
+        base = {b: self._enabled(b << 12) for b in range(16)}
+        out = {}
+        for net in cands:
+            self.c.forced = {net: ("jumper", 0)}
+            got = [(ref, kind, b) for b in range(16) for ref, kind in self._enabled(b << 12) - base[b]]
+            if got: out[net] = got
+        self.c.forced = saved; _JUMPER_MAPS[self.rev] = out
+        return out
+
+    def _enabled(self, a):
+        acts, _ = self._run(a, 0, 0, 1)
+        return {(ref, kind) for ref, kind, _, _ in acts}
+
+    def set_jumpers(self, jumpers):
+        """jumpers: 16 chars from 0000, R = the RAM for that block, E = the EPROM, - = none"""
+        self.jumpers = jumper_list(jumpers)
+        if len(self.jumpers) != 16 or set(self.jumpers) - set("RE-"): raise ValueError("jumpers: 16 of R/E/-")
+        want = {(("RAM" if ch == "R" else "ROM"), b) for b, ch in enumerate(self.jumpers) if ch != "-"}
+        forced = {}; self.jumpers_fitted = []; served = set()
+        for net, hits in self.jumper_map().items():
+            hit = [(kind, b) for _, kind, b in hits if (kind, b) in want]
+            if hit:
+                forced[net] = ("jumper", 0); served.update(hit)
+                pins = ["%s.%s" % k for k in self.nl.nets[net] if "MA08" in self.nl.parts[k[0]].lib]
+                self.jumpers_fitted.append("%s (%s)" % ("/".join(pins), ", ".join("%s %X000" % (r, b) for r, _, b in hits)))
+        self.jumpers_unused = sorted(want - served)        # asked for, but nothing on this card answers to it
+        self.c.forced = forced; self.cache.clear()
+
+    def program(self, a, v):
+        """an EPROM programmer's view: put byte v where a read of bus address a (-VMA low) finds an EPROM"""
+        for ref, kind, op, ca in self.decode(a, 0, 0, 1)[0]:
+            if kind == "ROM":
+                bits = self.bitmap[ref]; self.contents[ref][ca] = sum(((v >> bits[i]) & 1) << i for i in range(8)); return True
+        return False
+
+    def describe(self):
+        out = [super().describe()]
+        out.append("  jumpers %s:" % self.jumpers + ("" if self.jumpers_fitted else " none take effect on this card"))
+        out += ["    " + j for j in self.jumpers_fitted]
+        if self.jumpers_unused:
+            out.append("    asked for but not on this card: " + ", ".join("%s %X000" % kb for kb in self.jumpers_unused))
+        return "\n".join(out)
+
+
+class NetlistVideoCard(NetlistCard):
+    """the 6845 card; its video RAM and CRTC registers are the Video6845 object the screen is drawn from"""
+    def __init__(self, video, rev="B", root=ROOT):
+        if rev not in VIDEO_REVS: raise ValueError("6845 card revision %r: one of %s" % (rev, ", ".join(VIDEO_REVS)))
+        super().__init__("6845", rev, VIDEO_REVS[rev], root)
+        self.v = video
+        for d in self.devices:
+            self.store[d.ref] = (self._vram_rd, self._vram_wr) if d.kind == "DPRAM" else (self._crtc_rd, self._crtc_wr)
+
+    def _vram_rd(self, a): return self.v.vram[a % len(self.v.vram)]
+    def _vram_wr(self, a, b): self.v.vram[a % len(self.v.vram)] = b; self.v.dirty = True
+
+    def _crtc_rd(self, rs):
+        """MC6845: R14-R17 read back; the address register and the other registers are write-only and read as 0"""
+        return self.v.reg[self.v.sel] if rs and self.v.sel in (14, 15, 16, 17) else 0
+
+    def _crtc_wr(self, rs, b):
+        if not rs: self.v.sel = b & 31
+        elif self.v.sel < 18: self.v.reg[self.v.sel] = b; self.v.dirty = True
+
+
+_CPU_EXTERNAL = {"U$1": "the CDP1802: the emulator's CPU core drives its address, data and strobe pins",
+                 "U1": "the CM1232/DS1232 reset chip: the emulator's reset drives -RESET"}
+_CPU_NOTE = ("A 74LS373 latches A8-A15 on TPA; a 74LS138 (SV2 = upper/lower 32K, SV4 = 4K bank) decodes the EPROM "
+             "window; SV5 makes -VMA from the 74LS74 boot flip-flop (IC8B, cleared by -RESET); a 74LS05 enables the "
+             "2732 while -VMA is high; JP1-JP4 route the bus -EF line and the card flags to EF1-4. Jumpers as built "
+             "(photos 2026-10-07): SV2 H, SV4 bank 7, SV5 Boot/REMAP, JP1 row 3 (bus -EF to EF3), JP2-JP4 empty.")
+CPU_REVS = {
+    "A-built": dict(net="hardware/cpu/kicad/rev-a/reports/netlist.net", external=_CPU_EXTERNAL,
+                    rework=[("retype", "IC1", "74xx-us_74x374_N_pwrhidden", "74LS374"),
+                            ("lift", "IC8", "10"), ("wire", "IC8", "10", "SV2", "5"),     # PRE -> VCC: no window preset
+                            ("lift", "IC8", "11"), ("wire", "IC8", "11", "SV2", "6"),     # CLK -> ADDR15 (latched A15)
+                            ("lift", "IC8", "12"), ("wire", "IC8", "12", "SV2", "5")],    # D   -> VCC
+                    note="CPU Rev A as built. " + _CPU_NOTE + " Rework (photos 2026-10-07, wiring derived "
+                         "2026-10-07): IC1 is a 74LS374 (TPA rising edge); IC8 pins 10/11/12 are lifted and wired to "
+                         "SV2 pin 5 (VCC) and the ADDR15 net, the only signals the red wires reach - so PRE = VCC, "
+                         "D = VCC, CLK = ADDR15: the first rising edge of the latched A15 (the boot code's PHI R0 jump "
+                         "to F003) ends the boot map, as YACC1's FORCE-ROM does and as the 2005 ops notes describe. "
+                         "Which wire is which is inferred, not traced. The reset-circuit rework (IC5 pins 1/3, U1 pin "
+                         "7) is off the bus path. See hardware/cpu/eagle/rev-a/rework/README.md."),
+    "A": dict(net="hardware/cpu/kicad/rev-a/reports/netlist.net", external=_CPU_EXTERNAL,
+              note="CPU Rev A as drawn (Fusion export 2026-10-06; = the 2005 order gerbers, holes and copper). " + _CPU_NOTE +
+                   " As drawn, the boot flip-flop is set by the first access to the EPROM window (PRE = the window "
+                   "select; D, CLK grounded)."),
+}
+CPU_REVS["D"] = dict(
+    net="hardware/cpu/kicad/rev-d/reports/netlist.net", cpu="U1",
+    external={"U1": "the CDP1802: the emulator's CPU core drives its address, data and strobe pins",
+              "U10": "the DS1813 reset chip: the emulator's reset drives -RESET",
+              "X1": "the 4 MHz oscillator: the emulator's clock"},
+    jumpers=[("JP2", "1", "JP2", "2"), ("JP2", "3", "JP2", "4"),     # -EF1 -> EF1, -EF2 -> EF2
+             ("JP3", "1", "JP3", "2")],                              # -EF -> EF3: the old IO card's keyboard (JP2's EF3/EF4 off)
+    note="CPU Rev D (2026-10-30, not built; hardware/cpu/kicad/rev-d/DESIGN.md): a 74HCT373 latches A8-A15 while TPA is "
+         "high; the boot map (the 2732 at every address, -VMA high) ends on the first A15 rising edge (U4B, cleared by "
+         "CLEAR = -RESET through two 74HCT14s) unless LOADED (U8A: set by LOAD mode, cleared by the RESET/RUN switch and "
+         "power-on); a 74HCT20 decodes F000-FFFF; -VMA and the EPROM's CE come from a 74HCT00. Jumpers for the machine "
+         "as it is today: JP2 EF1/EF2, JP3 -EF -> EF3 (the 2005 IO card's keyboard flag). A machine reset is the "
+         "RESET/RUN switch: it clears LOADED, so it boots HBIOS.")
+
+
+_IO_NOTE = ("IO Rev A, the built card (Fusion export 2026-10-06; = the 2005 order gerbers, holes and copper). A 74LS138 "
+            "decodes N0-N2; SV2 picks the keyboard's CDP1852 port, SV6 the 1861's (a 74LS02 makes DISPON from INP, "
+            "DISPOFF from OUT); SV1 sends the 1852's service request to EFK or the bus -EF line. As built (photo "
+            "2026-10-07): SV2 13-14 (keyboard = port 1), SV1 2-3 (bus -EF, which the CPU card's JP1 puts on EF3), "
+            "SV6 empty - the 1861 is on no port (it was never tested). The PIC16F84 + PAK-VI keyboard path and the "
+            "1861's video timing stay behavioural.")
+IO_REVS = {
+    "A": dict(net="hardware/io-1861-keyboard/kicad/rev-a/reports/netlist.net",
+              rework=[("jumper", "SV2", "13", "SV2", "14"), ("jumper", "SV1", "2", "SV1", "3")], note=_IO_NOTE),
+    "A-1861": dict(net="hardware/io-1861-keyboard/kicad/rev-a/reports/netlist.net",
+                   rework=[("jumper", "SV2", "13", "SV2", "14"), ("jumper", "SV1", "2", "SV1", "3"), ("jumper", "SV6", "7", "SV6", "8")],
+                   note=_IO_NOTE + " This variant adds SV6 7-8: the 1861 on port 4 (INP 4 on, OUT 4 off)."),
+}
+
+
+class NetlistCPUCard:
+    """the CPU card's address latch, EPROM window, boot flip-flop and -VMA, from its netlist; the 1802 itself is the
+    emulator's CPU core. A memory cycle runs in the three bus phases with -RESET high; cycle() -> (-VMA, EPROM address
+    or None). Its state (the boot flip-flop) carries from cycle to cycle. Jumpers come from the SV5 mode and the
+    EPROM base: SV2 picks the 32K half (H: 1-3/2-4, L: 3-5/4-6), SV4 the 4K bank (pins 15-2b/16-2b), SV5 the mode
+    (Boot/REMAP 3-4, Boot only 1-2, No ROM 5-6); JP1 5-6 = the bus -EF line on EF3 (as built)."""
+    MODES = {"remap": ("SV5", "3", "SV5", "4"), "boot": ("SV5", "1", "SV5", "2"), "norom": ("SV5", "5", "SV5", "6")}
+
+    def __init__(self, rom, rev="A-built", vma_mode="remap", root=ROOT):
+        if rev not in CPU_REVS: raise ValueError("CPU card revision %r: one of %s" % (rev, ", ".join(CPU_REVS)))
+        spec = CPU_REVS[rev]; self.name, self.rev, self.note, self.rom = "cpu", rev, spec["note"], rom
+        self.nl = Netlist(os.path.join(root, spec["net"])); self.cpu_ref = spec.get("cpu", "U$1")
+        if "jumpers" in spec: jumpers = spec["jumpers"]                 # Rev D: the EPROM is fixed at F000, no mode jumper
+        else:
+            b = rom.base >> 12
+            jumpers = ([("SV2", "1", "SV2", "3"), ("SV2", "2", "SV2", "4")] if b & 8 else [("SV2", "3", "SV2", "5"), ("SV2", "4", "SV2", "6")])
+            k = b & 7; jumpers += [("SV4", str(15 - 2 * k), "SV4", str(16 - 2 * k)), self.MODES[vma_mode],
+                                   ("JP1", "5", "JP1", "6")]            # bus -EF -> EF3 (photo 2026-10-07; JP2-JP4 empty)
+        for j in jumpers: self.nl.jumper(*j)
+        for op, *args in spec.get("rework", []): getattr(self.nl, op)(*args)
+        self.c = Circuit(self.nl, None, external=spec["external"])
+        self.eprom = next(d for d in self.c.mem if d.kind == "ROM")
+        self.vma = self.c.bus.sig["-VMA"]
+        halves = [(m, i, h) for m in self.c.models if type(m).__name__ == "DFF74" for i, h in enumerate(m.ff)]
+        if "jumpers" in spec:                                           # Rev D: boot flip-flop cleared by CLEAR, and LOADED
+            boot = next((m, i) for m, i, h in halves if h[0].split("/")[-1] == "CLEAR")
+            loaded = next((m, i) for m, i, h in halves if h[3].split("/")[-1] == "LOAD_L")
+            self.flops = [boot, loaded]; self.sw_rst = next(n for n in self.nl.nets if n.split("/")[-1] == "SW_RST")
+        else:                                                           # Rev A: the half -RESET clears
+            rst = self.c.bus.sig["-RESET"]
+            self.flops = [next((m, i) for m, i, h in halves if h[0] == rst)]; self.sw_rst = None
+        self.ff, self.ffi = self.flops[0]
+        self.cache = {}; self.ef_map = self.ef_routes(); self.reset()
+
+    def ef_routes(self):
+        """{EF number: 'KEF' | 'VEF' | ...}: which card flag each 1802 EF input is jumpered to"""
+        out = {}
+        for n in range(1, 5):
+            try: pin = self.nl.pin_by_function(self.cpu_ref, "EF%d" % n)
+            except KeyError: pin = self.nl.pin_by_function(self.cpu_ref, "~{EF%d}" % n)     # KiCad's stock 1802 symbol
+            net = self.nl.net(self.cpu_ref, pin)
+            for src in ("KEF", "VEF", "FEF", "-EF4", "-EF", "-EF1", "-EF2", "-EF3"):
+                if net.endswith("/" + src) or net == src: out[n] = "-EF4" if src == "-EF" else src   # -EF = the 2005 -EF4
+        return out
+
+    def reset(self):
+        """-RESET low, one bus cycle at 0000 (the 1802's initialization cycle: TPA loads 00 into the 74LS373, so the
+        EPROM-window decode is defined), then -RESET high. On the real card the latch holds whatever it powered up with
+        until that first TPA."""
+        c = self.c
+        if self.sw_rst: c.forced[self.sw_rst] = ("SW1", 0)               # Rev D: the RESET/RUN switch (or power-on) clears LOADED
+        c.drive(RESET=0, TPA=1, TPB=0, MRD=1, MRW=1, A=0); c.settle(); c.drive(TPA=0); c.settle()
+        c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
+        if self.sw_rst: c.forced.pop(self.sw_rst); c.settle()
+        c.drive(RESET=1); c.settle()
+        self._snap0 = self._snapshot()
+
+    def mode(self, reset, pause):
+        """Rev D: hold -RESET / -PAUSE as a debug board or the IO card would (1 = released); e.g. mode(0, 0) = LOAD"""
+        self.c.drive(**{"-RESET": reset, "-PAUSE": pause}); self.c.settle(); self.cache.clear()
+
+    def loaded(self):
+        return len(self.flops) > 1 and self.flops[1][0].state.get(self.flops[1][1]) == 1
+
+    def _snapshot(self):
+        """every bit of sequential state: net values, latch / flip-flop contents and their last clock levels"""
+        return dict(self.c.val), [{k: dict(v) if isinstance(v, dict) else v for k, v in vars(m).items()
+                                   if k in ("state", "last", "clk_last")} for m in self.c.models]
+
+    def _restore(self, snap):
+        self.c.val = dict(snap[0])
+        for m, attrs in zip(self.c.models, snap[1]):
+            for k, v in attrs.items(): setattr(m, k, dict(v) if isinstance(v, dict) else v)
+
+    def booted(self): return self.ff.state.get(self.ffi) == 1
+    def set_booted(self, b): self.ff.state[self.ffi] = 1 if b else 0
+
+    def _key(self): return tuple(m.state.get(i) for m, i in self.flops)
+
+    def cycle(self, a, mrd, mrw, commit=True):
+        key = (a, mrd, mrw, self._key()); hit = self.cache.get(key)
+        if hit:
+            res, st = hit
+        else:
+            # A computed cycle starts from the state right after reset, with the boot flip-flop as it is now. That is
+            # exact: while the flip-flop is clear every earlier cycle had A15 low (the latch's A15 is 0, as after
+            # reset); once it is set nothing can clear it but -RESET. So the result depends only on the key.
+            saved = self._snapshot(); now = [m.state[i] for m, i in self.flops]
+            self._restore(self._snap0)
+            for (m, i), v in zip(self.flops, now): m.state[i] = v
+            c = self.c
+            c.drive(TPA=1, TPB=0, A=a >> 8, MRD=1, MRW=1); c.settle()
+            c.drive(TPA=0); c.settle()
+            c.drive(A=a & 0xFF, MRD=mrd, MRW=mrw, TPB=1); v = c.settle()
+            r = self.eprom.access(v); vma = v.get(self.vma)
+            res = (vma, r[1] if isinstance(r, tuple) else None, r if isinstance(r, str) else None)
+            c.drive(TPB=0); c.settle()
+            st = [m.state[i] for m, i in self.flops]; self.cache[key] = (res, st)
+            self._restore(saved)
+        if commit:
+            for (m, i), v in zip(self.flops, st): m.state[i] = v
+        return res
+
+    def describe(self):
+        out = ["%s card %s: %s" % (self.name, self.rev, os.path.relpath(self.nl.path, ROOT)), "  " + self.note]
+        out += ["  jumper: " + e for e in self.nl.edits]
+        out.append("  played by the emulator: " + "; ".join("%s = %s" % kv for kv in self.c.external.items()))
+        out.append("  off the bus path (checked from the netlist, not simulated): " +
+                   " ".join("%s %s" % (r, self.nl.parts[r].value) for r in self.c.unmodelled))
+        out.append("  EF routing: " + ", ".join("EF%d = %s" % kv for kv in sorted(self.ef_routes().items())))
+        return "\n".join(out)
+
+
+class NetlistIOCard:
+    """a card that answers I/O instructions, from its netlist. An INP/OUT is simulated in four phases (TPA high,
+    TPA low, TPB high, TPB low) with N0-N2, -MRD/-MRW and (OUT) the data byte as the 1802 drives them; the card's
+    latches carry state from one instruction to the next. Subclasses read the pins at TPB (sample)."""
+    revs = {}
+    name = "io"
+
+    def __init__(self, rev, root=ROOT):
+        if rev not in self.revs: raise ValueError("%s card revision %r: one of %s" % (self.name, rev, ", ".join(self.revs)))
+        spec = self.revs[rev]; self.rev, self.note = rev, spec["note"]
+        self.nl = Netlist(os.path.join(root, spec["net"]))
+        for op, *args in spec.get("rework", []): getattr(self.nl, op)(*args)
+        self.c = Circuit(self.nl, None, self.header_controls()); self.cache = {}
+
+    def header_controls(self): return []
+
+    def _state(self):
+        from .logic import Latch
+        return frozenset(self.c.val.items()), tuple(tuple(m.state.items()) for m in self.c.models if isinstance(m, Latch))
+
+    def _restore(self, st):
+        from .logic import Latch
+        self.c.val = dict(st[0])
+        for m, saved in zip([m for m in self.c.models if isinstance(m, Latch)], st[1]): m.state = dict(saved)
+
+    def cycle(self, n, out, v=None):
+        """an OUT n with byte v on the bus (out=True) or an INP n -> what sample() makes of the pins at TPB"""
+        key = (n, out, v if out else None, self._state()); hit = self.cache.get(key)
+        if hit: self._restore(hit[1]); return hit[0]
+        c = self.c
+        c.drive(N=n, MRD=0 if out else 1, MRW=1 if out else 0, D=v if out else None, A=0, VMA=0, TPA=1, TPB=0); c.settle()
+        c.drive(TPA=0); c.settle()
+        c.drive(TPB=1); res = self.sample(c.settle())
+        c.drive(TPB=0); c.settle()
+        c.drive(N=0, MRD=1, MRW=1); c.settle()                     # the next machine cycle: N back to 0
+        self.cache[key] = (res, self._state())
+        return res
+
+    def describe(self):
+        out = ["%s card %s: %s" % (self.name, self.rev, os.path.relpath(self.nl.path, ROOT)), "  " + self.note]
+        out += ["  rework: " + e for e in self.nl.edits]
+        if self.c.unmodelled:
+            out.append("  off the bus path (checked from the netlist, not simulated): " +
+                       " ".join("%s %s" % (r, self.nl.parts[r].value) for r in self.c.unmodelled))
+        return "\n".join(out)
+
+
+class NetlistIDECard(NetlistIOCard):
+    """the IDE/CF card; the drive on its 40-pin header is machine.py's IDE (the CF image). At TPB the drive sees
+    DIOW/DIOR and the register on DA0-2/CS0/CS1 (CS1 selects the control block: register 8 + DA, e.g. 0E = device
+    control). sample -> (op 'w'|'r'|None, register)"""
+    revs = IDE_REVS
+    name = "ide"
+
+    def __init__(self, rev="A", root=ROOT):
+        super().__init__(rev, root)
+        bus_d = {self.c.bus.sig["D%d" % i]: i for i in range(8)}
+        self.dmap = [bus_d.get(self.ata["DD%d" % k]) for k in range(8)]     # drive bit k <-> bus bit dmap[k]
+        if None in self.dmap: raise ValueError("IDE data lines DD0-7 are not all bus data lines")
+
+    def header_controls(self):
+        hdr = next(r for r, p in self.nl.parts.items() if "2X20" in p.lib)
+        self.ata = {ATA_PINS[p]: net for (r, p), (net, _) in self.nl.pins.items() if r == hdr and p in ATA_PINS}
+        return [self.ata[k] for k in ("DIOW", "DIOR", "DA0", "DA1", "DA2", "CS0", "CS1")]
+
+    def sample(self, val):
+        g = lambda k: val.get(self.ata[k])
+        op = "w" if g("DIOW") == 0 else "r" if g("DIOR") == 0 else None
+        if not op: return (None, None)
+        da = [g("DA%d" % i) for i in range(3)]; cs0, cs1 = g("CS0"), g("CS1")
+        if None in da or 2 in da or (cs0, cs1) not in ((0, 1), (1, 0)): return (op, "undefined")
+        return (op, (8 if cs0 else 0) + sum(b << i for i, b in enumerate(da)))
+
+    def to_drive(self, v): return sum(((v >> self.dmap[k]) & 1) << k for k in range(8))
+    def to_bus(self, b): return sum(((b >> k) & 1) << self.dmap[k] for k in range(8))
+
+
+class NetlistIOBoard(NetlistIOCard):
+    """the IO card (1861 + keyboard). sample -> (keyboard 1852 drives the bus, 1861 DISPON, 1861 DISPOFF, faults)"""
+    revs = IO_REVS
+    name = "io"
+
+    def __init__(self, rev="A", root=ROOT):
+        super().__init__(rev, root)
+        self.port = next(d for d in self.c.mem if d.kind == "PORT"); self.pixie = next(d for d in self.c.mem if d.kind == "PIXIE")
+        sr = self.nl.net(self.port.ref, self.nl.pin_by_function(self.port.ref, "SR"))
+        self.sr_on_bus = sr == self.c.bus.sig.get("-EF4")                      # SV1 2-3: the keyboard flag drives bus -EF
+        bus_d = {self.c.bus.sig["D%d" % i]: i for i in range(8)}
+        self.dmap = [bus_d.get(n) for n in self.port.data]                    # 1852 DO k <-> bus bit dmap[k]
+        if None in self.dmap: raise ValueError("1852 DO0-7 are not all bus data lines")
+
+    def sample(self, val):
+        faults = []; k = self.port.access(val); p = self.pixie.access(val)
+        if isinstance(k, str): faults.append(k); k = None
+        if isinstance(p, str): faults.append(p); p = None
+        return (bool(k), bool(p and p[0] == "on"), bool(p and p[0] == "off"), tuple(faults))
+
+    def to_bus(self, b): return sum(((b >> k) & 1) << self.dmap[k] for k in range(8))
+
+
+IOPANEL_REVS = {
+    "A": dict(net="hardware/io-panel/kicad/rev-a/reports/netlist.net",
+              note="IO panel Rev A (2026-10-30, not built; hardware/io-panel/kicad/rev-a/DESIGN.md): a 74HCT138 decodes "
+                   "port 4; OUT 4 latches the byte in a 74HCT374 on TPB's fall (the LEDs and two TIL311s show it); INP 4 "
+                   "and this card's DMA IN put the eight toggles on the bus through a 74HCT244 (played here: it drives "
+                   "exactly when its OE, from the card's gates, is low); INPUT on -EF1; ELF-style RUN and LOAD on "
+                   "-RESET / -PAUSE; one DMA IN per INPUT press in LOAD mode (REQ, ACK, DRIVE flip-flops)."),
+}
+
+
+class NetlistIOPanel:
+    """the IO panel card from its netlist. The hand controls are held on the card: toggles (byte), INPUT (pressed), RUN
+    and LOAD; out() / inp() run an OUT n / INP n through the card's gates; dma_in() runs the DMA IN cycle of LOAD mode."""
+    name = "panel"
+
+    def __init__(self, rev="A", root=ROOT):
+        if rev not in IOPANEL_REVS: raise ValueError("IO panel revision %r: one of %s" % (rev, ", ".join(IOPANEL_REVS)))
+        spec = IOPANEL_REVS[rev]; self.rev, self.note = rev, spec["note"]
+        self.nl = Netlist(os.path.join(root, spec["net"]))
+        self.c = Circuit(self.nl, None)
+        net = lambda name: next(n for n in self.nl.nets if n.split("/")[-1] == name)
+        self.out_nets = [net("OUT%d" % k) for k in range(8)]; self.sw_nets = [net("SW%d" % k) for k in range(8)]
+        self.oe244, self.button, self.req = net("OE244_L"), net("INPUT_RC"), net("REQ")
+        self.sig = self.c.bus.sig
+        self.switches, self.pressed, self.run_on, self.load_on = 0, False, True, False
+        self.latch = None                                   # the '374 powers up undefined
+        self._apply(); self._idle()
+
+    # ---- the hand controls, as the card's nets see them
+    def _apply(self):
+        f = self.c.forced
+        for k, n in enumerate(self.sw_nets): f[n] = ("SW%d" % (k + 1), (self.switches >> k) & 1)   # SPDT: driven both ways
+        if self.pressed: f[self.button] = ("SW9", 0)
+        else: f.pop(self.button, None)                     # released: R9 pulls it up
+        self.c.drive(**{"-RESET": 1 if self.run_on else 0, "-PAUSE": 0 if self.load_on else 1})
+
+    def _idle(self):
+        """a bus cycle with nothing for this card: N = 0, -MRD low (a fetch), TPA/TPB pulsed"""
+        c = self.c; c.drive(N=0, MRD=0, MRW=1, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
+        c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
+
+    def set(self, switches=None, pressed=None, run=None, load=None):
+        if switches is not None: self.switches = switches & 0xFF
+        if pressed is not None: self.pressed = pressed
+        if run is not None: self.run_on = run
+        if load is not None: self.load_on = load
+        self._apply(); self.c.settle()
+
+    def ef1(self): return self.c.val.get(self.sig["-EF1"]) == 0          # -EF1 pulled low (open collector)
+    def dmain(self): return self.c.val.get(self.sig["-DMAIN"]) == 0
+    def load_mode(self): return not self.run_on and self.load_on
+
+    def _io(self, n, out, v=None):
+        c = self.c
+        c.drive(N=n, MRD=0 if out else 1, MRW=1 if out else 0, D=v if out else None, TPA=1, TPB=0); c.settle()
+        c.drive(TPA=0); c.settle(); c.drive(TPB=1); at_tpb = c.settle(); drives = at_tpb.get(self.oe244) == 0
+        c.drive(TPB=0); c.settle(); c.drive(N=0, MRD=1, MRW=1, D=None); c.settle()
+        return drives
+
+    def out(self, n, v):
+        """an OUT n with byte v from memory: -> True if the card latched it (the LEDs / TIL311s now show self.latch)"""
+        drives = self._io(n, True, v)
+        q = [self.c.val.get(x) for x in self.out_nets]
+        if None not in q and X not in q: self.latch = sum(b << k for k, b in enumerate(q))
+        return drives, self.latch
+
+    def inp(self, n):
+        """an INP n: -> the toggles' byte if the '244 drove the bus, else None"""
+        return self.switches if self._io(n, False) else None
+
+    def dma_in(self):
+        """one DMA IN cycle of LOAD mode: -> the byte the card put on the bus (None if it did not drive), after the
+        cycle as the 1802 runs it: -MRD high, -MWR low then high (the write), then the next IDLE (-MRD low)"""
+        c = self.c
+        if not self.dmain(): return None
+        c.drive(N=0, MRD=1, MRW=1, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
+        c.drive(MRW=0); during = c.settle().get(self.oe244) == 0
+        c.drive(TPB=1); c.settle(); c.drive(MRW=1); held = c.settle().get(self.oe244) == 0   # past the write: still on?
+        c.drive(TPB=0); c.settle(); c.drive(MRD=0); c.settle()                                # the next IDLE
+        return self.switches if during and held else None
+
+    def leds(self):
+        if self.latch is None: return "LEDs ????????  TIL311 ??"
+        return "LEDs %s  TIL311 %02X" % ("".join("*" if self.latch >> k & 1 else "." for k in range(7, -1, -1)), self.latch)
+
+    def describe(self):
+        return "IO panel %s: %s\n  %s" % (self.rev, os.path.relpath(self.nl.path, ROOT), self.note)
+
+
+class _NetlistROM(CPUCardROM):
+    """the CPU card's EPROM when the card runs from its netlist: `remap` (machine.py's 'still in the boot map') is the
+    boot flip-flop itself"""
+    @property
+    def remap(self):
+        return not self.card.booted() if "card" in self.__dict__ else self.__dict__.get("_remap", True)
+
+    @remap.setter
+    def remap(self, v):
+        if "card" in self.__dict__: self.card.set_booted(not v)
+        else: self.__dict__["_remap"] = v
+
+
+class BusLog:
+    """contention and other bus events, grouped by (kind, who, 4K block)"""
+    def __init__(self): self.events = {}
+
+    def add(self, kind, names, a, detail, pc):
+        key = (kind, tuple(names), a >> 12); e = self.events.get(key)
+        if e: e[0] += 1
+        else: self.events[key] = [1, pc, a, detail]
+        return e is None
+
+    def clear(self): self.events.clear()
+
+    def text(self):
+        if not self.events: return "no bus events"
+        out = []
+        for (kind, names, blk), (n, pc, a, detail) in sorted(self.events.items(), key=lambda kv: (kv[0][0], kv[0][2])):
+            out.append("%-11s %-26s %X000-%XFFF  x%-7d first: R(P)=%04X addr %04X  %s" % (kind, " + ".join(names), blk, blk, n, pc, a, detail))
+        return "\n".join(out)
+
+
+class HWMachine(Machine):
+    """Machine with the bus modelled; see the module notes. vma_mode: remap (Boot/REMAP), boot (Boot only), norom.
+    video_rev: a VIDEO_REVS key for the 6845 card from its netlist, or None for machine.py's behavioural model."""
+    VMA_MODES = ("remap", "boot", "norom")
+
+    def __init__(self, mem_rev="D", vma_mode="remap", cpu_rev="A-built", video_rev="B", ide_rev="A", io_rev="A", jumpers=None,
+                 rom_lo=None, rom_hi=None, panel_rev=None, **kw):
+        if vma_mode not in self.VMA_MODES: raise ValueError("vma mode: one of " + ", ".join(self.VMA_MODES))
+        super().__init__(**kw)
+        self.memory = NetlistMemoryCard(mem_rev, jumpers); self.vma_mode = vma_mode
+        self.ccard = NetlistCPUCard(self.cpurom, cpu_rev, vma_mode) if cpu_rev else None
+        if self.ccard:
+            loaded = self.cpurom.loaded; self.cpurom.__class__ = _NetlistROM; self.cpurom.__dict__.pop("remap", None)
+            self.cpurom.card = self.ccard; self.ccard.reset()
+            if not loaded: self.ccard.set_booted(True)                # no EPROM fitted: nothing to boot from
+        self.vcard = NetlistVideoCard(self.video, video_rev) if video_rev else None
+        self.cards = [self.memory] + ([self.vcard] if self.vcard else [])
+        self.icard = NetlistIDECard(ide_rev) if ide_rev else None
+        self.iocard = NetlistIOBoard(io_rev) if io_rev else None
+        self.panel = NetlistIOPanel(panel_rev) if panel_rev else None    # the IO panel card (port 4, -EF1, RUN/LOAD)
+        self.held = False                                                # the panel's RUN off or LOAD on: the 1802 is not running
+        self.log = BusLog(); self.stop_on = set(); self.fault = None
+        for path in (rom_lo, rom_hi):
+            if path: self.load_rom(path)
+
+    def describe(self):
+        return "\n".join([c.describe() for c in [self.ccard] + self.cards + [self.icard, self.iocard, self.panel] if c] +
+                         ([] if self.vcard else ["6845 card: behavioural (machine.py)"]) +
+                         ([] if self.icard else ["IDE card: behavioural (machine.py)"]) +
+                         ([] if self.iocard else ["IO card: behavioural (machine.py)"]) +
+                         ([] if self.ccard else ["CPU card: -VMA and the boot EPROM behavioural (hardware/cpu/eagle/rev-a/ops.html)"]))
+
+    # ------------------------------------------------------------------ the CPU card
+    def cpu_card(self, a, mrd=0, mrw=1, commit=False):
+        """-> (-VMA level, CPU EPROM byte or None) for an access to a; commit = let the boot flip-flop change"""
+        if self.ccard:
+            vma, ea, fault = self.ccard.cycle(a, mrd, mrw, commit)
+            if fault and commit: self._event("undefined", ["cpu"], a, fault)
+            return vma, (None if ea is None or not self.cpurom.loaded else self.cpurom.data[ea & 0xFFF])
+        vma, rom = self._cpu_behavioural(a)
+        return vma, (self.cpurom.data[a & 0xFFF] if rom else None)
+
+    def _cpu_behavioural(self, a):
+        if self.vma_mode == "norom" or not self.cpurom.loaded: return 0, False
+        if self.cpurom.remap: return 1, True               # flip-flop still reset: boot map
+        if self.vma_mode == "boot": return 0, False
+        return (1, True) if (a >> 12) == (self.cpurom.base >> 12) else (0, False)
+
+    def _flipflop(self, a):
+        if not self.ccard and a & 0x8000: self.cpurom.remap = False
+
+    # ------------------------------------------------------------------ bus
+    def _event(self, kind, names, a, detail):
+        pc = self.cpu.R[self.cpu.P]
+        self.log.add(kind, names, a, detail, pc)
+        if kind in self.stop_on and self.fault is None:
+            self.fault = "%s %s at %04X: %s" % (kind, " + ".join(names), a, detail)
+
+    def _drivers(self, a, log):
+        vma, rom = self.cpu_card(a, 0, 1, commit=log); drv = []; faults = []
+        if rom is not None: drv.append(("CPU EPROM", rom))
+        if not self.vcard:
+            v = self.video.read(a)
+            if v is not None: drv.append(("6845", v))
+        for card in self.cards:
+            d, f = card.bus_read(a, vma); drv += d; faults += f
+        if log:
+            for f in faults: self._event("undefined", ["bus"], a, f)
+        return vma, drv
+
+    def _read(self, a, log):
+        vma, drv = self._drivers(a, log)
+        if log and len(drv) > 1:
+            names = [n for n, _ in drv]; detail = " ".join("%s=%02X" % d for d in drv)
+            self._event("fight" if len({b for _, b in drv}) > 1 else "double", names, a, detail)
+        if not drv: return FLOAT
+        r = 0xFF
+        for _, b in drv: r &= b
+        return r
+
+    def peek(self, a): return self._read(a, False)
+
+    def read(self, a):
+        v = self._read(a, True); self._flipflop(a)
+        if self.watch: self.watch("r", a, v)
+        return v
+
+    def fetch(self, a):
+        v = self._read(a, True); self._flipflop(a); return v
+
+    def write(self, a, v):
+        if self.watch: self.watch("w", a, v)
+        vma, _ = self.cpu_card(a, 1, 0, commit=True); got = []
+        if not self.vcard and self.video.write(a, v): got.append("6845")
+        for card in self.cards:
+            g, faults = card.bus_write(a, vma, v); got += g
+            for f in faults: self._event("undefined", ["bus"], a, f)
+        if len(got) > 1: self._event("multi-write", got, a, "%02X lands in %d places" % (v, len(got)))
+        self._flipflop(a)
+
+    def load_rom(self, path, base=0x8000):
+        from .machine import load_image
+        img = load_image(path, base); n = sum(self.memory.program(a, b) for a, b in img.items())
+        return n
+
+    def bus_map(self):
+        """which drivers answer a read at each 4K block (and its upper half, where the 6845 card splits), right now"""
+        out = []
+        for a in range(0, 0x10000, 0x800):
+            if a & 0x800 and a >> 12 != 7: continue
+            vma, drv = self._drivers(a, False)
+            out.append("%04X  -VMA=%d  %s" % (a, vma, " + ".join(n for n, _ in drv) or "(nothing: floats FF)"))
+        return "\n".join(out)
+
+    # ------------------------------------------------------------------ I/O instructions
+    def out(self, n, v):
+        if self.icard:
+            op, reg = self.icard.cycle(n, True, v)
+            if reg == "undefined": self._event("undefined", ["ide"], n, "OUT %d: drive register lines undefined" % n)
+            elif op == "w": self.ide.sel = reg; self.ide.out(3, self.icard.to_drive(v))
+            elif op == "r": self._event("undefined", ["ide"], n, "OUT %d raised DIOR" % n)
+        elif n in (2, 3): self.ide.out(n, v)
+        if self.iocard:
+            kbd, on, off, faults = self.iocard.cycle(n, True, v)
+            for f in faults: self._event("undefined", ["io"], n, "OUT %d: %s" % (n, f))
+            if off: self.pixie.on = False
+            if on: self.pixie.on = True
+            if kbd: self._event("undefined", ["io"], n, "OUT %d enabled the keyboard 1852 onto the bus" % n)
+        elif n == self.pixie.port: self.pixie.on = False
+        if self.panel: self.panel.out(n, v)
+        if self.watch: self.watch("o", n, v)
+
+    def inp(self, n):
+        drv = []
+        if self.icard:
+            op, reg = self.icard.cycle(n, False)
+            if reg == "undefined": self._event("undefined", ["ide"], n, "INP %d: drive register lines undefined" % n)
+            elif op == "r": self.ide.sel = reg; drv.append(("ide drive", self.icard.to_bus(self.ide.inp(3))))
+            elif op == "w": self._event("undefined", ["ide"], n, "INP %d raised DIOW" % n)
+        elif n in (2, 3): drv.append(("ide", self.ide.inp(n)))
+        if self.iocard:
+            kbd, on, off, faults = self.iocard.cycle(n, False)
+            for f in faults: self._event("undefined", ["io"], n, "INP %d: %s" % (n, f))
+            if kbd: drv.append(("io 1852", self.iocard.to_bus(self.kbd.read())))
+            if on: self.pixie.on = True
+            if off: self.pixie.on = False
+        else:
+            if n == self.kbd.port: drv.append(("keyboard", self.kbd.read()))
+            if n == self.pixie.port: self.pixie.on = True
+        if self.panel:
+            b = self.panel.inp(n)
+            if b is not None: drv.append(("io panel", b))
+        if len(drv) > 1:
+            self._event("fight" if len({b for _, b in drv}) > 1 else "double", [d for d, _ in drv], n,
+                        "INP %d: " % n + " ".join("%s=%02X" % d for d in drv))
+        v = FLOAT
+        for _, b in drv: v &= b
+        if self.watch: self.watch("i", n, v)
+        return v
+
+    def ef(self, n):
+        if not self.ccard: return super().ef(n)
+        src = self.ccard.ef_map.get(n)
+        kbd_on_bus = self.iocard.sr_on_bus if self.iocard else True
+        if src == "-EF4": return kbd_on_bus and self.kbd.ready()          # the bus -EF line: the IO card's 1852 (SV1 2-3)
+        if src == "KEF": return not kbd_on_bus and self.kbd.ready()       # the IO card's EFK, over the SV3 cable
+        if src == "VEF": return self.pixie.ef1()
+        if src == "-EF1" and self.panel: return self.panel.ef1()          # the IO panel's INPUT button
+        return False
+
+    # ------------------------------------------------------------------ the IO panel's hand controls
+    def panel_set(self, switches=None, input=None, run=None, load=None):
+        """the IO panel's toggles (byte), INPUT (pressed), RUN and LOAD, as a person at the front panel would. RUN off holds
+        the machine in reset (-RESET), LOAD on pauses it (-PAUSE); both = LOAD mode, where each INPUT press is one DMA IN
+        of the toggles to M(R0). The CPU card (Rev D) sees the same lines: its LOADED flag then keeps the boot map off."""
+        p = self.panel; was_pressed = p.pressed
+        mode = lambda: {(True, False): "run", (True, True): "pause", (False, False): "reset", (False, True): "load"}[(p.run_on, p.load_on)]
+        before = mode()
+        p.set(switches=switches, pressed=input, run=run, load=load)
+        if self.ccard and hasattr(self.ccard, "mode") and len(self.ccard.flops) > 1:
+            self.ccard.mode(1 if p.run_on else 0, 0 if p.load_on else 1)
+        if mode() == "reset" and before != "reset":                      # CLEAR low, WAIT high: the 1802 resets (R0 = 0000)
+            self.cpu.reset(); self.pixie.on = False                      # (in LOAD mode R0 counts the bytes instead)
+        self.held = mode() != "run"
+        if p.load_mode() and p.pressed and not was_pressed:
+            b = p.dma_in()
+            if b is None: self._event("undefined", ["panel"], 0, "INPUT in LOAD mode: the card did not drive the bus")
+            else: self.cpu.dma_in(b)
+        return self.panel_text()
+
+    def panel_text(self):
+        p = self.panel
+        return "%s  Q %s   toggles %s (%02X)  INPUT %s  RUN %s  LOAD %s   mode %s" % (
+            p.leds(), "*" if self.cpu.Q else ".", "".join("1" if p.switches >> k & 1 else "0" for k in range(7, -1, -1)),
+            p.switches, "down" if p.pressed else "up", "on" if p.run_on else "off", "on" if p.load_on else "off",
+            {(True, False): "run", (True, True): "pause", (False, False): "reset", (False, True): "LOAD"}[(p.run_on, p.load_on)])
+
+    def step(self):
+        if self.panel and self.held:                                     # reset or paused by the panel: no instruction
+            self.cpu.cycles += 1; return None
+        return super().step()
+
+    def reset(self):
+        super().reset(); self.fault = None
+        if self.ccard: self.ccard.reset()

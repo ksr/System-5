@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-28T12:54:42",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/710aa62b-b3e7-5d80-83cb-285c466b3d3f",
+            "violations": []
+        },
+        {
+            "path": "/Decode/",
+            "uuid_path": "/710aa62b-b3e7-5d80-83cb-285c466b3d3f/9354b49d-ede7-599f-a59c-ab0933cf897b",
+            "violations": []
+        },
+        {
+            "path": "/Keyboard/",
+            "uuid_path": "/710aa62b-b3e7-5d80-83cb-285c466b3d3f/8eebf418-7a56-5362-941f-fac6cae9edd9",
+            "violations": [
+                {
+                    "description": "Input Power pin not driven by any Output Power pins",
+                    "items": [
+                        {
+                            "description": "Symbol X1 Pin SH1 [PE1, Power input, Line]",
+                            "pos": {
+                                "x": 1.0922,
+                                "y": 2.0955
+                            },
+                            "uuid": "706e4a50-01f3-583e-ab1f-6ed935441974"
+                        }
+                    ],
+                    "severity": "error",
+                    "type": "power_pin_not_driven"
+                }
+            ]
+        },
+        {
+            "path": "/1861/",
+            "uuid_path": "/710aa62b-b3e7-5d80-83cb-285c466b3d3f/77d382b4-b93a-50a9-a3b7-b43111ac7440",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/710aa62b-b3e7-5d80-83cb-285c466b3d3f/0fdfaf84-e5c0-5d47-8e75-5234cf882bfb",
+            "violations": []
+        }
+    ],
+    "source": "io-1861-keyboard-rev-a-schematic.kicad_sch"
+}

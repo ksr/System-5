@@ -1,0 +1,65 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-30T15:16:21",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e",
+            "violations": []
+        },
+        {
+            "path": "/CPU/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/d666e74a-a345-5b55-9da2-88a91ba96c37",
+            "violations": []
+        },
+        {
+            "path": "/Clock/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/70b555aa-a1b7-5641-af8e-976004cf89dc",
+            "violations": []
+        },
+        {
+            "path": "/Control/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/658d543c-78de-59ef-9579-fb940350eff2",
+            "violations": []
+        },
+        {
+            "path": "/Boot/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/e179127e-8856-5200-b5d4-d142ee2b6fb9",
+            "violations": []
+        },
+        {
+            "path": "/Flags/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/22510c87-a9f8-5dd2-add1-88364df16d75",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/61b003d1-aaa1-5c9b-a32e-92837005f36e/08b9efd9-4926-5acf-ad18-5cbe0b00209c",
+            "violations": []
+        }
+    ],
+    "source": "cpu-rev-d-schematic.kicad_sch"
+}

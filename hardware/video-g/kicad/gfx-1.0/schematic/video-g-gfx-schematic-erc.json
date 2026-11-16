@@ -1,0 +1,65 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-02T01:09:26",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27",
+            "violations": []
+        },
+        {
+            "path": "/CPU side/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/4e19443f-2239-53b8-b378-1a3ac79dec48",
+            "violations": []
+        },
+        {
+            "path": "/Graphics RAM/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/ba6c9b45-bbf4-5916-b2a3-a4067ef7d37a",
+            "violations": []
+        },
+        {
+            "path": "/Display/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/404b2321-9eae-57fa-bfbf-f05a0e8fa23b",
+            "violations": []
+        },
+        {
+            "path": "/Mouse/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/3a60f44d-c8fb-5895-bfb7-d7b35d2090ae",
+            "violations": []
+        },
+        {
+            "path": "/Ribbon from TEXT/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/fa2060b5-9bec-5029-89bc-4b0dae184a2d",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/bac66e29-0822-52d0-bc98-812cdd0e1b27/4413e6bd-91a6-50d8-93fc-c38b62b74310",
+            "violations": []
+        }
+    ],
+    "source": "video-g-gfx-schematic.kicad_sch"
+}

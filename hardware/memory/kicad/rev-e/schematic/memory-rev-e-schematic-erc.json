@@ -1,0 +1,70 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-28T12:54:28",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904",
+            "violations": []
+        },
+        {
+            "path": "/Address/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/7ee77b28-06db-5f3b-b933-341880dfa2af",
+            "violations": []
+        },
+        {
+            "path": "/RAM lo/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/058cecbf-0ff4-5191-b19f-4d2b04071cc8",
+            "violations": []
+        },
+        {
+            "path": "/RAM hi/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/2cc1a30e-c0f2-5258-b587-d3634e9ff647",
+            "violations": []
+        },
+        {
+            "path": "/EPROM lo/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/042f510a-1a1c-5cfd-a4f5-43c562720ada",
+            "violations": []
+        },
+        {
+            "path": "/EPROM hi/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/4cc4b2d8-3f2c-59b0-b88d-5b261f1baa71",
+            "violations": []
+        },
+        {
+            "path": "/Memory/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/8b0906fe-0f48-5e56-96ab-67817c256efb",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/71144e64-8357-5735-a19b-cfb9b187b904/9507ed19-375d-5ac6-9954-75a01d204e2c",
+            "violations": []
+        }
+    ],
+    "source": "memory-rev-e-schematic.kicad_sch"
+}
