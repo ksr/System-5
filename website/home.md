@@ -21,6 +21,8 @@ with a new CPU card and a front-panel IO card ([below](#next-the-36-pin-machine)
 I'm Ken Rother. I designed and built System-5. Claude, Anthropic's AI, has been directly involved in converting the
 boards, the manual, the emulator and this site.
 
+[:material-github: Source on GitHub](https://github.com/ksr/System-5){ .md-button .md-button--primary }
+
 ## At a glance
 
 | | |
