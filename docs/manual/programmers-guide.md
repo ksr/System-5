@@ -14,7 +14,7 @@ The hardware behind each section is in the card chapters; the 1802 instruction s
 | EPROM | 8000–EFFF on the memory card; F000–FFFF the CPU card's boot ROM (HBIOS) |
 | Console | the 6845 screen and the PS/2 keyboard (no serial port) |
 | Disk | a CompactFlash card on the IDE card, 512-byte sectors by LBA |
-| Operating system | ELF/OS (Mike Riley), booted from the CF card |
+| Operating system | Mike Riley's Elf/OS 5.1.1 (build 229), his later release, booted from the CF card since 2026-11-15; before that his ELF/OS 0.2.6 |
 
 ## Memory map
 
@@ -102,7 +102,7 @@ The registers and HBIOS's values are in `video-6845-card.md`. Only R14–R17 can
 
 ## The monitor
 
-Mike Riley's monitor reads a line and acts on its first character. Addresses and bytes are in hex.
+The monitor is Mike Riley's, part of his BIOS: it reads a line and acts on its first character. Addresses and bytes are in hex. The commands from `H` down are System-5's additions to it (HBIOS v1.0.5 and later), in the System-5 part of the ROM; his monitor passes any command it does not know to them.
 
 | Command | Effect |
 |---|---|
@@ -116,6 +116,7 @@ Mike Riley's monitor reads a line and acts on its first character. Addresses and
 | `D start:end` | disassemble, 14 lines a screen; at `-- more --` any key goes on, Esc stops (**v1.0.5**). `D start`: one screenful |
 | `Q1` / `Q0` | Q output on (`SEQ`) / off (`REQ`) (**v1.0.5**) |
 | `@F1C0` | the IO panel demo: toggles to the LEDs, INPUT (EF1) to Q, until Reset (**v1.0.5**) |
+| `@F1E0` | key codes: wait for a key (EF3), read it (`INP 1`), write its code as `0x31` at the start of the bottom line, over the last, until Reset; self-contained, straight into the video RAM (**v1.0.7**, 2026-11-17) |
 
 `f_boot` resets the drive, reads LBA 0 into 0100 and runs it there (R0 = 0100).
 
@@ -172,7 +173,7 @@ The serial-port, baud-rate and drive-geometry entries (FF0C, FF1E–FF2D) are st
 
 ## ELF/OS
 
-ELF/OS 0.2.x (Mike Riley) runs from the CF card; its commands are in the [operator's guide](operators-guide.md). Its kernel API, file system and utilities are documented with its source in `../private-resources/elf/reference/mike-riley/`. Known issues found with the emulator:
+Since 2026-11-15 the machine runs Mike Riley's later operating system, Elf/OS 5.1.1 (build 229), from the CF card; it needs HBIOS 1.0.6. Before that it ran his ELF/OS 0.2.6 (build 135), the system of 2004–05. The commands of both are in the [operator's guide](operators-guide.md); 0.2.6's kernel API, file system and utilities are documented with its source in `../private-resources/elf/reference/mike-riley/`. Known issues found with the emulator:
 - HBIOS loses the first character after a 64-column line wrap, so `DIR` drops every fifth name.
 - `EDIT` with no file name hangs (kernel 0.2.6 build 135's empty-path handling); give a name.
 

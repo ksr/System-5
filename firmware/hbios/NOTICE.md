@@ -7,9 +7,12 @@ keyboard drivers (2005), and the monitor commands and disk fixes of v1.0.5 and v
   the old website (`docs/website-2005/System-5/BIOS/`), and,
   through it, every HBIOS ROM built from it: the `.rom`, `.hex` and `.img` files in this folder, the emulator's ROMs
   in `software/s5emu/roms/` and the CPU card's EPROM read in `hardware/cpu/eagle/rev-a/rom/`. Ken's few changes
-  inside his source are marked `KSR`.
+  inside his source are marked `KSR`. **The monitor is his:** it is part of that BIOS (`minimon`), with its
+  commands `?`, `!`, `=` and `@`.
 - **Ken Rother's:** the `sec1.asm` files, `index.htm`, the Makefiles and the build and check scripts
-  (MIT: `LICENSES/MIT.txt` at the top of the repository).
+  (MIT: `LICENSES/MIT.txt` at the top of the repository). `sec1.asm` holds the video and keyboard drivers and,
+  from v1.0.5, the commands Ken added to Mike's monitor: `H`, `B`, `D` and `Q1` / `Q0`. His monitor hands them any
+  command it does not know, through one changed branch.
 
 Mike Riley's source carries this notice, which stays with it and with every ROM built from it:
 

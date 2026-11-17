@@ -1,6 +1,6 @@
 # VIDEO-G 1.0 GFX - bill of materials
 
-Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-01). Every IC goes in a socket.
+Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-17). Every IC goes in a socket.
 
 | Qty | Value | Footprint | References | What to buy |
 |---|---|---|---|---|

@@ -24,9 +24,9 @@ The project's website is <https://system5.cottageworker.com>. This repository is
 | Breadboard proto | `hardware/proto-breadboard` | Solderless-breadboard prototyping card. Drawn in 2005, never made. |
 | Bus driver | `hardware/bus-driver` | New, 2026: Arduino Nano and 2× MCP23017 on the bus, a test card after the YACC1 bus tester. It runs bus cycles in place of the CPU, or steps and traces the CPU. **Rev B** (BUSDRV-B, `kicad/rev-b/`; JLCPCB, 2 layers) is built and working since 2026-10-30. Rev A is scrap: routed on 4 layers, ordered from a 2-layer zip. |
 | IO panel | `hardware/io-panel` | New, 2026: the front panel as a card on the 36-pin bus. 8 toggles, 8 LEDs, two TIL311 hex displays, Q LED, INPUT button, ELF-style RUN/LOAD. Rev A (`kicad/rev-a/`) designed, not ordered. No front panel was designed in 2005: the System-4 wire-wrap panel was used via the CPU card header. |
-| VIDEO-G | `hardware/video-g` | New, 2026: the next video card, two boards joined by a 40-pin ribbon. **TEXT**: 6845 text, 64 × 25 or 64 × 32, with a PS/2 keyboard. **GFX**: graphics, 512 × 200 or 512 × 256, with a PS/2 mouse. Version 1.0 (`kicad/`) designed, not ordered. |
+| VIDEO-G | `hardware/video-g` | New, 2026: the next video card, two boards joined by a 40-pin ribbon. **TEXT**: 6845 text, 64 × 25 or 64 × 32, with a PS/2 keyboard. **GFX**: graphics, 512 × 200 or 512 × 256, with a PS/2 mouse. All memory-mapped in its own block, no I/O ports (2026-11-17). Version 1.0 (`kicad/`) designed, not ordered. |
 
-The machine today (2026-11-14) is the 2009 backplane with CPU Rev A, memory Rev E, 6845 Rev B, IO Rev A and IDE Rev A. The five new boards (bus Rev D, CPU Rev D, the IO panel and the two VIDEO-G boards) pass the pre-order check and none is ordered.
+The machine today (2026-11-14) is the 2009 backplane with CPU Rev A, memory Rev E, 6845 Rev B, IO Rev A and IDE Rev A. The five new boards (bus Rev D, CPU Rev D, the IO panel and the two VIDEO-G boards) pass the older check, `tools/preorder_check.py`, and none is ordered. Before an order each has to pass `pcb-check`, Ken's check for the boards of all his systems since 2026-11-06 (`hardware/BUILD-RULES.md`, section 2): the two VIDEO-G boards and the bus Rev D have (VIDEO-G on 2026-11-17, with no failures).
 
 Board conventions (size 5.50" × 3.75", LED positions, labelling `KSR -- XXX#-A`,
 CAM jobs) are in `hardware/board-notes/`.
@@ -41,12 +41,14 @@ the same name but different content, the website version is kept in a
 ## Firmware (Ken's)
 
 - `firmware/hbios/` — **HBIOS**: 6845 video and keyboard drivers layered on Mike
-  Riley's ELF/OS BIOS (changes marked `#define KSR`); boots into the BIOS
-  `minimon`. `v1.0.6` is current, in the machine since 2026-11-15 (v1.0.4 plus monitor commands, and the disk calls
+  Riley's ELF/OS BIOS (changes marked `#define KSR`); boots into the BIOS's
+  monitor, `minimon`, which is Mike's. `v1.0.6` is current, in the machine since 2026-11-15 (v1.0.4 plus the commands
+  Ken added to that monitor, `H`, `B`, `D` and `Q1` / `Q0`, and the disk calls
   always in LBA mode, which Elf/OS v5 needs; built by its `build.py`); `v1.0.5`, `v1.0.4`, `v0.9` and `old/` are
-  earlier builds. v1.0.4 builds with `rcasm` + `srec_cat` into a ROM
-  at `0xF000`. `video-g/` is a build for the VIDEO-G card (6845 on
-  ports 5/6, 64 x 25, a faster scroll; for the emulator, not burned).
+  earlier builds. `v1.0.7` (2026-11-17, burned that day, not yet in the machine) adds `@F1E0`: the code of each key pressed, as `0x31`, on the
+  bottom line of the screen, until Reset. v1.0.4 builds with `rcasm` + `srec_cat` into a ROM
+  at `0xF000`. `video-g/` is a build for the VIDEO-G card (everything
+  memory-mapped: the 6845 at 7800/7801, the key at 7802; 64 x 25, a faster scroll; for the emulator, not burned).
   Mike Riley's BIOS comes under his notice (`firmware/hbios/NOTICE.md`: free to use and share with the notice kept,
   not for commercial use without his permission).
 - `firmware/rom-tests/` — test ROM (`sec2`).

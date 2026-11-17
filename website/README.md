@@ -8,7 +8,7 @@ documents stay where they are; the site is a readable view of them, with navigat
 | File | What |
 |---|---|
 | `home.md` | the visitor home page (the site's index) |
-| `stage.py` | copies what the site uses into `stage/`, keeping repository paths so the links between documents work: the manual and its PDFs, the hardware notes, each KiCad revision's README (as `notes.md`), the schematic PDFs, the photos and renders (resized) |
+| `stage.py` | copies what the site uses into `stage/`, keeping repository paths so the links between documents work: the manual and its PDFs, the hardware notes, each KiCad revision's README and VIDEO-G's `kicad/README.md` (as `notes.md`), VIDEO-G's parts lists (`BOM.md`), the schematic PDFs, the photos and renders (resized) |
 | `hooks.py` | MkDocs hook: links to repository files that are not on the site become plain text (the repository is private, so GitHub links would not open for visitors); each card's menu gets its KiCad revisions, named with their status from `hardware/FABRICATED.md` |
 | `mkdocs.yml` | the site: navigation, theme, Markdown extensions |
 | `mkdocs-publish.yml` | `mkdocs.yml` + the Google Analytics tag (G-X7P96DTCNE); only the published build carries it |

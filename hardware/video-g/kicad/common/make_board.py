@@ -7,7 +7,7 @@
      edge to the front edge; the card-guide keep-outs (3.00" x 0.15" at both sides, from the bus edge)
   2. KiCad stock footprints (and kicad/lib/video-g-local) for every part in gen/netlist.py at gen/place.py's PLACE;
      nets and symbol links from reports/netlist.net (the exported schematic netlist), so DRC's parity check works
-  3. 4 layers: F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid VCC plane (Ken's MEM3-E stack-up)
+  3. 4 layers: F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid +5V plane (Ken's MEM3-E stack-up)
   4. silkscreen (Ken's rules, 2026-10-24 / 10-31): every reference outside its part's outline with the IC type beside
      it ("IC5 74HCT138"), jumpers, jacks and LEDs labelled by what they do (place.LABELS), the board name and
      cottageworker.com
@@ -89,7 +89,7 @@ for blk in re.split(r'\n\t\t\(comp\s', s)[1:]:
     if fp and sp and ts: fp.SetPath(pcbnew.KIID_PATH(sp.group(1).rstrip("/") + "/" + ts.group(1)))
 
 # ---- 3. planes ----------------------------------------------------------------------------------------------------------
-for lname, net in (("In1.Cu", "GND"), ("In2.Cu", "VCC")):
+for lname, net in (("In1.Cu", "GND"), ("In2.Cu", "+5V")):
     z = pcbnew.ZONE(b); z.SetLayer(b.GetLayerID(lname)); z.SetNet(netitem(net)); o = z.Outline(); o.NewOutline(); i = 0.5
     for x, y in ((X0 + i, Y0 + i), (X1 - i, Y0 + i), (X1 - i, Y1 - i), (X0 + i, Y1 - i)):
         o.Append(MM(x), MM(y))
@@ -115,7 +115,7 @@ c = pj["net_settings"]["classes"][0]
 c.update(name="Default", clearance=0.2, track_width=0.25, via_diameter=0.6, via_drill=0.3)
 pw = dict(c); pw.update(name="Power", clearance=0.2, track_width=0.5, via_diameter=0.8, via_drill=0.4, priority=0)
 pj["net_settings"]["classes"] = [c, pw]
-pj["net_settings"]["netclass_patterns"] = [{"netclass": "Power", "pattern": n} for n in ("VCC", "GND", "PS2VCC")]
+pj["net_settings"]["netclass_patterns"] = [{"netclass": "Power", "pattern": n} for n in ("+5V", "GND", "PS2VCC")]
 pj["board"]["design_settings"]["rules"].update(min_clearance=0.15, min_track_width=0.15, min_via_diameter=0.5,
     min_via_annular_width=0.13, min_through_hole_diameter=0.3, min_hole_clearance=0.25, min_hole_to_hole=0.5,
     min_copper_edge_clearance=0.5, min_text_height=0.8, min_text_thickness=0.15)

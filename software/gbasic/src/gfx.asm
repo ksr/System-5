@@ -1,15 +1,15 @@
 ; GBASIC - VIDEO-G: detection, the display switches and the drawing commands.
 ;
-; The graphics window 7800-783F is pixel line Y (OUT 7); bit 7 of byte 0 is x = 0.  x 0-511, y 0-199 (NTSC) or
+; The graphics window 7C00-7C3F is pixel line Y (written at 7806); bit 7 of byte 0 is x = 0.  x 0-511, y 0-199 (NTSC) or
 ; 0-255 (IBM 5151, MONITOR jumper).  Everything is clipped to the screen.  PEN 1 draws (OR), PEN 0 erases (AND NOT),
 ; PEN 2 inverts (XOR); every pixel of a shape is touched once, so drawing a shape twice with PEN 2 removes it.
 
 ; ------------------------------------------------------------------ detection, control register
-; vg_detect: INP 4; VIDEO-G answers 10xxxxxx (a missing card floats: the INP opcode itself, 6C, or FF here).
-; Then the control register = 00 (text on, graphics off; the ELF/OS boot loader writes sector numbers to port 4),
-; and with the GFX board both graphics pages are cleared.
-vg_detect:  sex     r2
-            inp     VGPORT
+; vg_detect: the status at 7804; VIDEO-G answers 10xxxxxx (the 6845 card's CRTC mirror there, or nothing, reads
+; otherwise). Then the control register = 00 (text on, graphics off), and with the GFX board both graphics pages are
+; cleared.
+vg_detect:  ldiw    r9, VGCSR
+            ldn     r9
             plo     re
             ani     0c0h
             xri     80h
@@ -40,9 +40,7 @@ vd_ntsc:    ldi     0
 vd_none:    zp_at   r9, ctrl
             ldi     0
             str     r9
-            str     r2
-            out     VGPORT
-            dec     r2
+            call    setctrl             ; (only with VIDEO-G)
             zp_at   r9, pen
             ldi     1
             str     r9
@@ -83,17 +81,23 @@ m_vggfx:    db      "VIDEO-G graphics 512 x ",0
 m_vgtext:   db      "VIDEO-G text, no GFX board: no graphics",0
 m_novg:     db      "No VIDEO-G: text only",0
 
-; setctrl: OUT 4 = ctrl.   setctrl_d: ctrl = D, then OUT 4.
+; setctrl: the control register (7804) = ctrl.   setctrl_d: ctrl = D, then the same.  Without VIDEO-G nothing is
+; written (7804 is the 6845 card's CRTC mirror there).
 setctrl_d:  plo     re
             zp_at   r9, ctrl
             glo     re
             str     r9
-setctrl:    zp_at   r9, ctrl
+setctrl:    zp_at   r9, vgstat
             ldn     r9
-            str     r2
-            out     VGPORT
-            dec     r2
-            rtn
+            jz      sc_dn
+            ldi     low ctrl            ; (the same page as vgstat, as vg_textsafe uses it)
+            plo     r9
+            ldn     r9
+            plo     re
+            ldiw    r9, VGCSR
+            glo     re
+            str     r9
+sc_dn:      rtn
 ; vg_textsafe: back in direct mode, the text must show (graphics stay as they are)
 vg_textsafe: zp_at  r9, vgstat
             ldn     r9
@@ -369,10 +373,9 @@ fn_point:   call    gfx_need
             plo     acc
             call    clip_xy             ; DF = 1 off the screen
             jdf     pt_dn
+            ldiw    rf, VGY             ; the Y register (RF is pixaddr's next)
             glo     r8
-            str     r2
-            out     YPORT
-            dec     r2
+            str     rf
             call    pixaddr             ; RF, D = mask
             str     r2
             ldn     rf
@@ -399,10 +402,9 @@ gerase:     phi     rc                  ; RC.1 = the byte
             plo     r7
             ldi     0
             plo     rc                  ; RC.0 = y
-ge_line:    glo     rc
-            str     r2
-            out     YPORT
-            dec     r2
+ge_line:    ldiw    r9, VGY             ; the Y register
+            glo     rc
+            str     r9
             ldiw    r9, GWIN + 63       ; 64 STXD, in line: no call for each line
             sex     r9
             ghi     rc
@@ -549,10 +551,9 @@ pa_inv:     glo     re
 ; plot: one pixel at (R7, R8), clipped
 plot:       call    clip_xy
             jdf     plt_dn
+            ldiw    rf, VGY             ; the Y register (RF is pixaddr's next)
             glo     r8
-            str     r2
-            out     YPORT
-            dec     r2
+            str     rf
             call    pixaddr
             lbr     pen_apply
 plt_dn:     rtn
@@ -599,10 +600,9 @@ hs_l1:      ghi     r7                  ; R7 > 511: nothing
             phi     r9
             ldi     0ffh
             plo     r9
-hs_r1:      glo     r8                  ; the line
-            str     r2
-            out     YPORT
-            dec     r2
+hs_r1:      ldiw    rf, VGY             ; the line, in the Y register (RF is set again below)
+            glo     r8
+            str     rf
             glo     r7                  ; RA.0 = the left byte's mask, RA.1 = the right byte's
             ani     7
             adi     low lmasks
@@ -897,10 +897,9 @@ vl_op:      plo     re
             ldiw    r9, vl_alu
             glo     re
             str     r9
+            ldiw    r9, VGY             ; R9 = the Y register through the loop
 vl_loop:    glo     r8
-            str     r2
-            out     YPORT
-            dec     r2
+            str     r9
             glo     ra
             str     r2
             ldn     rf
@@ -1076,7 +1075,7 @@ lx_pst:     str     r9
             call    ld_r7               ; R7 = x
             ldi     low ly0
             call    ld_r8               ; R8 = y
-            call    line_y              ; OUT 7 and RE.1 = y valid (0 = on the screen)
+            call    line_y              ; the Y register and RE.1 = y valid (0 = on the screen)
             ghi     r7                  ; RF, RE.0 = the byte and mask for x (if x < 0 they are set when x reaches 0)
             ani     80h
             jnz     lx_neg
@@ -1138,10 +1137,9 @@ lx_ystep:   inc     r8                  ; patched: INC R8 / DEC R8
             glo     r8
             smi     200
             jdf     lx_yoff
-lx_yon:     glo     r8                  ; y on the screen: the Y register
-            str     r2
-            out     YPORT
-            dec     r2
+lx_yon:     ldiw    r9, VGY             ; y on the screen: the Y register (R9 is the loop's scratch)
+            glo     r8
+            str     r9
             ldi     0
             phi     re
             jmp     lx_next
@@ -1210,10 +1208,9 @@ ly_loop:    ghi     r8                  ; y on the screen?
             jdf     ly_skip
 ly_yok:     ghi     re
             jnz     ly_skip
+            ldiw    r9, VGY             ; the Y register (R9 is the loop's scratch)
             glo     r8
-            str     r2
-            out     YPORT
-            dec     r2
+            str     r9
             glo     re
 ly_xri:     xri     0
             str     r2
@@ -1321,7 +1318,7 @@ lp_inv:     ldi     0
             ldi     0f3h                ; XOR
             str     rf
             rtn
-; line_y: OUT 7 = y and RE.1 = 0 if y (R8) is on the screen, else 1.  Keeps RE.0.
+; line_y: the Y register = y and RE.1 = 0 if y (R8) is on the screen, else 1.  Keeps RE.0.  (R9: scratch)
 line_y:     ghi     r8
             jnz     lyy_off
             zp_at   r9, gheight
@@ -1330,10 +1327,9 @@ line_y:     ghi     r8
             glo     r8
             smi     200
             jdf     lyy_off
-lyy_on:     glo     r8
-            str     r2
-            out     YPORT
-            dec     r2
+lyy_on:     ldiw    r9, VGY
+            glo     r8
+            str     r9
             ldi     0
             phi     re
             rtn

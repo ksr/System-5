@@ -24,8 +24,8 @@ BOOKS = [
       "docs/manual/bus-driver-card.md", "docs/manual/other-cards.md"]),
     ("system5-programmers-guide", "System-5 Programmer's Guide", "The memory and I/O maps, the devices, HBIOS, "
      "the monitor and the BIOS calls", ["docs/manual/programmers-guide.md"]),
-    ("system5-operators-guide", "System-5 Operator's Guide", "The boot monitor, the ELF/OS installer, every ELF/OS "
-     "command and Rc/Basic", ["docs/manual/operators-guide.md"]),
+    ("system5-operators-guide", "System-5 Operator's Guide", "The boot monitor, Elf/OS 5.1.1 and every program on its "
+     "card, ELF/OS 0.2.6 and Rc/Basic", ["docs/manual/operators-guide.md"]),
     ("system5-system", "System-5: the System", "The cards, a bus cycle, the maps and how it starts", ["docs/manual/system.md"]),
     ("system5-bus", "The System-5 Bus", "The 30-pin bus: every pin, the 1802's cycle, -VMA, rules for a card",
      ["docs/manual/bus.md"]),

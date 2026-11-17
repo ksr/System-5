@@ -1,4 +1,4 @@
-# Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-01
+# Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-01 (memory-mapped 2026-11-17)
 """netlist.py - VIDEO-G 1.0 GFX: THE single source of the board's circuit.
 
 make_schematic.py and make_board.py read this module. Design: hardware/video-g/DESIGN.md, section 5. The graphics
@@ -9,14 +9,16 @@ modified) without direct mode, with the plane register replaced by the Y registe
     every character row), the CPU {CPAGE, Y2-Y0, Y7-Y3, A5-A0}: the same layout, so pixel line y, byte x/8 is plain
     wiring. Four 74HCT157 (IC2-IC5) choose on NMUX = NOT(QC OR RCO): the CPU's in the first half of each character
     time (counts 8-11), the display's in the second (12-15)
-  * CPU read: IC6 loads the CPU-half byte on every QC rise and drives D0-D7 while GSEL AND -MRD low
-  * CPU write: WRQ (IC13A) = GSEL AND -MRW low, sampled on CHARCLOCK's rise; -WE = NAND(WRQ, NMUX, WEPH, GWR) = counts
+  * CPU read: IC6 loads the CPU-half byte on every QC rise and drives D0-D7 while WSEL AND -MRD low
+  * CPU write: WRQ (IC13A) = WSEL AND -MRW low, sampled on CHARCLOCK's rise; -WE = NAND(WRQ, NMUX, WEPH, GWR) = counts
     9-10; IC7 drives the byte onto the RAM only while -WE is low; the RAM's -OE is off through that CPU half
   * display: IC8 latches the display-half byte on CHARCLOCK's rise, IC9 shifts it out at the dot clock -> GDOT
-  * Y register IC10, loaded by OUT 7 (-WR7 from TEXT); control register IC19, loaded by OUT 4 (-WR4 from TEXT):
+  * memory-mapped (2026-11-17), decoded on TEXT: WSEL = the window, 7C00-7FFF; Y register IC10, loaded by a write to
+    7806 (-WRY); control register IC19, loaded by a write to 7804 (-WRCTL):
     0 TEXT-OFF (TEXT-ON to TEXT), 1 GFX-ON (gates GDOT here), 2 XOR (to TEXT), 3 DPAGE, 4 CPAGE, 5 MOUSE-ON
-  * mouse: ATmega328P IC11 (the keyboard firmware in mouse mode: PD7 strapped low) loads IC12 (INP 7, -RD7 from TEXT)
-    and sets MOUSE-READY (IC13B); INP 7 clears it at TPB; it reports only while MOUSE-ON (control bit 5)
+  * mouse: ATmega328P IC11 (the keyboard firmware in mouse mode: PD7 strapped low) loads IC12 (read at 7806,
+    -RDMOUSE from TEXT) and sets MOUSE-READY (IC13B); that read clears it at TPB; it reports only while MOUSE-ON
+    (control bit 5)
   * J4: the 40-pin ribbon from TEXT (common/ribbon.py). Every decode is on TEXT; GFX uses only D0-D7, A0-A5, -MRD,
     -MRW, TPB, -RESET from the bus.
 """
@@ -28,14 +30,14 @@ import ribbon
 CARD = "VIDEO-G 1.0 GFX"
 PROJ = "video-g-gfx"
 REV = "1.0"
-DATE = "2026-11-01"
-SUBTITLE = "512 x 200 / 512 x 256 graphics in two pages, Y register (OUT 7), PS/2 mouse (INP 7); needs the TEXT board"
+DATE = "2026-11-17"
+SUBTITLE = "512 x 200 / 512 x 256 graphics in two pages, Y register (7806), PS/2 mouse (7806); needs the TEXT board"
 FLAG_NETS = ("PS2VCC",)
 SCH_NOTES = [
     "VIDEO-G 1.0 GFX (hardware/video-g/DESIGN.md): the graphics board of VIDEO-G, on the J4 ribbon from TEXT (which decodes everything).",
-    "CPU window 7800-783F = pixel line Y (OUT 7), bit 7 of byte 0 = leftmost dot. Pages: DPAGE shown, CPAGE written (OUT 4 bits 3, 4).",
+    "CPU window 7C00-7C3F = pixel line Y (written at 7806), bit 7 of byte 0 = leftmost dot. Pages: DPAGE shown, CPAGE written (control at 7804, bits 3, 4).",
     "RAM address: display {DPAGE, RA2-RA0, MA10-MA0}, CPU {CPAGE, Y2-Y0, Y7-Y3, A5-A0}; the RAM is shared per character time (no snow).",
-    "Mouse: INP 7 = the next byte of the 3-byte PS/2 packets; MOUSE-READY on TEXT's status bit 1; reports only while MOUSE-ON.",
+    "Mouse: a read of 7806 = the next byte of the 3-byte PS/2 packets; MOUSE-READY on TEXT's status bit 1; reports only while MOUSE-ON.",
 ]
 
 DIP = {n: "Package_DIP:DIP-%d_W7.62mm_Socket" % n for n in (14, 16, 20, 28)}
@@ -57,16 +59,16 @@ PARTS = {
     "IC7":  ("74HCT244", "74xx:74LS244", DIP[20], "write buffer D0-D7 -> RAM (while -WE)"),
     "IC8":  ("74LS374", "74xx:74LS374", DIP[20], "display latch (CHARCLOCK)"),
     "IC9":  ("74LS166", "74xx:74LS166", DIP[16], "graphics dot shifter"),
-    "IC10": ("74HCT374", "74xx:74LS374", DIP[20], "Y register, OUT 7"),
+    "IC10": ("74HCT374", "74xx:74LS374", DIP[20], "Y register, written at 7806"),
     "IC11": ("ATmega328P-PU", "MCU_Microchip_ATmega:ATmega328P-P", DIP[28], "PS/2 mouse controller"),
-    "IC12": ("74HCT374", "74xx:74LS374", DIP[20], "mouse latch, INP 7"),
+    "IC12": ("74HCT374", "74xx:74LS374", DIP[20], "mouse latch, read at 7806"),
     "IC13": ("74HCT74", "74xx:74LS74", DIP[14], "WRQ, MOUSE-READY"),
     "IC14": ("74LS04", "74xx:74LS04", DIP[14], "NMUX, MEMRD, MEMWR, TPB inverted"),
     "IC15": ("74LS05", "74xx:74LS05", DIP[14], "open collector: ATmega reset"),
     "IC16": ("74LS08", "74xx:74LS08", DIP[14], "GWR, RAM -OE, MOUSE-READY clear"),
     "IC17": ("74LS20", "74xx:74LS20", DIP[14], "RAM -WE, read latch enable"),
-    "IC18": ("74LS32", "74xx:74LS32", DIP[14], "INP 7 at TPB"),
-    "IC19": ("74HCT273", "74xx:74LS273", DIP[20], "control register, OUT 4 (-WR4 decoded on TEXT)"),
+    "IC18": ("74LS32", "74xx:74LS32", DIP[14], "mouse read at TPB"),
+    "IC19": ("74HCT273", "74xx:74LS273", DIP[20], "control register, written at 7804 (-WRCTL decoded on TEXT)"),
     "Y1":   ("16MHz", "Device:Crystal", "Crystal:Crystal_HC49-U_Vertical", "ATmega clock"),
     "J2":   ("MOUSE", LOC + ":MINIDIN6", LOC + ":MiniDIN6_MD-60SM", "PS/2 mouse (Same Sky MD-60SM)"),
     "J3":   ("FTDI", "Connector_Generic:Conn_01x06", FP_H % 6, "GND CTS VCC(nc) TXD RXD DTR: ATmega bootloader"),
@@ -102,25 +104,25 @@ for n in range(2, 20):
     if n == 11: continue
     POWER["IC%d" % n] = (20, 10) if n in (6, 7, 8, 10, 12, 19) else (16, 8) if n in (2, 3, 4, 5, 9) else (14, 7)
 for ref, (v, g) in POWER.items():
-    c("VCC", "%s.%d" % (ref, v)); c("GND", "%s.%d" % (ref, g))
-c("VCC", "IC11.7", "IC11.20"); c("GND", "IC11.8", "IC11.22")
+    c("+5V", "%s.%d" % (ref, v)); c("GND", "%s.%d" % (ref, g))
+c("+5V", "IC11.7", "IC11.20"); c("GND", "IC11.8", "IC11.22")
 for cap in DECOUPLE:
-    c("VCC", cap + ".1"); c("GND", cap + ".2")
-c("VCC", "C22.1"); c("GND", "C22.2")
+    c("+5V", cap + ".1"); c("GND", cap + ".2")
+c("+5V", "C22.1"); c("GND", "C22.2")
 
 # ---- the bus (J1): only what GFX uses --------------------------------------------------------------------------------
-BUS = {1: "VCC", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 12: "TPB", 13: "-MRD",
-       14: "-MRW", 15: "BA0", 16: "BA1", 17: "BA2", 18: "BA3", 19: "BA4", 20: "BA5", 27: "-RESET", 30: "GND"}
+BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 12: "TPB", 13: "-MRD",
+       14: "-MRW", 15: "A0", 16: "A1", 17: "A2", 18: "A3", 19: "A4", 20: "A5", 27: "-RESET", 30: "GND"}
 for pin, net in BUS.items():
     c(net, "J1.%d" % pin)
 
 # ---- the ribbon (J4) -------------------------------------------------------------------------------------------------
 for pin, sig in ribbon.PINS.items():
-    c("VCC" if sig == "GFXPRES" else ribbon.GFX_NET.get(sig, sig), "J4.%d" % pin)
+    c("+5V" if sig == "GFXPRES" else ribbon.GFX_NET.get(sig, sig), "J4.%d" % pin)
 
 # ---- address muxes IC2-IC5 (S = NMUX: 1 = CPU on I1, 0 = display on I0) ----------------------------------------------
-MUX = [("IC2", ("BA0", "MA0"), ("BA1", "MA1"), ("BA2", "MA2"), ("BA3", "MA3")),
-       ("IC3", ("BA4", "MA4"), ("BA5", "MA5"), ("Y3", "MA6"), ("Y4", "MA7")),
+MUX = [("IC2", ("A0", "MA0"), ("A1", "MA1"), ("A2", "MA2"), ("A3", "MA3")),
+       ("IC3", ("A4", "MA4"), ("A5", "MA5"), ("Y3", "MA6"), ("Y4", "MA7")),
        ("IC4", ("Y5", "MA8"), ("Y6", "MA9"), ("Y7", "MA10"), ("Y0", "RA0")),
        ("IC5", ("Y1", "RA1"), ("Y2", "RA2"), ("CPAGE", "DPAGE"), ("GND", "GND"))]
 SECTIONS = ((3, 2, 4), (6, 5, 7), (10, 11, 9), (13, 14, 12))        # (I1 = CPU, I0 = display, Z) of sections a-d
@@ -136,7 +138,7 @@ for i, pin in enumerate((10, 9, 8, 7, 6, 5, 4, 3, 25, 24, 21, 23, 2, 26, 1)):
 GDP = (11, 12, 13, 15, 16, 17, 18, 19)
 for i, pin in enumerate(GDP):
     c("GD%d" % i, "IC1.%d" % pin, "RN1.%d" % (2 + i))
-c("VCC", "RN1.1"); c("GND", "IC1.20"); c("RAMOE", "IC1.22"); c("GWE", "IC1.27")
+c("+5V", "RN1.1"); c("GND", "IC1.20"); c("RAMOE", "IC1.22"); c("GWE", "IC1.27")
 
 # ---- read latch IC6, write buffer IC7, display latch IC8, shifter IC9 ------------------------------------------------
 L374 = ((3, 2), (4, 5), (7, 6), (8, 9), (13, 12), (14, 15), (17, 16), (18, 19))       # (D, Q) of bits 0..7
@@ -148,50 +150,50 @@ for i, (a, y) in enumerate(((2, 18), (4, 16), (6, 14), (8, 12), (11, 9), (13, 7)
 c("GWE", "IC7.1", "IC7.19")
 for i, pin in enumerate((2, 3, 4, 5, 10, 11, 12, 14)):               # H (bit 7) shifts out first: leftmost dot
     c("GL%d" % i, "IC9.%d" % pin)
-c("GND", "IC9.1", "IC9.6"); c("DOTCLK", "IC9.7"); c("VCC", "IC9.9"); c("GDOTRAW", "IC9.13"); c("CHARCLOCK", "IC9.15")
+c("GND", "IC9.1", "IC9.6"); c("DOTCLK", "IC9.7"); c("+5V", "IC9.9"); c("GDOTRAW", "IC9.13"); c("CHARCLOCK", "IC9.15")
 c("GDOTRAW", "IC16.12"); c("GFXON", "IC16.13"); c("GDOT", "IC16.11")        # IC16D: dots only while GFX-ON
 
-# ---- control register IC19 (OUT 4): TEXT-OFF and XOR go back to TEXT, GFX-ON gates GDOT here ----------------------
-c("-RESET", "IC19.1"); c("-WR4", "IC19.11")
+# ---- control register IC19 (7804): TEXT-OFF and XOR go back to TEXT, GFX-ON gates GDOT here -----------------------
+c("-RESET", "IC19.1"); c("-WRCTL", "IC19.11")
 for i, (d, q) in enumerate(L374):
     c("D%d" % i, "IC19.%d" % d)
     if i < 6: c(("TEXTOFF", "GFXON", "XORM", "DPAGE", "CPAGE", "MOUSEON")[i], "IC19.%d" % q)
 
 # ---- Y register IC10 ------------------------------------------------------------------------------------------------
-c("GND", "IC10.1"); c("-WR7", "IC10.11")
+c("GND", "IC10.1"); c("-WRY", "IC10.11")
 for i, (d, q) in enumerate(L374):
     c("D%d" % i, "IC10.%d" % d); c("Y%d" % i, "IC10.%d" % q)
 
 # ---- slot logic: IC13A WRQ, IC14 inverters, IC16 ANDs, IC17 NAND4s --------------------------------------------------
-c("-RESET", "IC13.1"); c("GWR", "IC13.2"); c("CHARCLOCK", "IC13.3"); c("VCC", "IC13.4"); c("WRQ", "IC13.5")
+c("-RESET", "IC13.1"); c("GWR", "IC13.2"); c("CHARCLOCK", "IC13.3"); c("+5V", "IC13.4"); c("WRQ", "IC13.5")
 c("QCR", "IC14.1"); c("NMUX", "IC14.2"); c("-MRD", "IC14.3"); c("MEMRD", "IC14.4")
 c("-MRW", "IC14.5"); c("MEMWR", "IC14.6"); c("TPB", "IC14.9"); c("TPBN", "IC14.8")
 c("TEXTOFF", "IC14.11"); c("TEXTON", "IC14.10")                           # IC14E: TEXT-ON to TEXT (ribbon)
 c("GND", "IC14.13")                                                        # IC14F spare
-c("GSEL", "IC16.1"); c("MEMWR", "IC16.2"); c("GWR", "IC16.3")              # IC16A: a window write
+c("WSEL", "IC16.1"); c("MEMWR", "IC16.2"); c("GWR", "IC16.3")              # IC16A: a window write
 c("WRQ", "IC16.4"); c("NMUX", "IC16.5"); c("RAMOE", "IC16.6")              # IC16B: RAM -OE off in a write slot
 c("WRQ", "IC17.1"); c("NMUX", "IC17.2"); c("WEPH", "IC17.4"); c("GWR", "IC17.5"); c("GWE", "IC17.6")   # IC17A: -WE
-c("GSEL", "IC17.9"); c("MEMRD", "IC17.10"); c("VCC", "IC17.12", "IC17.13"); c("SRDOE", "IC17.8")       # IC17B
+c("WSEL", "IC17.9"); c("MEMRD", "IC17.10"); c("+5V", "IC17.12", "IC17.13"); c("SRDOE", "IC17.8")       # IC17B
 
 # ---- mouse: IC11 ATmega328P, Y1, reset, FTDI, IC12 latch, MOUSE-READY (IC13B) ---------------------------------------
-c("-RESET", "IC15.1"); c("RESETH", "IC15.2", "R2.1", "IC15.3"); c("VCC", "R2.2")   # IC15A, B: open collector
-c("MRST", "IC11.1", "R1.1", "C21.2", "IC15.4"); c("VCC", "R1.2")
+c("-RESET", "IC15.1"); c("RESETH", "IC15.2", "R2.1", "IC15.3"); c("+5V", "R2.2")   # IC15A, B: open collector
+c("MRST", "IC11.1", "R1.1", "C21.2", "IC15.4"); c("+5V", "R1.2")
 c("GND", "IC15.5", "IC15.9", "IC15.11", "IC15.13")                        # IC15C-F spare
 c("FTX", "IC11.2", "J3.4"); c("FRX", "IC11.3", "J3.5"); c("FDTR", "J3.6", "C21.1"); c("GND", "J3.1", "J3.2")
-c("MCLK", "IC11.4", "R4.1", "J2.5"); c("MDAT", "IC11.6", "R5.1", "J2.1"); c("VCC", "R4.2", "R5.2", "F1.1")
+c("MCLK", "IC11.4", "R4.1", "J2.5"); c("MDAT", "IC11.6", "R5.1", "J2.1"); c("+5V", "R4.2", "R5.2", "F1.1")
 c("PS2VCC", "F1.2", "J2.4"); c("GND", "J2.3", "J2.S")
 c("MSTRAP", "IC11.13", "R6.1"); c("GND", "R6.2")                          # PD7 low = mouse mode (TEXT: open = keyboard)
 c("MOUSEON", "IC11.17")
 c("XT1", "IC11.9", "Y1.1", "C23.1"); c("XT2", "IC11.10", "Y1.2", "C24.1"); c("GND", "C23.2", "C24.2")
-c("LDDATA", "IC11.12", "IC12.11", "IC13.11", "R3.1"); c("VCC", "R3.2")
+c("LDDATA", "IC11.12", "IC12.11", "IC13.11", "R3.1"); c("+5V", "R3.2")
 for i, pin in enumerate((23, 24, 25, 26, 27, 28, 14, 15)):
     c("MD%d" % i, "IC11.%d" % pin)
 c("MREADY", "IC11.16")
-c("-RD7", "IC12.1")
+c("-RDMOUSE", "IC12.1")
 for i, (d, q) in enumerate(L374):
     c("MD%d" % i, "IC12.%d" % d); c("D%d" % i, "IC12.%d" % q)
-c("VCC", "IC13.12", "IC13.10"); c("MCLR", "IC13.13"); c("MREADY", "IC13.9")
-c("-RD7", "IC18.1"); c("TPBN", "IC18.2"); c("MCLRT", "IC18.3")             # IC18A: low while INP 7 and TPB
+c("+5V", "IC13.12", "IC13.10"); c("MCLR", "IC13.13"); c("MREADY", "IC13.9")
+c("-RDMOUSE", "IC18.1"); c("TPBN", "IC18.2"); c("MCLRT", "IC18.3")             # IC18A: low while 7806 is read, at TPB
 c("MCLRT", "IC16.9"); c("-RESET", "IC16.10"); c("MCLR", "IC16.8")          # IC16C: ... or -RESET
 c("GND", "IC18.4", "IC18.5", "IC18.9", "IC18.10", "IC18.12", "IC18.13")   # spares
 

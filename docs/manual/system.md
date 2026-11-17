@@ -66,7 +66,7 @@ As the machine is set up (CPU card SV2 = H, SV4 = bank 7, SV5 = Boot/REMAP; memo
 | 0000–6FFF | memory card RAM (IC1) | 28K. ELF/OS and its programs live here; the stack starts at 00FF in the monitor |
 | 7000–77FF | 6845 card: video RAM (IDT7134, bus port) | 64 × 16 = 1024 characters at 7000–73FF; HBIOS keeps its cursor position in 77FE–77FF |
 | 7800–7FFF | 6845 card: the CRTC | 7800 = address register, 7801 = data register; repeats every 2 bytes through 7FFF |
-| 8000–EFFF | memory card EPROM (IC5) | 28K; e.g. the ELF/OS install ROM (`../private-resources/elf/firmware/elfos-install-rom`) |
+| 8000–EFFF | memory card EPROM (IC5) | 28K. Since 2026-11-15 Mike Riley's Elf/OS v5 installer, which formats the CF card at once when run (`@8000`); before that the ELF/OS 0.2.6 install ROM (`../private-resources/elf/firmware/elfos-install-rom`) |
 | F000–FFFF | CPU card boot EPROM (2732) | HBIOS: the System-5 video and keyboard code (F000–F2FF) and Mike Riley's BIOS (F300–FFFF, entry table at FF00) |
 
 After a reset, until the first access with A15 high, the CPU card's EPROM answers at **every** address (that is how the 1802, which starts at 0000, reaches the boot code); see "Starting up" below.

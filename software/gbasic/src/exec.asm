@@ -1087,14 +1087,14 @@ frame_wait: zp_at   r9, vgstat          ; VIDEO-G: wait for VSYNC to end and sta
             jz      fw_loop
 fw_lo:      bn3     fw_lo1
             call    brkcheck
-fw_lo1:     sex     r2
-            inp     VGPORT
+fw_lo1:     ldiw    r9, VGCSR
+            ldn     r9
             ani     ST_VSYNC
             jnz     fw_lo
 fw_hi:      bn3     fw_hi1
             call    brkcheck
-fw_hi1:     sex     r2
-            inp     VGPORT
+fw_hi1:     ldiw    r9, VGCSR
+            ldn     r9
             ani     ST_VSYNC
             jz      fw_hi
             rtn

@@ -88,7 +88,7 @@ def on_page_markdown(markdown, page, config, files):
             stand_in = posixpath.join(resolved, "README.md")
         if stand_in and stand_in not in site and posixpath.join(posixpath.dirname(stand_in), "notes.md") in site:
             stand_in = posixpath.join(posixpath.dirname(stand_in), "notes.md")     # a KiCad revision's README
-        if not stand_in and re.fullmatch(r"hardware/[^/]+/kicad/[^/]+/README\.md", resolved):
+        if not stand_in and re.fullmatch(r"hardware/[^/]+/kicad/(?:[^/]+/)?README\.md", resolved):  # a revision's or a card's
             stand_in = posixpath.join(posixpath.dirname(resolved), "notes.md")
         if stand_in and stand_in in site and not bang:
             stats["readme"] += 1

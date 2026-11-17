@@ -34,7 +34,7 @@ VIDEO-G graphics 512 x 200
 Ready
 ```
 
-The second line says what GBASIC found on port 4: `VIDEO-G graphics 512 x 200` (or `x 256` with the MONITOR jumper
+The second line says what GBASIC found at VIDEO-G's status register (7804): `VIDEO-G graphics 512 x 200` (or `x 256` with the MONITOR jumper
 set for an IBM 5151), `VIDEO-G text, no GFX board: no graphics`, or `No VIDEO-G: text only`. When it starts, GBASIC
 sets the VIDEO-G control register to 00 (text on, graphics off, page 0) and clears both graphics pages. `BYE` goes
 back to ELF/OS (with text on and graphics off).
@@ -250,9 +250,10 @@ Examples:
 `tests/screens/` has pictures from the test programs (`demo-screen.png`: text and graphics as the monitor shows them;
 `demo-graphics.png`: the graphics page alone; `demo-xor.png`: with `MIX XOR`; `parabola.png`).
 
-**How it talks to VIDEO-G** (DESIGN.md sections 2-3): `OUT 7` = the pixel line, then the line's 64 bytes are at
-7800-783F (bit 7 of byte 0 = x 0); `OUT 4` = the control register (GBASIC keeps a copy, because it cannot be read);
-`INP 4` = the status, read once at start. Without the GFX board every graphics command (and TEXT, MIX) gives
+**How it talks to VIDEO-G** (DESIGN.md section 3; memory-mapped since 2026-11-17, no I/O ports): a write to 7806 =
+the pixel line, then the line's 64 bytes are at 7C00-7C3F (bit 7 of byte 0 = x 0); a write to 7804 = the control
+register (GBASIC keeps a copy, because it cannot be read); a read of 7804 = the status, read once at start; the key
+is read at 7802 when EF3 says one waits (on the 6845 card's machine, with INP 1 from the IO card). Without the GFX board every graphics command (and TEXT, MIX) gives
 `?No graphics`.
 
 ## Files
@@ -316,8 +317,9 @@ RAM the program never reaches. Example (RF = RF * 2):
 ```
 
 `PEEK`, `POKE`, `INP` and `OUT` reach everything: the text screen at 7000h (row r, column c at 7000h + 64 r + c),
-the graphics window at 7800h, the ports (1 = the keyboard, 4 = VIDEO-G status/control, 5/6 = the 6845, 7 = the Y
-register / mouse, 2/3 = the IDE card: careful).
+VIDEO-G's registers (7800/7801 the 6845, 7802 the key, 7804 status / control, 7806 the mouse / the Y register) and its
+graphics window at 7C00h, the ports (2/3 = the IDE card: careful; 4 = the IO panel; 1 = the keyboard on the 6845
+card's machine).
 
 ## Putting GBASIC on a CF card
 
@@ -391,7 +393,7 @@ straight back to the loop without searching.
 | 6C00-6DFF | LOAD's read buffer, the typed line, its tokens |
 | 6E00-6EFF | GBASIC's own variables |
 | 6F00-6FFF | the machine stack (expressions nest here) |
-| 7000-77FF / 7800 | the text screen / VIDEO-G's graphics window |
+| 7000-77FF / 7800-7807 / 7C00-7C3F | the text screen / VIDEO-G's registers / its graphics window |
 
 ## Limits and known gaps
 
@@ -399,12 +401,11 @@ straight back to the loop without searching.
   file names. No floating point. `CHR$` exists only as a PRINT item.
 - **VIDEO-G is not built**: everything was tested in the emulator's behavioural model; the timings are the emulated
   1802's. The keyboard codes are those of the VIDEO-G PS/2 firmware of 2026-11-02.
-- **The ELF/OS boot loader writes port 4** (sector numbers, the ELF hex-display habit), which leaves VIDEO-G's control
-  register at 0Eh (graphics on, XOR) after a boot until a program writes it; GBASIC does at start
-  (`firmware/hbios/video-g/README.md`).
+- **The keyboard flag is EF3** (the bus -EF through CPU Rev A's JP1): GBASIC tests it between statements. CPU Rev D
+  takes the bus -EF on EF4, so there GBASIC would need KEY-READY from the status register (7804 bit 0) instead.
 - HBIOS on VIDEO-G uses the NTSC table (64 x 25) even with the 5151 jumper; GBASIC's graphics follow the jumper
   (256 lines), and LOCATE keeps to the 25 text rows HBIOS uses.
-- The mouse is not used by GBASIC (`INP(7)` and `INP(4)` reach it).
+- The mouse is not used by GBASIC (`PEEK(&H7806)` and `PEEK(&H7804)` reach it).
 - `FOR` bodies run at least once; `IF ... ELSE` on one line pairs the ELSE with the first IF.
 - Lines far off the screen are drawn pixel by pixel (they are clipped per pixel): `LINE -30000,-30000,30000,30000`
   takes many seconds. Circles and boxes are clipped by rows and are fast.

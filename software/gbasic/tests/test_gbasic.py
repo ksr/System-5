@@ -281,11 +281,14 @@ class Language(unittest.TestCase):
         self.assertEqual(a, b)
         free = int(self.p("FRE(0)")[0]); self.assertGreater(free, 6000)
 
-    def test_inp_out_and_vg_status(self):
-        st = int(self.p("INP(4)")[0])
+    def test_vg_registers_by_peek_and_poke(self):
+        """VIDEO-G is memory-mapped (2026-11-17): the status at 7804, the Y register at 7806; INP and OUT still reach
+        the ports, but VIDEO-G answers none"""
+        st = int(self.p("PEEK(&H7804)")[0])
         self.assertEqual(st & 0xE0, 0xA0)                  # VIDEO-G with GFX, NTSC
-        self.g.cmd("OUT 7,123")
+        self.g.cmd("POKE &H7806,123")
         self.assertEqual(self.g.video.yreg, 123)
+        self.assertEqual(int(self.p("INP(4)")[0]), 255)    # no port answers: the bus floats
 
     def test_locate_and_cls(self):
         g = self.g

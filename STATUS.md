@@ -1,6 +1,6 @@
 # System-5: where things stand
 
-A summary written on **2026-11-14** (the machine's software brought up to date on 2026-11-15) from the repository's own records: `hardware/FABRICATED.md`, `BACKLOG.md`, the
+A summary written on **2026-11-14** (the machine's software brought up to date on 2026-11-15, VIDEO-G and the decisions below on 2026-11-17) from the repository's own records: `hardware/FABRICATED.md`, `BACKLOG.md`, the
 bring-up reports, the design notes and the `elfos-v5` branch. It is a snapshot. Where it and those records differ,
 the records are right.
 
@@ -11,8 +11,11 @@ the records are right.
   The clock is 500 kHz as the machine stands today.
 - **Two boards made in 2026 are in use:** the memory card MEM3-E and the bus driver card BUSDRV-B, both live and
   running (Ken, 2026-11-14). Two earlier 2026 boards were scrap.
-- **Five new boards are designed and pass the pre-order check, and none is ordered:** the bus backplane Rev D, CPU
-  Rev D, the IO panel, and the two VIDEO-G boards. Four decisions of Ken's stand between them and an order.
+- **Five new boards are designed and pass the older pre-order check, and none is ordered:** the bus backplane Rev D, CPU
+  Rev D, the IO panel, and the two VIDEO-G boards. `pcb-check`, the check before an order since 2026-11-06, passes the
+  two VIDEO-G boards (2026-11-17, reworked to be memory-mapped; no failures) and the bus Rev D; CPU Rev D and the IO
+  panel have still to go through it. Three of the four decisions that held the orders were settled on 2026-11-17
+  (section 2).
 - **The software on the machine is HBIOS 1.0.6 and Elf/OS 5.1.1** (2026-11-15). HBIOS 1.0.6 is 1.0.5 with the disk
   calls always in LBA mode, which v5 needs on a real card (`firmware/hbios/v1.0.6/README.md`). The 16 MB card holds
   v5.1.1 with Mike Riley's base tools, MINIMON and Rc/Basic Level 2; every command tried works (Ken). ELF/OS 0.2.6's
@@ -54,21 +57,22 @@ check before any order is `~/Developer/pcb-check/pcb-check`, so each board must 
 |---|---|---|---|
 | Bus backplane **Rev D (S5BUS-D)** | 8 slots of 36 pins, power switch, 4 A polyfuse, reverse-polarity MOSFET, pull-ups and pull-downs so every line idles off | Check passed (2 layers). Not ordered | Where the card supports go; SW1's ON direction; the cards' total current; socket height against the card guides; Ken's look at the pictures |
 | **CPU Rev D** | The 36-pin CPU card: 2 MHz from a 4 MHz oscillator or an external clock, DS1813 reset, RESET/RUN switch, LOADED flag, 2732 at F000 | Check passed (2 layers). Not ordered. Runs HBIOS and ELF/OS in the emulator | The keyboard flag (below); the card-guide fit of a 4.00 inch card |
-| **IO panel Rev A** | The front panel as a card: 8 toggles, 8 LEDs, two TIL311 hex displays, Q LED, INPUT button, ELF-style RUN/LOAD | Check passed (2 layers). Not ordered. Runs in the emulator and on the web page | Port 4 (below); M9040P toggles' availability and lever direction; Ken's look at the pictures |
-| **VIDEO-G 1.0 TEXT** | 6845 text, 64 x 25 (NTSC) or 64 x 32 (IBM 5151), PS/2 keyboard on an ATmega, RCA and DB9. Works alone | Check passed (4 layers). Not ordered | **188 mm tall** against the standard 141: Ken to approve; port 4 and the boot loader (below) |
-| **VIDEO-G 1.0 GFX** | Graphics, 512 x 200 or 512 x 256 in two pages, PS/2 mouse. Joins TEXT by a 40-pin ribbon | Check passed (4 layers). Not ordered | The same decisions as TEXT |
+| **IO panel Rev A** | The front panel as a card: 8 toggles, 8 LEDs, two TIL311 hex displays, Q LED, INPUT button, ELF-style RUN/LOAD | Check passed (2 layers). Not ordered. Runs in the emulator and on the web page | M9040P toggles' availability and lever direction; Ken's look at the pictures (port 4 is its own since VIDEO-G went memory-mapped, 2026-11-17) |
+| **VIDEO-G 1.0 TEXT** | 6845 text, 64 x 25 (NTSC) or 64 x 32 (IBM 5151), PS/2 keyboard on an ATmega, RCA and DB9; everything memory-mapped (2026-11-17). Works alone | **`pcb-check` passed** (2026-11-17: no failures, 0 warnings; 4 layers). Not ordered | Ken's look at the renders, the pictures and the fab's viewer (188 mm tall: Ken keeps it) |
+| **VIDEO-G 1.0 GFX** | Graphics, 512 x 200 or 512 x 256 in two pages, PS/2 mouse. Joins TEXT by a 40-pin ribbon | **`pcb-check` passed** (2026-11-17: no failures, 1 warning, no power LED: TEXT has it; 4 layers). Not ordered | As TEXT |
 | 6845 Rev B, order master | A re-make of the 2005 card | Order files ready. **On hold** (Ken, 2026-10-09) | Whether to make it at all, now that VIDEO-G exists |
 | 6845 Rev C | Rev B plus the PS/2 keyboard, 36-pin bus | Design notes only | Looks superseded by VIDEO-G: retire it if Ken agrees |
 
-The four decisions that hold the orders (`BACKLOG.md`, "Questions for Ken"):
+The four decisions that held the orders (`BACKLOG.md`, "Questions for Ken"), three of them settled by Ken on 2026-11-17:
 
-1. **Port 4 is wanted twice.** The IO panel uses it and so does VIDEO-G's control register. Ports 1 to 7 are all
-   taken once VIDEO-G is in.
-2. **The keyboard flag.** VIDEO-G signals on bus -EF, which reaches EF3 through CPU Rev A's jumper. CPU Rev D sends
-   -EF to EF4, and HBIOS reads EF3.
-3. **TEXT's height**, 188 mm.
-4. **The ELF/OS boot loader writes port 4**, which leaves VIDEO-G showing graphics noise after `@FF00`. Either the
-   loader is patched (one byte) or the control register moves to another port.
+1. **Port 4 was wanted twice**, by the IO panel and by VIDEO-G's control register. Settled: VIDEO-G is memory-mapped
+   (everything in its own block at 7000-7FFF, no I/O ports), so port 4 is the IO panel's.
+2. **The keyboard flag.** VIDEO-G signals on bus -EF, which reaches EF3 through CPU Rev A's jumper; CPU Rev D sends
+   -EF to EF4, and HBIOS reads EF3. Settled for VIDEO-G: its HBIOS polls KEY-READY in the status register (7804), so
+   it works with either CPU card. Still open for the IO card's keyboard with CPU Rev D.
+3. **TEXT's height**, 188 mm. Settled: it stays (Ken).
+4. **The ELF/OS boot loader writes port 4**, which left the port version of VIDEO-G showing graphics noise after
+   `@FF00`. Settled with 1: VIDEO-G answers no port.
 
 Ken orders from JLCPCB and groups boards into one order to share the shipping.
 
@@ -78,9 +82,9 @@ On the machine:
 
 | Where | What | Version |
 |---|---|---|
-| CPU card, 2732 | **HBIOS**: Ken's 6845 and keyboard drivers on Mike Riley's BIOS and monitor | 1.0.4 (the chip was read on the T48, 2026-10-30) |
-| CF card, 16 MB | **ELF/OS** with Mike Riley's programs in `/` and `/BIN` | 0.2.6, kernel build 135. The card was built on the Mac with `mkelfos.py` (2026-11-04) |
-| MEM3-E, IC5 | The ELF/OS install ROM | The 2005 image. Its format option cannot leave a usable card: build cards on the Mac |
+| CPU card, 2732 | **HBIOS**: Ken's 6845 and keyboard drivers on Mike Riley's BIOS and monitor, with the monitor commands Ken added (`H`, `B`, `D`, `Q1` / `Q0`) | 1.0.6, burned 2026-11-15 (the 1.0.5 and 1.0.4 chips are spares) |
+| CF card, 16 MB | **Elf/OS v5**, Mike Riley's later operating system, with his base tools, MINIMON and Rc/Basic Level 2 | 5.1.1, kernel build 229, since 2026-11-15. The card image of ELF/OS 0.2.6 (kernel build 135, built on the Mac with `mkelfos.py`, 2026-11-04) is kept on the Mac (`~/s5-cf.img`) |
+| MEM3-E, IC5 | Mike Riley's Elf/OS v5 installer, with the System-5 change to its kernel | Burned 2026-11-15. **`@8000` wipes the card at once.** It leaves kernel 5.0.2 and five programs; the full card comes from the Mac's image. The ELF/OS 0.2.6 install ROM (the 2005 image) is kept |
 | IO card | PS/2 firmware in the PIC16F84, behind a PAK-VI | 2005 |
 | 6845 card | Character generator EPROM | 2005 |
 | Bus driver, Nano | `s5-bus-driver` | Banner `blocks-1 io-2 clk-1 2026-10-31` |
@@ -96,7 +100,8 @@ On the Mac, all in use:
 - **Card and program tools:** `mkelfos.py` (builds a CF card image), `disktool`, `tools/asm1802.py` (the Python
   1802 assembler that builds HBIOS 1.0.5 and 1.0.6, GBASIC and the VIDEO-G HBIOS).
 - **Board tools:** the Eagle-to-KiCad converter with its netlist proof, the schematic generator and book, the
-  pre-order check.
+  older pre-order check (`tools/preorder_check.py`; the check before an order is `pcb-check`, a repository of its
+  own).
 - **Documents:** the System-5 manual (`docs/manual/`, 13 PDFs) and the website (`website/`), which is built from
   the repository's documents on every push to `main`. It has been published at `system5.cottageworker.com` since
   2026-11-13 (GitHub Pages).
@@ -130,7 +135,7 @@ Changes to make:
 - **`EDIT` with no file name hangs ELF/OS 0.2.6.** Always give a name until the kernel's error path is traced.
 - **The BIOS probes for a UART and a clock on ports 2 and 3**, which on System-5 are the IDE registers. Check that
   this does no harm.
-- **For VIDEO-G:** the boot loader's port 4 (section 2), and the 64 x 32 table for the IBM 5151.
+- **For VIDEO-G:** the 64 x 32 table for the IBM 5151 (the boot loader's port 4 no longer matters: VIDEO-G is memory-mapped).
 - **CF card tools:** a `mkelfos.py --card` helper that checks the image and prints the `dd` line; a manual section
   on the CF card.
 - **Emulator:** the 6845's real character generator and the PIC keyboard path; an IDE write past the end of the

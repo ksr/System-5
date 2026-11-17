@@ -47,7 +47,7 @@ Each folder: `spec.py` (the blocks, their notes, names for unnamed nets, symbol 
 
 ## Keeping them up to date
 
-Ken's rule (2026-10-28): the PDFs follow the boards. After any change to a card's circuit, re-export its `reports/netlist.net`, redraw it and rebuild the book (`build_all.sh` does every card), and commit the PDFs with the change. `tools/preorder_check.py` does it too, as its SCHEMATIC check, for any board with a `schematic/spec.py`: it first proves `reports/netlist.net` against the board, so a stale netlist fails rather than giving a stale drawing.
+Ken's rule (2026-10-28): the PDFs follow the boards. After any change to a card's circuit, re-export its `reports/netlist.net`, redraw it and rebuild the book (`build_all.sh` does every card), and commit the PDFs with the change. `tools/preorder_check.py` does it too, as its SCHEMATIC check, for any board with a `schematic/spec.py`: it first proves `reports/netlist.net` against the board, so a stale netlist fails rather than giving a stale drawing. `pcb-check`, the check before an order since 2026-11-06, redraws nothing (it writes nothing in the repository): redraw before running it.
 
 ## The sheets
 

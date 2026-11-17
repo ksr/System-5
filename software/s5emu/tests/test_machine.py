@@ -9,6 +9,7 @@ ROM09 = os.path.join(ROOT, "firmware/hbios/v0.9/sec1.rom")
 ROM104 = os.path.join(HERE, "..", "roms", "hbios-1.0.4.rom")
 ROM105 = os.path.join(HERE, "..", "roms", "hbios-1.0.5.rom")
 ROM106 = os.path.join(HERE, "..", "roms", "hbios-1.0.6.rom")
+ROM107 = os.path.join(HERE, "..", "roms", "hbios-1.0.7.rom")
 # Elf/OS v5 is third-party and unlicensed: its image is kept in the private repository beside this one
 V5_GZ = os.path.join(ROOT, "..", "private-resources", "elf", "reference", "mike-riley", "elfos-v5", "system5",
                      "elfos-5.1.1-system5-16mb.img.gz")
@@ -98,7 +99,8 @@ class T(unittest.TestCase):
     @unittest.skipUnless(os.path.exists(ROM106), "build firmware/hbios/v1.0.6 first")
     def test_hbios_106_reads_in_lba_mode(self):
         """HBIOS 1.0.6 sends E0h in register 6 whatever R8.1 holds: a boot loader reading sector 0 with R8 = 0000, as
-        Elf/OS v5 reads, gets ERR (ID not found) on 1.0.4 and 1.0.5, and the sector on 1.0.6 (2026-11-15)"""
+        Elf/OS v5 reads, gets ERR (ID not found) on 1.0.4 and 1.0.5, and the sector on 1.0.6 (2026-11-15) and on
+        1.0.7, which keeps 1.0.6's LBA code"""
         loader = bytes([0x90, 0xB3, 0xF8, 0x06, 0xA3, 0xD3,      # 0100 R3 = 0106, SEP R3, as v5's boot loader starts
                         0xF8, 0x00, 0xA7, 0xB7, 0xA8, 0xB8,      # 0106 R7 = 0000, R8 = 0000: R8.1 = 00, as v5 passes
                         0xF8, 0x03, 0xBF, 0xF8, 0x00, 0xAF,      # 010C RF = 0300, the buffer
@@ -109,7 +111,7 @@ class T(unittest.TestCase):
         img = tempfile.mktemp(suffix=".img")
         with open(img, "wb") as f: f.write(loader.ljust(512, b"\0") + bytes(512 * (16 * 63 * 2 - 1)))
         try:
-            for rom, ok in ((ROM104, False), (ROM105, False), (ROM106, True)):
+            for rom, ok in ((ROM104, False), (ROM105, False), (ROM106, True), (ROM107, True)):
                 m = Machine(cpu_rom=rom, disk=img); sh = Shell(m)
                 sh.d.run(max_instructions=2_000_000); m.kbd.press("@FF00\n"); sh.d.run(max_instructions=2_000_000)
                 self.assertEqual(chr(m.peek(0x0200)), "O" if ok else "E", os.path.basename(rom))
@@ -117,6 +119,34 @@ class T(unittest.TestCase):
                 else: self.assertEqual(m.ide.error, m.ide.IDNF)
         finally:
             os.remove(img)
+
+    @unittest.skipUnless(os.path.exists(ROM107), "build firmware/hbios/v1.0.7 first")
+    def test_hbios_107_key_codes_on_screen(self):
+        """v1.0.7's @F1E0 (Ken, 2026-11-17), self-contained: it waits for the keyboard's flag (EF3), reads the key
+        (INP 1) and writes its code as text, "0x31" for the key 1, straight into the video RAM at the start of the
+        bottom line, over the one before; it calls nothing in the BIOS, so nothing else on the screen changes. The ROM
+        is v1.0.6 with only that added (a jump at F1E0-F1E2, the routine at FC50-FC91), so H's list is v1.0.6's"""
+        with open(ROM106, "rb") as f: r106 = f.read()
+        with open(ROM107, "rb") as f: r107 = f.read()
+        diff = [0xF000 + i for i in range(4096) if r106[i] != r107[i]]
+        self.assertEqual(diff[:3], [0xF1E0, 0xF1E1, 0xF1E2])
+        self.assertTrue(diff[3:] and all(0xFC50 <= a <= 0xFC91 for a in diff[3:]))
+        m = Machine(cpu_rom=ROM107); sh = Shell(m); run = lambda n=1_500_000: sh.d.run(max_instructions=n)
+        lines = lambda: [l.rstrip() for l in m.video.lines()]
+        run(2_000_000)
+        m.kbd.press("H\n"); run()
+        self.assertEqual([l for l in lines() if l][-2:], [" H               this list", "test>"])
+        m.kbd.press("@F1E0\n"); run()
+        above = lines()[:-1]
+        for key, shown in (("1", "0x31"), ('"', "0x22"), ("'", "0x27"), ("a", "0x61"), ("A", "0x41"),
+                           ("\x1b", "0x1B"), ("\r", "0x0D"), ("~", "0x7E"), ("\x7f", "0x7F")):
+            m.kbd.press(key); run(300_000)
+            self.assertEqual(lines()[-1], shown, repr(key))
+            self.assertEqual(lines()[:-1], above, repr(key))        # only the bottom line changes: nothing is typed
+            self.assertEqual(m.video.cursor(), (15, 4), repr(key))  # the cursor just after the text
+        n = m.cpu.instructions; run(200_000)                       # no key: it goes on waiting, the text stays
+        self.assertGreater(m.cpu.instructions, n); self.assertEqual(lines()[-1], "0x7F")
+        self.assertEqual((m.cpu.P, m.cpu.R[0]), (0, 0xFC64))       # in its wait for the keyboard's flag
 
     @unittest.skipUnless(os.path.exists(ROM104), "run tools/mkrom.py first")
     @unittest.skipUnless(ELFOS026, NO_ELFOS026)

@@ -3,16 +3,18 @@
 #
 # build.sh BOARD_DIR - build and check a VIDEO-G board from its gen/netlist.py and gen/place.py:
 #   netlist check, schematic + ERC, the exported netlist proven against netlist.py, the unrouted 4-layer board,
-#   Freerouting (signals on F.Cu/B.Cu; In1.Cu GND and In2.Cu VCC planes), the leftover router, DRC with the zones
+#   Freerouting (signals on F.Cu/B.Cu; In1.Cu GND and In2.Cu +5V planes), the leftover router, DRC with the zones
 #   refilled and schematic parity, the order files (gerbers, drill, zip read back, render, placement PDF) and
 #   tools/preorder_check.py --layers 4.
 #   hardware/video-g/kicad/common/build.sh hardware/video-g/kicad/gfx-1.0
-# Needs KiCad 10 and Freerouting 1.9 (~/freerouting/freerouting.jar, or FRJAR). MP = Freerouting passes (default 60).
+# Needs KiCad 10 and Freerouting 1.9 (~/freerouting/freerouting.jar, or FRJAR). MP = the most Freerouting passes (default
+# 100: it stops sooner once every net is routed). route.py writes Freerouting's input in a fixed order, shuffled by
+# ROUTE_SEED in gen/place.py, so a board routes the same way every time (2026-11-17).
 set -e
 B=$(cd "$1" && pwd); C=$(cd "$(dirname "$0")" && pwd); ROOT=$(cd "$C/../../../.." && pwd)
 PYK=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
 CLI=/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli
-FRJAR="${FRJAR:-$HOME/freerouting/freerouting.jar}"; MP=${MP:-60}
+FRJAR="${FRJAR:-$HOME/freerouting/freerouting.jar}"; MP=${MP:-100}
 P=$(cd "$B/gen" && python3 -c "import netlist; print(netlist.PROJ)")
 q() { grep -v -E 'Fontconfig|traits|Debug|GetWidth called|^$' || true; }
 mkdir -p "$B/reports" "$B/logs"; cd "$B"

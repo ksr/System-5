@@ -31,7 +31,7 @@ CARDS = [
     ("memory/kicad/rev-e", "Memory card Rev E", "2 x 62256 RAM, 2 x 27256 EPROM, each placed by jumpers in 4K blocks; chip-enable LEDs"),
     ("io-1861-keyboard/kicad/rev-a", "IO card Rev A", "CDP1861 video, PS/2 keyboard through a PAK-VI and a PIC16F84, CDP1852 port"),
     ("video-6845/kicad/rev-b", "6845 video card Rev B", "HD6845 CRTC, IDT7134 dual-port video RAM, character generator (after BYTE, May 1979)"),
-    ("video-g/kicad/text-1.0", "VIDEO-G 1.0 TEXT (designed, not built)", "6845 + IDT7134 64-column text, status port, PS/2 keyboard; the GFX board on a ribbon"),
+    ("video-g/kicad/text-1.0", "VIDEO-G 1.0 TEXT (designed, not built)", "6845 + IDT7134 64-column text, status register, PS/2 keyboard, all memory-mapped; the GFX board on a ribbon"),
     ("video-g/kicad/gfx-1.0", "VIDEO-G 1.0 GFX (designed, not built)", "512 x 200 / 512 x 256 graphics in two pages, Y and control registers, PS/2 mouse"),
     ("ide-cf/kicad/rev-a", "IDE / CF card Rev A", "Mike Riley's 8-bit IDE interface with port-select jumpers"),
     ("bus-driver/kicad/rev-b", "Bus driver card Rev B (BUSDRV-B)", "Arduino Nano and 2 x MCP23017: drives the bus with the CPU card out"),

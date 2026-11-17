@@ -13,7 +13,7 @@ Written 2026-10-26 from the cards' netlists (the KiCad conversions of the 2005 E
 | [ide-cf-card.md](ide-cf-card.md) | IDE/CF card: ports, register latch, strobes, registers | `pdf/system5-ide-cf-card.pdf` |
 | [bus-driver-card.md](bus-driver-card.md) | bus driver card: the Nano and expanders, bus cycles, protocol | `pdf/system5-bus-driver-card.pdf` |
 | [other-cards.md](other-cards.md) | the prototyping card, the front panel, earlier and planned revisions | `pdf/system5-other-cards.pdf` |
-| [operators-guide.md](operators-guide.md) | using the machine: the boot monitor, the ELF/OS installer, every ELF/OS command, Rc/Basic, known problems | `pdf/system5-operators-guide.pdf` |
+| [operators-guide.md](operators-guide.md) | using the machine: the boot monitor, Elf/OS 5.1.1 and every program on its card, ELF/OS 0.2.6, Rc/Basic, known problems | `pdf/system5-operators-guide.pdf` |
 | [programmers-guide.md](programmers-guide.md) | memory and I/O maps, the devices, booting, the monitor, BIOS calls, tools | `pdf/system5-programmers-guide.pdf` |
 
 `pdf/system5-hardware-reference.pdf` is the system, the bus and every card in one book.

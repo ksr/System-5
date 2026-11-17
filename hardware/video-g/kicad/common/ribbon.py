@@ -3,8 +3,9 @@
 
 A 2 x 20 IDC header on each board, at the same edge and height, joined by a straight 40-way flat cable: conductor n
 is pin n on both ends. The fast clocks each have a ground conductor on both sides. TEXT drives the display timing,
-and the decoded GFX strobes (OUT 4, OUT 7, INP 7); GFX returns its dot stream (already gated by GFX-ON),
-TEXT-ON and XOR from the control register it holds, MOUSE-READY and its presence.
+the window select and the decoded GFX strobes (memory-mapped since 2026-11-17: control 7804, Y 7806, mouse 7806); GFX
+returns its dot stream (already gated by GFX-ON), TEXT-ON and XOR from the control register it holds, MOUSE-READY and
+its presence.
 """
 PINS = {1: "GND"}
 for i in range(11):
@@ -15,12 +16,12 @@ PINS.update({16: "GND", 17: "DOTCLK", 18: "GND", 19: "CHARCLK", 20: "GND", 21: "
              23: "QCR",                          # QC OR RCO: the GFX address-mux select (1 = display)
              24: "WEPH",                         # QA XOR QB: counts 9-10, the GFX -WE phase
              25: "GND",
-             26: "-WR4",                         # OUT 4 strobe: loads the control register (on GFX)
+             26: "-WRCTL",                       # write to 7804: loads the control register (on GFX)
              27: "TEXTON",                       # GFX -> TEXT: NOT control bit 0 (TEXT pulls it up: text on alone)
              28: "XORM",                         # GFX -> TEXT: control bit 2, text XOR graphics (TEXT pulls it down)
-             29: "GSEL",                         # the CPU is in 7800-7FFF (the graphics window)
-             30: "-WR7",                         # OUT 7 strobe: loads the Y register
-             31: "-RD7",                         # INP 7 read enable: the mouse latch drives D0-D7
+             29: "WSEL",                         # the CPU is in 7C00-7FFF (the graphics window)
+             30: "-WRY",                         # write to 7806: loads the Y register
+             31: "-RDMOUSE",                     # read of 7806: the mouse latch drives D0-D7
              32: "GND",
              33: "GDOT",                         # GFX -> TEXT: graphics dots
              34: "GND",

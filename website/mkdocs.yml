@@ -13,6 +13,7 @@ repo_name: ksr/System-5
 edit_uri: ""                                   # no "edit this page": the pages are copies made by stage.py
 hooks:
   - hooks.py
+  - lastupdated.py                 # "Last updated <date>" at the foot of every page
 
 theme:
   name: material
@@ -20,7 +21,9 @@ theme:
   features:
     - navigation.sections
     - navigation.top
-    - navigation.indexes
+    # no navigation.indexes (off since 2026-11-17): it made the first README.md in each section the section title's
+    # own page and left it out of the list, so the manual's PDFs, the schematic drawing tool and the emulator were
+    # missing from the menu
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -77,6 +80,11 @@ nav:
       - Bus driver card:
           - How it works: docs/manual/bus-driver-card.md
       - IO panel card: []
+      - VIDEO-G card (text + graphics):
+          - Design: hardware/video-g/DESIGN.md
+          - TEXT and GFX boards (KiCad): hardware/video-g/kicad/notes.md    # kicad/README.md, staged as notes.md
+          - TEXT parts list: hardware/video-g/kicad/text-1.0/BOM.md
+          - GFX parts list: hardware/video-g/kicad/gfx-1.0/BOM.md
       - Other cards: docs/manual/other-cards.md
   - Building:
       - Build rules: hardware/BUILD-RULES.md
@@ -90,6 +98,8 @@ nav:
       - Bus driver host tool: software/busdrv/README.md
       - Bus driver bring-up: software/busdrv/BRINGUP.md
       - Bus driver firmware: embedded/bus-driver/README.md
+      - GBASIC (graphics BASIC for VIDEO-G): software/gbasic/README.md
+      - VIDEO-G keyboard and mouse firmware: embedded/video-g-ps2/README.md
   - Status:
       - Backlog: BACKLOG.md
   - The repository: repository.md

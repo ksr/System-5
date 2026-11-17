@@ -3,7 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "CAPACITOR\n\ngrid 2.5 mm, outline 5 x 5 mm")
+	(descr "CAPACITOR\n\ngrid 2.5 mm, outline 5 x 5 mm; body 4.0 x 2.5 mm (F.Fab, a dipped 0.1 uF), courtyard 0.25 mm beyond it (VIDEO-G, 2026-11-17)")
 	(property "Reference" "C1"
 		(at -2.286 -2.54 180)
 		(unlocked yes)
@@ -218,6 +218,28 @@
 		)
 		(layer "F.Fab")
 		(uuid "37a69ffc-c7ed-4b0c-b02c-5e55003ef6b9")
+	)
+	(fp_rect
+		(start -2.25 -1.5)
+		(end 2.25 1.5)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "632ca86f-7f24-5dc3-a20b-a0b9037b2d16")
+	)
+	(fp_rect
+		(start -2 -1.25)
+		(end 2 1.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "5ce7a09e-7019-5bed-8666-33b7c9df69b7")
 	)
 	(pad "1" thru_hole roundrect
 		(at -1.27 0)

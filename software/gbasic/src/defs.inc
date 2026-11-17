@@ -16,11 +16,12 @@ o_delete    equ     0318h
 f_type      equ     0ff03h          ; BIOS: type D (HBIOS screen)
 
 ; ------------------------------------------------------------------ System-5 / VIDEO-G hardware
-KBDPORT     equ     1               ; INP 1 = key, EF3 = a key waits
-VGPORT      equ     4               ; VIDEO-G: OUT control / INP status
-YPORT       equ     7               ; VIDEO-G GFX: OUT = Y register
+KBDPORT     equ     1               ; the IO card (6845 card machines): INP 1 = key, EF3 = a key waits
+VGKEY       equ     7802h           ; VIDEO-G (memory-mapped, 2026-11-17): the key; reading it clears KEY-READY (EF3)
+VGCSR      equ     7804h           ; VIDEO-G: status (read) / control (write)
+VGY         equ     7806h           ; VIDEO-G GFX: the Y register (write) / the mouse byte (read)
 SCREEN      equ     7000h           ; text RAM (64 columns)
-GWIN        equ     7800h           ; graphics window: pixel line Y, 64 bytes
+GWIN        equ     7C00h           ; graphics window: pixel line Y, 64 bytes
 CTL_TEXTOFF equ     01h
 CTL_GFXON   equ     02h
 CTL_XOR     equ     04h

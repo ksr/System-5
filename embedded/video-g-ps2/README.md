@@ -38,15 +38,16 @@ resets the keyboard ($FF, then its self-test answer $AA) and sends the LED state
 or one that resets itself, sends $AA: the firmware then clears the Shift/Ctrl state and sends the LEDs again. Keys
 typed while the CPU is busy wait in a 63-byte queue.
 
-The CPU's side is the IO card's, unchanged: KEY-READY pulls the bus **-EF** low through a 7416 gate (jumper KBD-EF;
-CPU card JP1 row 3 = EF3) and shows on INP 4 bit 0; **INP 1** reads the key. HBIOS's `inchar` (`BN3 inchar`, `INP 1`)
-works as it is. After a reset the keyboard is ready in about 1.5 s: Optiboot waits about 1 s after every external
+The CPU's side (memory-mapped since 2026-11-17, `hardware/video-g/DESIGN.md` section 3; the firmware is the same):
+KEY-READY pulls the bus **-EF** low through a 7416 gate (jumper KBD-EF; CPU card JP1 row 3 = EF3) and shows in the
+status register (7804) bit 0; a **read of 7802** gives the key and clears KEY-READY at TPB. The VIDEO-G HBIOS polls
+the status bit, which works with either CPU card. After a reset the keyboard is ready in about 1.5 s: Optiboot waits about 1 s after every external
 reset (the bus -RESET resets the ATmega too), then the keyboard's own reset takes 0.3-0.75 s. Keys pressed before
 that are lost.
 
 ### Mouse mode (GFX)
 
-The mouse reports only while **MOUSE-ON** (PB3, the GFX control register's bit 5, OUT 4) is 1, so HBIOS never sees
+The mouse reports only while **MOUSE-ON** (PB3, the GFX control register's bit 5, written at 7804) is 1, so HBIOS never sees
 mouse bytes.
 
 - **MOUSE-ON rises:** V2.0's start sequence: reset ($FF, answered $FA $AA $00), then enable data reporting ($F4). The
@@ -62,7 +63,7 @@ mouse bytes.
   mouse plugged in (or reset) while running sends $AA $00 and then nothing: the firmware sees that, a part packet
   followed by silence, and starts it again.
 
-The CPU reads TEXT's status port **INP 4 bit 1** (MOUSE-READY), then **INP 7**. The packet layout:
+The CPU reads TEXT's status register, **7804 bit 1** (MOUSE-READY), then the byte at **7806**. The packet layout:
 
 | Byte | Bits |
 |---|---|
@@ -71,15 +72,20 @@ The CPU reads TEXT's status port **INP 4 bit 1** (MOUSE-READY), then **INP 7**. 
 | 3 | Y movement (positive = up) |
 
 ```
-mwait: SEX R2       ; R(X) points at a scratch byte
-       INP 4        ; status -> M(R(X)) and D
+       LDI 78H      ; RF = 7804, the status register
+       PHI RF
+       LDI 04H
+       PLO RF
+mwait: LDN RF       ; status
        ANI 02H      ; MOUSE-READY?
        BZ mwait
-       INP 7        ; the byte (clears MOUSE-READY at TPB)
+       LDI 06H      ; RF = 7806
+       PLO RF
+       LDN RF       ; the byte (clears MOUSE-READY at TPB)
 ```
 
 **Turning the mouse on again:** when MOUSE-ON falls, a byte already in the latch stays there (MOUSE-READY stays 1;
-only INP 7 or -RESET clears it). So before setting MOUSE-ON, read INP 7 while INP 4 bit 1 is 1, and start counting
+only a read of 7806 or -RESET clears it). So before setting MOUSE-ON, read 7806 while 7804 bit 1 is 1, and start counting
 packets at a byte with bit 3 set.
 
 **Throughput:** the firmware loads bytes at least 1 ms apart (the read guard, below), so a packet needs 2 ms or more.
@@ -88,10 +94,10 @@ whole packets are dropped.
 
 ### Rules for both modes
 
-- **INP 1 / INP 7 only after READY was seen 1** (EF3, or INP 4 bit 0 / bit 1). This is V2.0's rule (R2-10). After
-  each load the firmware reads READY back. If it did not set, an INP was clearing it, and the same byte is loaded again.
-  A program that reads without waiting for READY could clear it inside that check and get the byte twice.
-- **The read guard:** READY falls at TPB, but the INP's read enable lasts to the end of that cycle. A pin-change
+- **Read 7802 / 7806 only after READY was seen 1** (EF3, or 7804 bit 0 / bit 1). This is V2.0's rule (R2-10). After
+  each load the firmware reads READY back. If it did not set, a read was clearing it, and the same byte is loaded
+  again. A program that reads without waiting for READY could clear it inside that check and get the byte twice.
+- **The read guard:** READY falls at TPB, but the read's enable lasts to the end of that cycle. A pin-change
   interrupt timestamps READY's fall, and the next byte is loaded only 1 ms later. That covers the 1802 at any clock and
   the bus driver's `INP:n#`, which holds TPB high for about 0.3 ms (I2C-stepped). A master that holds one INP longer
   than 1 ms, such as the CPU single-stepped with `CLK:n#`, can see the latch change under its read.
@@ -151,9 +157,9 @@ HBIOS could skip echoing bytes of $80 and up.
 | PD4 (6) | D4 | KDAT: J4 pin 1, R10 4.7k | MDAT: J2 pin 1, R5 4.7k |
 | PD6 (12) | D6 | LDDATA out: IC9 CLK, IC24B CLK; RN2 10k pull-up | LDDATA out: IC12 CLK, IC13B CLK; R3 10k pull-up |
 | PD7 (13) | D7 | not connected: keyboard mode | MSTRAP, R6 4.7k to GND: mouse mode |
-| PC0-PC5 (23-28), PB0, PB1 (14, 15) | A0-A5, D8, D9 | MD0-MD7 out to the key latch IC9 (INP 1) | MD0-MD7 out to the mouse latch IC12 (INP 7) |
+| PC0-PC5 (23-28), PB0, PB1 (14, 15) | A0-A5, D8, D9 | MD0-MD7 out to the key latch IC9 (read at 7802) | MD0-MD7 out to the mouse latch IC12 (read at 7806) |
 | PB2 (16) | D10 | KREADY in (IC24B Q) | MREADY in (IC13B Q) |
-| PB3 (17) | D11 | not connected | MOUSEON in (IC19 Q5, OUT 4 bit 5) |
+| PB3 (17) | D11 | not connected | MOUSEON in (IC19 Q5, control bit 5, written at 7804) |
 | PD3, PD5, PB4, PB5 (5, 11, 18, 19) | D3, D5, D12, D13 | not connected | not connected |
 | RESET (1) | | MRST: R7 10k, C27 from DTR; bus -RESET through IC23 (7416) | MRST: R1 10k, C21 from DTR; bus -RESET through IC15 (74LS05) |
 

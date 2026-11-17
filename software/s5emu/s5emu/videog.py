@@ -1,24 +1,25 @@
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-01
 """VIDEO-G 1.0 (hardware/video-g/DESIGN.md), a behavioural model: the TEXT board and, if fitted, the GFX board.
 
-As the software sees it (DESIGN.md sections 2 and 3):
+As the software sees it (DESIGN.md sections 2 and 3): memory-mapped, no I/O ports (Ken, 2026-11-17)
   7000-77FF   text RAM (the IDT7134's bus port, 2K); row r, column c at 7000 + 64r + c
-  7800-783F   graphics window: pixel line Y of the page CPAGE, 64 bytes, bit 7 of byte 0 = x 0; repeated to 7FFF
-  INP 1       key (ASCII); EF3 = a key waits (as the IO card)
-  OUT 4       control: 0 TEXT-OFF, 1 GFX-ON, 2 XOR, 3 DPAGE, 4 CPAGE, 5 MOUSE-ON; -RESET clears it.  The register is
-              on the GFX board (hardware change of 2026-11-02): with TEXT alone, OUT 4 does nothing (text always on)
-  INP 4       status: 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR (1 = IBM 5151, 512 x 256), 5 GFX-PRESENT,
-              7..6 = 10 (card ID)
-  OUT 5/OUT 6 6845 address / data register; INP 6 reads R14-R17
-  OUT 7/INP 7 GFX: the Y register (pixel line) / the mouse byte (3-byte PS/2 packets while MOUSE-ON)
+  7800        write: the 6845's address register        7801  the 6845's data register (reads R14-R17)
+  7802        read: the key (ASCII; reading it clears KEY-READY); EF3 = a key waits (bus -EF, jumper KBD-EF)
+  7804        read: status: 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR (1 = IBM 5151, 512 x 256),
+              5 GFX-PRESENT, 7..6 = 10 (card ID)
+              write: control: 0 TEXT-OFF, 1 GFX-ON, 2 XOR, 3 DPAGE, 4 CPAGE, 5 MOUSE-ON; -RESET clears it.  The register
+              is on the GFX board: with TEXT alone a write does nothing (text always on)
+  7806        GFX: read: the mouse byte (3-byte PS/2 packets while MOUSE-ON); write: the Y register (pixel line)
+              (7800-7807 repeat through 7BFF: the card decodes A1-A2 there, A0 only for the 6845)
+  7C00-7C3F   graphics window: pixel line Y of the page CPAGE, 64 bytes, bit 7 of byte 0 = x 0; repeated to 7FFF
 Graphics RAM: two pages of 16K (512 x 256 bits); NTSC shows lines 0-199. The CPU-side address is the RA:MA layout
 {page, Y2..Y0, Y7..Y3, A5..A0}; that is a fixed permutation the software never sees, so pages are stored by line here
 (line y at y*64), which is what page_bitmap() and the PNG show. At power-up the RAM holds noise (seeded, so runs repeat).
-Without the GFX board (gfx=False): status bit 5 = 0, the window and port 7 float (FF), OUT 4 and OUT 7 do nothing.
+Without the GFX board (gfx=False): status bit 5 = 0, the window and the mouse float (FF), writes to 7804 and 7806 do nothing.
 Keys (the VIDEO-G PS/2 firmware): ASCII (Enter 0D, Backspace 08, Esc 1B, Ctrl-C 03, Delete 7F); F1-F12 = 80-8B;
 Home, Up, PgUp, Left, keypad 5, Right, End, Down, PgDn, Ins, Del = 90-9A; with Shift + 40h (C0-DA).  KEYS names them.
 Mouse: the GFX board's ATmega sends 3-byte packets only while MOUSE-ON; MOUSE-READY says a byte waits in its latch,
-which keeps the last byte when MOUSE-ON goes off (a stale byte: read INP 7 once before turning MOUSE-ON back on).
+which keeps the last byte when MOUSE-ON goes off (a stale byte: read 7806 once before turning MOUSE-ON back on).
 VSYNC and DE in the status come from the CPU's cycle count (NTSC: 262 lines x 95 characters at 1.5 MHz; 5151: 370 x 81).
 """
 import random, struct, zlib, os
@@ -35,7 +36,7 @@ FORMATS = {   # lines/frame, characters/line (R0+1), displayed lines, VSYNC star
 
 
 class VideoG:
-    TEXT_BASE, TEXT_SIZE, WIN = 0x7000, 0x800, 0x7800
+    TEXT_BASE, TEXT_SIZE, REGS, WIN = 0x7000, 0x800, 0x7800, 0x7C00
 
     def __init__(self, machine, monitor="ntsc", gfx=True, mhz=1.76, seed=1802):
         self.m = machine; self.monitor = monitor.lower(); self.gfx = gfx; self.mhz = mhz
@@ -61,9 +62,17 @@ class VideoG:
     # ---------------------------------------------------------------- memory
     def read(self, a):
         if self.TEXT_BASE <= a < self.TEXT_BASE + self.TEXT_SIZE: return self.vram[a - self.TEXT_BASE]
-        if self.WIN <= a <= 0x7FFF:
+        if self.WIN <= a <= 0x7FFF:                               # the window (A10 = 1)
             if not self.gfx: return FLOAT
             return self.pages[self.cpage()][self.yreg * 64 + (a & 0x3F)]
+        if self.REGS <= a < self.WIN:                             # the registers (A10 = 0), chosen by A1-A2
+            r = (a >> 1) & 3
+            if r == 0:                                            # the 6845: 7801 reads R14-R17
+                return (self.reg[self.sel] if self.sel in (14, 15, 16, 17) else 0) if a & 1 else FLOAT
+            if r == 1: return self.m.kbd.read()                   # 7802: the key (the read clears KEY-READY)
+            if r == 2: return self.status()                       # 7804
+            if not self.gfx: return FLOAT                         # 7806: the mouse byte (GFX)
+            return self.mouse.popleft() if self.mouse else 0
         return None
 
     def write(self, a, v):
@@ -73,27 +82,18 @@ class VideoG:
             if self.gfx:
                 self.pages[self.cpage()][self.yreg * 64 + (a & 0x3F)] = v; self.dirty = True; self.writes += 1
             return True
+        if self.REGS <= a < self.WIN:
+            r = (a >> 1) & 3
+            if r == 0:                                            # the 6845: 7800 address register, 7801 data
+                if a & 1:
+                    if self.sel < 18: self.reg[self.sel] = v; self.dirty = True
+                else: self.sel = v & 31
+            elif r == 2 and self.gfx:                             # 7804: control (the register is on GFX)
+                if self.ctrl & 0x20 and not v & 0x20: self.mouse = deque(list(self.mouse)[:1])   # the latch keeps one
+                self.ctrl = v; self.dirty = True
+            elif r == 3 and self.gfx: self.yreg = v               # 7806: the Y register
+            return True
         return False
-
-    # ---------------------------------------------------------------- ports
-    def out(self, n, v):
-        if n == 4:
-            if not self.gfx: return                               # the control register is on the GFX board
-            if self.ctrl & 0x20 and not v & 0x20: self.mouse = deque(list(self.mouse)[:1])   # the latch keeps one
-            self.ctrl = v; self.dirty = True
-        elif n == 5: self.sel = v & 31
-        elif n == 6:
-            if self.sel < 18: self.reg[self.sel] = v; self.dirty = True
-        elif n == 7:
-            if self.gfx: self.yreg = v
-
-    def inp(self, n):
-        if n == 4: return self.status()
-        if n == 6: return self.reg[self.sel] if self.sel in (14, 15, 16, 17) else 0
-        if n == 7:
-            if not self.gfx: return FLOAT
-            return self.mouse.popleft() if self.mouse else 0
-        return FLOAT
 
     def frame_position(self):
         """(line, character) of the beam, from the CPU's machine cycles (8 clocks each)"""
@@ -208,24 +208,14 @@ KEYS = dict({"F%d" % (i + 1): 0x80 + i for i in range(12)},
 
 
 class VideoGMachine(Machine):
-    """System-5 with VIDEO-G in place of the 6845 card and the IO card (no 1861; the keyboard is on TEXT)"""
+    """System-5 with VIDEO-G in place of the 6845 card and the IO card (no 1861; the keyboard is on TEXT). VIDEO-G uses
+    no I/O port (memory-mapped, 2026-11-17): the ports are the base machine's, the IDE card's 2 and 3 and, with the IO
+    panel fitted, its 4; nothing answers INP 1 (the key is read at 7802). EF3 is still KEY-READY (bus -EF)."""
     def __init__(self, monitor="ntsc", gfx=True, mhz=1.76, **kw):
         kw["pixie_port"] = 0                                   # no IO card: port 0 is never an INP/OUT
         super().__init__(**kw)
+        self.kbd.port = None                                   # the key is memory-mapped: not on INP 1
         self.video = VideoG(self, monitor, gfx, mhz)
-
-    def out(self, n, v):
-        if n in (2, 3): self.ide.out(n, v)
-        elif n in (4, 5, 6, 7): self.video.out(n, v)
-        if self.watch: self.watch("o", n, v)
-
-    def inp(self, n):
-        v = FLOAT
-        if n in (2, 3): v = self.ide.inp(n)
-        elif n == 1: v = self.kbd.read()
-        elif n in (4, 5, 6, 7): v = self.video.inp(n)
-        if self.watch: self.watch("i", n, v)
-        return v
 
     def reset(self):
         super().reset(); self.video.ctrl = 0                  # -RESET clears the control register

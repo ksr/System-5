@@ -16,7 +16,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repos
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "stage")
 GLOBS = ["BACKLOG.md", "docs/manual/*.md", "docs/manual/pdf/*.pdf", "hardware/*.md", "hardware/*/*.md",
-         "hardware/*/kicad/*/README.md", "hardware/*/kicad/*/DESIGN.md", "hardware/*/kicad/*/schematic/*.pdf", "hardware/*/kicad/*/*.png",
+         "hardware/*/kicad/README.md", "hardware/*/kicad/*/README.md", "hardware/*/kicad/*/DESIGN.md", "hardware/*/kicad/*/BOM.md", "hardware/*/kicad/*/schematic/*.pdf", "hardware/*/kicad/*/*.png",
          "hardware/*/kicad/*/reports/*.png", "hardware/*/eagle/*/photos/*", "hardware/*/kicad/*/photos/*", "hardware/board-notes/*.txt",
          "software/**/*.md", "embedded/**/*.md", "tools/kicad/sch/README.md"]
 SKIP = re.compile(r"(^|/)(reference|website-2005|website-older|node_modules|eagle-backups|website-copy)(/|$)"
@@ -58,9 +58,12 @@ n = 0
 for rel in sorted(paths):
     if SKIP.search(rel) or not os.path.isfile(os.path.join(REPO, rel)): continue
     copy(rel); n += 1
-# each KiCad revision's README is staged as notes.md: Material's navigation.indexes would take a README.md as the
-# card section's own page and drop it from the revision list (hooks.py points links to the README at notes.md)
-for readme in glob.glob(os.path.join(OUT, "hardware", "*", "kicad", "*", "README.md")):
+# each KiCad revision's README is staged as notes.md, and so is a card's own kicad/README.md (VIDEO-G's, for its two
+# boards, 2026-11-17); hooks.py points links to the README at notes.md. This was for Material's navigation.indexes,
+# which took a README.md as the card section's own page and dropped it from the list under it; that feature is off
+# since 2026-11-17 (mkdocs.yml), and notes.md stays so that the pages keep their addresses
+for readme in (glob.glob(os.path.join(OUT, "hardware", "*", "kicad", "*", "README.md")) +
+               glob.glob(os.path.join(OUT, "hardware", "*", "kicad", "README.md"))):
     os.rename(readme, os.path.join(os.path.dirname(readme), "notes.md"))
 # the visitor home page (home.md here) is the site's index; the repository README becomes "The repository" page
 # (links to README.md from other documents are pointed at it by hooks.py)

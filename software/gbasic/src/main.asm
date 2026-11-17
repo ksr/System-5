@@ -420,9 +420,7 @@ kwait:      ldn     r9                  ; (kwait: the test harness knows GBASIC 
             str     r9
             b3      gk_key
             jmp     kwait
-gk_key:     sex     r2
-            inp     KBDPORT
-            rtn
+gk_key:     lbr     readkey             ; (its RTN is ours)
 
 ; keyhit: a key waiting? DF = 1 and D = the key (taken), else DF = 0.  For INKEY and LIST's pause.
 keyhit:     zp_at   r9, keybuf
@@ -438,23 +436,31 @@ keyhit:     zp_at   r9, keybuf
 kh_port:    b3      kh_get
             adi     0                   ; DF = 0
             rtn
-kh_get:     sex     r2
-            inp     KBDPORT
+kh_get:     call    readkey
             plo     re
             smi     0
             glo     re
             rtn
 
+; readkey: the key EF3 says waits -> D: VIDEO-G's at 7802 (the read clears KEY-READY), else the IO card's INP 1
+readkey:    zp_at   r9, vgstat
+            ldn     r9
+            jz      rk_port
+            ldiw    r9, VGKEY
+            ldn     r9
+            rtn
+rk_port:    sex     r2
+            inp     KBDPORT
+            rtn
+
 ; brkcheck: between statements, when EF3 says a key waits.  Ctrl-C or Esc stops the program; any other key is
 ; kept for INPUT/INKEY.
-brkcheck:   sex     r2
-            inp     KBDPORT
+brkcheck:   call    readkey
+            plo     re                  ; keep it
             xri     3
             jz      brk_yes
             xri     3 ^ 1bh
             jz      brk_yes
-            ldx                         ; keep it (INP left it at M(R2))
-            plo     re
             zp_at   r9, keybuf
             glo     re
             str     r9

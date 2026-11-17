@@ -14,7 +14,7 @@ and the proposals still to agree. The Rev A card (`../rev-a/`, `docs/manual/cpu-
 | External clock | An **EXT CLK header pin** on the card, wired from a debug board (the bus driver's J2 spare) with a jumper wire; not on the bus (EXP stays free, Ken 2026-10-30). A jumper picks **INT / EXT**. The 1802 is static, so the debug board can run it slowly or step it edge by edge. |
 | Boot EPROM | A **4K 2732** at F000-FFFF, as on Rev A, so today's HBIOS 1.0.4 chip moves across. |
 | Layout | The board layout rules (front-edge switches and LEDs, labels, readable references, IC types), `cottageworker.com` and the board name/revision on the silkscreen, 0.1" bypass caps. |
-| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; preorder_check `--layers 2`. Go to 4 only if routing truly fails, and ask first. |
+| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; `pcb-check --layers 2`. Go to 4 only if routing truly fails, and ask first. |
 
 ## Proposed (to agree with Ken)
 
@@ -91,7 +91,9 @@ writing it (for Ken to review):
   connector clears the card supports). J1 = `s5cpu:C36` (the 30-pin cards' C30 with positions 1-3 and 34-36 added) down
   the left edge, centred; the 3.00 × 0.15 in support strips along the top and bottom edges are copper keep-outs.
 - **2 layers**, routed by Freerouting (1090 segments, 40 vias), GND pours both sides. `preorder_check --layers 2`: **PASS**
-  (ERC 0, DRC 0, parity 0, netlist 78/78 MATCH, bypass caps 0.1", schematic redrawn). Not ordered.
+  (ERC 0, DRC 0, parity 0, netlist 78/78 MATCH, bypass caps 0.1", schematic redrawn). Not ordered. That is the older
+  check, `tools/preorder_check.py`; before an order the board has to pass `pcb-check` (every system since 2026-11-06;
+  `hardware/BUILD-RULES.md`, section 2).
 - Front edge (right): SW1 RESET/RUN (RESET with the lever up), LEDs PWR, Q, PAUSE, RESET, ROM, J2 DEBUG with each pin
   named; JP1 CLK (INT/EXT), JP2 EF1-4, JP3 -EF>EF3 along the bottom edge outside the support strip; every chip's reference
   and type below it; S5CPU-D, "System-5 CPU Rev D 2026", cottageworker.com.

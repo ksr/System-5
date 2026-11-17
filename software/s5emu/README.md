@@ -75,25 +75,28 @@ python3 -m s5emu --video g --disk elfos.img
 
 System-5 with the VIDEO-G card (`hardware/video-g/DESIGN.md`, not built yet) in place of the 6845 card and the IO card
 (`s5emu/videog.py`, a behavioural model). The ROM defaults to `roms/hbios-video-g.rom`, the VIDEO-G build of HBIOS
-(`firmware/hbios/video-g`: the 6845 on OUT 5/6, 64 x 25, a 24-row scroll). Boot ELF/OS with `@FF00` as before.
+(`firmware/hbios/video-g`: the memory-mapped card, 64 x 25, a 24-row scroll, v1.0.6's disk fix). Boot ELF/OS with
+`@FF00` as before. **VIDEO-G is memory-mapped since 2026-11-17 (Ken): it answers no I/O port.**
 
 | What | Model |
 |---|---|
 | Text | 2K at 7000-77FF, 64 x 25 (6845 R1/R6), cursor from R14/R15 |
-| Graphics window | 7800-783F = pixel line Y (OUT 7) of page CPAGE, bit 7 of byte 0 = x 0; repeated to 7FFF |
+| Graphics window | 7C00-7C3F = pixel line Y (written at 7806) of page CPAGE, bit 7 of byte 0 = x 0; repeated to 7FFF |
 | Pages | two of 16K (512 x 256); NTSC shows lines 0-199. At power-up they hold noise (seeded) |
-| Port 4 | OUT = control (TEXT-OFF, GFX-ON, XOR, DPAGE, CPAGE, MOUSE-ON; on the GFX board, so nothing without it); INP = status (KEY-READY, MOUSE-READY, VSYNC and DE from the CPU clock, MONITOR, GFX-PRESENT, ID 10) |
-| Ports 5/6, 7, 1 | 6845 address/data (INP 6 reads R14-R17); Y register / mouse byte; the keyboard (EF3) |
+| 7804 | write = control (TEXT-OFF, GFX-ON, XOR, DPAGE, CPAGE, MOUSE-ON; on the GFX board, so nothing without it); read = status (KEY-READY, MOUSE-READY, VSYNC and DE from the CPU clock, MONITOR, GFX-PRESENT, ID 10) |
+| 7800/7801, 7802, 7806 | 6845 address / data (7801 reads R14-R17); the key (EF3 = KEY-READY); Y register (write) / mouse byte (read). 7800-7807 repeat through 7BFF |
+| Ports | none answer VIDEO-G; the IDE card keeps 2/3, and `--panel A` puts the IO panel on port 4 beside it |
 | Keys | ASCII; F1-F12 = 80-8B; Home, Up, PgUp, Left, keypad 5, Right, End, Down, PgDn, Ins, Del = 90-9A, Shift + 40h (`videog.KEYS`) |
-| Mouse | `video.mouse_packet(dx, dy, buttons)` queues a PS/2 packet, only while MOUSE-ON; the latch keeps its byte after MOUSE-ON goes off (read INP 7 once before turning it back on) |
-| Options | `--monitor mda` (IBM 5151: 512 x 256, MONITOR = 1), `--no-gfx` (the TEXT board alone: the window and port 7 float) |
+| Mouse | `video.mouse_packet(dx, dy, buttons)` queues a PS/2 packet, only while MOUSE-ON; the latch keeps its byte after MOUSE-ON goes off (read 7806 once before turning it back on) |
+| Options | `--monitor mda` (IBM 5151: 512 x 256, MONITOR = 1), `--no-gfx` (the TEXT board alone: the window and the mouse float) |
 
 Commands: `png FILE [screen|gfx|text] [SCALE]` writes the picture as a PNG (green on black; `screen` combines text
 and graphics as the control register says, with the 6845 Rev B character ROM `firmware/char-rom-fonts/goodfont`);
 `vg` shows the control register, Y register and status. `screen` shows the 25 text rows.
 
-Found with it: the ELF/OS boot loader writes the sector numbers to port 4 while it loads the kernel, which leaves
-VIDEO-G's control register at 0E (graphics on); see `firmware/hbios/video-g/README.md`.
+Found with it: the ELF/OS boot loader writes the sector numbers to port 4 while it loads the kernel, which left the
+port version's control register at 0E (graphics on); the memory-mapped card (2026-11-17) answers no port, which settles
+it (`firmware/hbios/video-g/README.md`).
 
 ## Hardware-faithful mode (`--hw`)
 

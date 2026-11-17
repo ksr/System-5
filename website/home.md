@@ -15,7 +15,9 @@ machine was rebuilt one card at a time. All the 2005 boards were designed in Eag
 
 In 2026 the designs came back to life: the surviving boards converted to KiCad and proven against their schematics, a manual
 written from the netlists, an emulator that runs the real ROM, and two new boards made, both live and running: the
-memory card now in the machine (Rev E), and a bus driver card (Rev B) that brought the old cards up on the bench. The next machine is being designed too: a 36-pin bus
+memory card now in the machine (Rev E), and a bus driver card (Rev B) that brought the old cards up on the bench. Since
+November 2026 System-5 runs Mike's later operating system, Elf/OS 5.1.1, in place of the ELF/OS 0.2.6 it was built
+for. The next machine is being designed too: a 36-pin bus
 with a new CPU card and a front-panel IO card ([below](#next-the-36-pin-machine)).
 
 I'm Ken Rother. I designed and built System-5. Claude, Anthropic's AI, has been directly involved in converting the
@@ -33,7 +35,7 @@ boards, the manual, the emulator and this site.
 | **Display** | a 64 × 16 text screen from the 6845 card (BYTE, May 1979), composite video |
 | **Keyboard** | PS/2, through a PAK-VI decoder and a PIC16F84 into a CDP1852 port |
 | **Disk** | a CompactFlash card in an 8-bit IDE interface (Mike Riley's design) |
-| **Software** | HBIOS (my video and keyboard code on Mike Riley's BIOS), the monitor, ELF/OS booted from the CF card |
+| **Software** | HBIOS: my video and keyboard code on Mike Riley's BIOS, and his monitor with commands I added (help, boot, a disassembler, Q on and off). Mike's later operating system, Elf/OS 5.1.1 (build 229), booted from the CF card |
 
 ## The cards
 

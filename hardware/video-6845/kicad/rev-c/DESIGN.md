@@ -14,7 +14,7 @@ agree. References: Rev B (`../rev-b/`, `docs/manual/video-6845-card.md`), the IO
 | Keyboard port and flag | Port 1 (as today), the 1852's SR on **-EF3** (the 36-pin straight-across EF mapping: -EF3 → EF3, where HBIOS waits), so HBIOS needs no change. |
 | Bus | The 36-pin interface. The video side uses only the 30-pin lines; the keyboard flag uses -EF3. |
 | Layout | The board layout rules (front-edge video jack, DB9, PS/2 socket and LEDs; labels; readable references with IC types), `cottageworker.com` and the board name/revision on the silkscreen, 0.1" bypass caps. |
-| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; preorder_check `--layers 2`. Go to 4 only if routing truly fails, and ask first. |
+| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; `pcb-check --layers 2`. Go to 4 only if routing truly fails, and ask first. |
 
 ## Proposed (to agree with Ken)
 

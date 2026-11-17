@@ -1,16 +1,20 @@
 ;
 ; HBIOS for VIDEO-G 1.0 (System-5), made 2026-11-01 from HBIOS v1.0.4 (firmware/hbios/v1.0.4/sec1.asm, unchanged).
 ; Changes, all for the VIDEO-G TEXT board (hardware/video-g/DESIGN.md sections 2, 3 and 8):
-;   - the 6845 is on ports: OUT 5 = address register, OUT 6 = data (7800/7801 is now the graphics window)
+;   - VIDEO-G is memory-mapped (2026-11-17, hardware/video-g/DESIGN.md section 3): the 6845 at 7800 (address
+;     register) and 7801 (data), as on the 6845 card; the key at 7802; status / control at 7804 (KEY-READY = bit 0)
 ;   - the 64 x 25 NTSC table (R0-R9 = 94,64,76,8,31,6,25,28,0,7; 8 x 8 cells), cursor rows 0-7
 ;   - the bottom row is row 24 (7600); the cursor is kept in 77FE/77FF as before (not displayed at 25 rows)
-;   - OUT 4 = 00 at start: text on, graphics, XOR and mouse off, page 0
+;   - the control register (7804) = 00 at start: text on, graphics, XOR and mouse off, page 0
+;   - inchar and brk poll KEY-READY in the status register instead of EF3 (any CPU card: CPU Rev D takes the bus
+;     -EF on EF4), read the key at 7802 and keep every register but D
 ;   - a line feed scrolls only the 24 visible rows (an unrolled copy, 1536 bytes) and blanks row 24:
 ;     about 45 ms at 1.76 MHz, against 168 ms for the v1.0.4 copy of all of 7040-77FF
 ;   - the cursor address sent to R14/R15 is the 6845 address (RC - 7000), not the high byte of RC AND 3F
 ;   - a key of 80h or more (the VIDEO-G keyboard: F1-F12 80-8B, Home Up PgUp Left 5 Right End Down PgDn Ins Del
 ;     90-9A, with Shift C0-DA) is returned by inchar but not echoed (outchar strips bit 7: it would print junk)
-; Everything else (the keyboard on INP 1 / EF3, break, the jump table at F200, the Riley code) is as in v1.0.4.
+; build.py also gives it v1.0.6's disk fix (LBA mode, FBC1 / FBDF / FC31-FC44), which Elf/OS v5 needs.
+; Everything else (the jump table at F200, the Riley code) is as in v1.0.4.
 ;
 ; Define BIOS to generate code for use with ELFOS BIOS
 ;
@@ -34,6 +38,10 @@
 
 minimon:	equ     0ff54h
 
+crtca:		equ	07800h		; the 6845: address register (VIDEO-G, memory-mapped)
+crtcd:		equ	07801h		; the 6845: data register
+kdata:		equ	07802h		; the key (reading it clears KEY-READY)
+vstat:		equ	07804h		; status (read; bit 0 = KEY-READY) and control (write)
 cur_h:		equ     14		; Cursor postion high
 cur_l:		equ     15		; Cursor postion low
 
@@ -55,23 +63,30 @@ basmon:		equ	0f500h
 		org 0f000h
 boot:		ldi high boot	;Trigger Boot rom remap
 		phi r0		;
-		sex r0		; X = P: OUT with the byte that follows
-		out 4		; VIDEO-G control register (OUT 4) = 00: text on, graphics off
-		db 00h
+		ldi high vstat	; the control register (7804) = 00: text on, graphics, XOR and mouse off, page 0
+		phi rf
+		ldi low vstat
+		plo rf
+		ldi 00h
+		str rf
+		ldi low crtca	; RF = 7800, the 6845's address register
+		plo rf
 		ldi high vtable ; Register D set to vtable (CRTC register, value pairs)
 		phi rd          ;
 		ldi low vtable  ;
 		plo rd          ;
-		sex rd		; X = RD: OUT sends M(RD) and steps RD
 ;
 ; Load Video Paramters into CRTC
 ;
-vload:          out 5           ; register number to the 6845 address register (OUT 5)
-	        out 6           ; its value to the 6845 data register (OUT 6)
+vload:          lda rd          ; register number to the 6845's address register (7800)
+		str rf
+		inc rf
+	        lda rd          ; its value to the data register (7801)
+		str rf
+		dec rf
 	        glo rd          ; end of the table?
 	        xri vtable_end.0
 	        bnz  vload      ; If not load next CRTC Video paramter
-		sex r0		; (X back to the program counter, as after reset)
 ;
 ; Clear Video memory (with space charachter)
 ;
@@ -212,26 +227,25 @@ normal:         glo re         ; Register F.1 contains character
 		str rc         ; Store at register C, Character pointer
                 inc rc         ;
 ;
-; Update Cursor position: R14/R15 = RC - 7000 through OUT 5 / OUT 6 (X = 2)
+; Update Cursor position: R14/R15 = RC - 7000, through 7800 / 7801 (RF is saved above and restored at outdn)
 ;
 update:
+		ldi high crtca	; RF = 7800, the 6845's address register
+		phi rf
+		ldi low crtca
+		plo rf
 		ldi cur_h      ; CRTC High cursor register
-		str r2         ; (the free byte below the stack)
-		out 5          ; set CRTC Address register (R2 + 1)
-		dec r2
+		str rf
+		inc rf
 		ghi rc         ; Get High portion of cursor postion
 		ani 07h        ; the 6845 address: 64 x row + column, 0-7FF
-		str r2
-		out 6          ; cursor position high
-		dec r2
+		str rf         ; cursor position high (7801)
+		dec rf
 		ldi cur_l      ; CRTC low cursor register
-		str r2
-		out 5          ; set CRTC Address register
-		dec r2
+		str rf
+		inc rf
 		glo rc
-		str r2
-		out 6          ; cursor positon low
-		dec r2
+		str rf         ; cursor positon low
 ;
 ; Store cursor position in memory
 ;
@@ -267,9 +281,22 @@ outnochar:		sep r5         ; Return
 ;
 ;
 		org 0f100h
-inchar:         bn3  inchar    ; Wait for an input character
-        	sex 2
-		inp 1          ; Read character
+inchar:		sex 2		; keep RF on the stack (R2 = s on return, as on entry)
+		glo rf
+		stxd
+		ghi rf
+		stxd
+		ldi high vstat	; RF = 7804, the status register
+		phi rf
+		ldi low vstat
+		plo rf
+inwait:		ldn rf		; Wait for an input character: KEY-READY (bit 0), polled, not EF3 (CPU Rev D has -EF
+		shr		; on EF4)
+		bnf inwait
+		ldi low kdata	; RF = 7802: Read character (the read clears KEY-READY)
+		plo rf
+		ldn rf
+		str r2		; the character, in the free byte below the saved RF
 		ani 080h       ; VIDEO-G: F1-F12, arrows etc. send 80h and up: return them, but no echo
 		bnz innoecho
 		ldn r2         ; the character again
@@ -277,26 +304,49 @@ inchar:         bn3  inchar    ; Wait for an input character
 		sep r4         ; Output the character
 		dw out         ;
 		inc r2         ; Increment (R2) restore inputed character
-innoecho:	ldn r2         ; Get the input Character
+innoecho:	irx		; RF back
+		ldxa
+		phi rf
+		ldx
+		plo rf
+		dec r2		; the character, two below R2 (nothing has written there since)
+		dec r2
+		ldn r2         ; Get the input Character
+		inc r2
+		inc r2
 		sep r5         ; Return
 ;
-; Check for a break character
+; Check for a break character: DF = 1 if a key waits and it is ESC (a key that waits is read either way, as before)
 ;
-brk:		b3  brkchk     ; Character is available
-bno:		ldi 00         ; Clear DF
-		shl            ;
-	        br brkdone       ; Return
-;
-;
-;
-brkchk:
-        	sex 2
-		inp 1          ; Input to (R(X)) and D, N=001
+brk:		sex 2		; keep RF
+		glo rf
+		stxd
+		ghi rf
+		stxd
+		ldi high vstat	; RF = 7804, the status register
+		phi rf
+		ldi low vstat
+		plo rf
+		ldn rf		; KEY-READY?
+		shr
+		bnf bno		; no key: DF = 0 (SHR left it 0)
+		ldi low kdata	; RF = 7802: the key
+		plo rf
+		ldn rf
 		xri 01bh       ; Check for ESC
-                bnz bno        ; Not a break character
+                bnz bnoclr     ; Not a break character
 		ldi 0ffh       ; Set DF to 1
 		shl            ; Shift left D
-brkdone:	sep r5         ; Return
+		br brkdone
+bnoclr:		ldi 00         ; Clear DF
+		shl            ;
+bno:
+brkdone:	irx		; RF back (IRX, LDXA, PHI, LDX, PLO leave DF alone)
+		ldxa
+		phi rf
+		ldx
+		plo rf
+		sep r5         ; Return
 #ifdef BASIC
 ;
 ; Copy Basic into RAM

@@ -62,17 +62,19 @@ PLACE["C21"] = (141.0, 67.0, 0)
 PLACE["C22"] = (140.0, 77.0, 0)
 
 LABELS.update({
-    "J2": "MOUSE", "J3": "FTDI  GND . . TX RX DTR", "J4": "J4 FROM TEXT (J6)   PIN 1",
-    "IC11": "IC11\nATmega\n328P",
+    "J2": "J2 MOUSE", "J3": "J3 FTDI  GND . . TX RX DTR", "J4": "J4 FROM TEXT (J6)   PIN 1", "J1": "J1\nBUS",
+    "IC11": "IC11\nATmega\n328P-PU", "C20": "C20",                       # (C20: silk.py adds the value)
 })
 REFPOS.update({
     "IC11": (119.2, 13.4, 0.8, 0, "left"), "Y1": (128.4, PLACE["Y1"][1], 0.8, 90, "c"),
+    "C20": (132.4, 33.6, 0.8, 0, "c"),                                     # above the cap: F1 is on its right
     "C23": (117.2, PLACE["C23"][1], 0.8, 90, "c"), "C24": (130.1, PLACE["C24"][1], 0.8, 90, "c"),
-    "J2": (139.0, 16.6, 1.0, 0, "left"), "J3": (150.3, 40.6, 0.8, 90, "left"),
+    "J2": (139.0, 16.6, 1.0, 0, "left"), "J1": (17.0, 18.1, 0.8, 0, "left"),
+    "J3": (150.3, 40.6, 0.8, -90, "left"),                                 # down the header from pin 1, clear of J2
     "J4": (88.4, 93.8, 0.9, 0, "left"),
 })
 TEXTS = [
-    ("VIDEO-G 1.0 GFX", 104.0, 89.5, 1.4, 0, "left"),
+    ("VIDEO-G GFX V1.0", 104.0, 89.5, 1.4, 0, "left"),                   # name and rev in one text (pcb-check)
     ("System-5   cottageworker.com", 104.0, 91.6, 0.9, 0, "left"),
-    ("512x200 / 512x256 graphics, 2 pages  OUT 4 control  OUT 7 Y  INP 7 mouse", 23.0, 101.8, 0.8, 0, "left"),   # above the card guide
+    ("512x200 / 512x256 graphics, 2 pages  7804 control  7806 Y / mouse  7C00 window", 23.0, 101.8, 0.8, 0, "left"),   # above the card guide
 ]

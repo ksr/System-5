@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-10-19
-"""Run every check we can before a board's gerbers go to the fab. Nothing is uploaded until this says PASS.
+"""Run every check we can on a board and the zip made from it.
+
+Since 2026-11-06 this is NOT the check before an order: that is pcb-check (~/Developer/pcb-check, Ken's check for the
+boards of every system), which runs its own copy of this one first and then its own checks. A PASS here is not enough
+to order. This script stays as a build step: VIDEO-G's kicad/common/build.sh ends with it, and its SCHEMATIC step
+redraws a card's schematic PDF, which pcb-check does not do.
 
 Written after the 2026-10-09 order, when two boards were routed on four copper layers but ordered from 2-layer zips.
   1. LAYERS      the layer count Ken will order (--layers) = the board's copper layers = the copper files in the zip

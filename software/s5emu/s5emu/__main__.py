@@ -4,7 +4,8 @@
 Defaults: CPU card ROM = roms/hbios-1.0.6.rom, the machine's ROM since 2026-11-15 (HBIOS + Mike Riley's BIOS 1.0.4,
 F000-FFFF, plus the monitor commands H, B, D and Q1 / Q0 and the disk calls always in LBA mode; built by
 firmware/hbios/v1.0.6/build.py). --rom roms/hbios-1.0.5.rom or roms/hbios-1.0.4.rom runs an earlier one;
-firmware/hbios/v0.9/sec1.rom is the older BIOS 0.9 build.
+firmware/hbios/v0.9/sec1.rom is the older BIOS 0.9 build. --rom roms/hbios-1.0.7.rom runs v1.0.7 (2026-11-17, burned
+that day): v1.0.6 plus @F1E0, which shows each key's code (0x31) on the bottom line.
 Memory card jumpered RAM 0000-6FFF / open 7000 (video) / ROM 8000-EFFF, symbols from the ROM's listings.
 """
 import argparse, os, sys
@@ -15,6 +16,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 ROM104 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "roms", "hbios-1.0.4.rom")    # tools/mkrom.py
 ROM105 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "roms", "hbios-1.0.5.rom")    # firmware/hbios/v1.0.5/build.py
 DEF_ROM = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "roms", "hbios-1.0.6.rom")   # firmware/hbios/v1.0.6/build.py
+ROM107 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "roms", "hbios-1.0.7.rom")    # firmware/hbios/v1.0.7/build.py
 VG_ROM = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "roms", "hbios-video-g.rom")  # firmware/hbios/video-g/build.py
 SYMS_104 = [os.path.join(ROOT, "firmware/hbios/v0.9/sec1.lst"), os.path.join(ROOT, "firmware/hbios/v1.0.4/orig_bios/bios.lst")]
 # symbols for each of these ROMs, whichever is the default: 1.0.5 and 1.0.6 are 1.0.4 byte for byte plus new code in
@@ -22,7 +24,8 @@ SYMS_104 = [os.path.join(ROOT, "firmware/hbios/v0.9/sec1.lst"), os.path.join(ROO
 # each one's own listing adds the new code (monext, the disassembler, ...)
 ROM_SYMS = {os.path.realpath(ROM104): SYMS_104,
             os.path.realpath(ROM105): [os.path.join(ROOT, "firmware/hbios/v1.0.5/sec1.lst")] + SYMS_104,
-            os.path.realpath(DEF_ROM): [os.path.join(ROOT, "firmware/hbios/v1.0.6/sec1.lst")] + SYMS_104}
+            os.path.realpath(DEF_ROM): [os.path.join(ROOT, "firmware/hbios/v1.0.6/sec1.lst")] + SYMS_104,
+            os.path.realpath(ROM107): [os.path.join(ROOT, "firmware/hbios/v1.0.7/sec1.lst")] + SYMS_104}
 
 
 def parse_jumpers(text):

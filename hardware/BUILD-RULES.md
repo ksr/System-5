@@ -34,12 +34,28 @@ Source: [`CLAUDE.md`](../CLAUDE.md) (standing rules).
 
 - **Every 0.1 µF bypass cap has 0.1" (2.54 mm) lead spacing**, never 0.2" (5 mm) discs. Memory Rev D's
   `C025-050X050` is the example (Ken, 2026-10-19; [`CLAUDE.md`](../CLAUDE.md)).
-- **Before any order, `python3 tools/preorder_check.py <board.kicad_pcb> <order.zip> --layers N` must pass**
-  (Ken, 2026-10-19). It checks that the layer count ordered, the board's copper layers and the zip's copper files
-  agree; ERC; DRC with zones refilled; unconnected pads; schematic parity; that the zip is fresh from the board and
-  reads back with every copper layer; the bypass-cap rule; the netlist proof; one-piece planes on 4-layer boards with
-  no tracks on them; and a picture of each copper layer. Then Ken looks at the pictures and the fab's gerber viewer.
-  DRC alone is not enough: it checks the board file, not the zip.
+- **Before any order, `~/Developer/pcb-check/pcb-check <board.kicad_pcb> <order.zip> --layers N` must show no FAIL,
+  and Ken must have seen the result** (Ken, 2026-11-05, for every system). `pcb-check` is Ken's one check for the
+  boards of all his systems, in a repository of its own (private). Since 2026-11-06 it is the check before an order,
+  in place of this repository's `tools/preorder_check.py` (Ken's first rule, of 2026-10-19). It is for new boards
+  only: it is never run on a board already ordered or built.
+    - **It runs the older check first**, from its own copy: the layer count ordered, the board's copper layers and
+      the zip's copper files agree; ERC; DRC with zones refilled; unconnected pads; schematic parity; that the zip is
+      fresh from the board and reads back with every copper layer; the bypass-cap rule; the netlist proof; one-piece
+      planes on 4-layer boards with no tracks on them; and a picture of each copper layer.
+    - **Then its own checks:** the copper rebuilt from the gerbers and the drill file alone and proved against the
+      schematic (the one check of what will really be made); a design review (unpowered parts, floating inputs, two
+      drivers on a net, too few bypass caps); the silkscreen (the card's name and rev, `cottageworker.com`, every
+      part's reference and value); polarity; footprints against the real parts; the board's fit; the fab's limits;
+      the bus connector's pins; a committed tree; and one rev on the silkscreen, the schematic and the zip's name.
+    - **FAIL blocks an order; WARN needs Ken's eye.** Then Ken looks at the pictures and the fab's gerber viewer.
+      DRC alone is not enough: it checks the board file, not the zip.
+    - **When a board is set for order**, `--archive --fab F --order NUMBER` stores what was sent beside the board
+      (the zip, the schematic and layout PDFs, the pictures, the report and a parts list), and the order goes into
+      [`FABRICATED.md`](FABRICATED.md).
+    - **`tools/preorder_check.py` is still in this repository as a build step**, no longer as the check before an
+      order: VIDEO-G's `kicad/common/build.sh` ends with it, and it redraws a card's schematic PDF. `pcb-check`
+      writes nothing in the repository, so the schematic PDFs are redrawn before it runs.
 
 ## 3. The 2005 board notes
 

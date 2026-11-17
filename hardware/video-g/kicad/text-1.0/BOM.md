@@ -1,14 +1,14 @@
 # VIDEO-G 1.0 TEXT - bill of materials
 
-Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-01). Every IC goes in a socket.
+Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-17). Every IC goes in a socket.
 
 | Qty | Value | Footprint | References | What to buy |
 |---|---|---|---|---|
 | 1 | 74HCT373 | DIP-20_W7.62mm_Socket | IC1 | 74HCT373 (CMOS inputs: no load on the 1802's address lines) |
 | 1 | 74LS85 | DIP-16_W7.62mm_Socket | IC2 |  |
 | 1 | IDT7134 | DIP-48_W15.24mm_Socket | IC3 | IDT7134SA or LA, 55-90 ns, DIP-48 (600 mil); the 6845 card's chip also fits |
-| 1 | HD68B45SP | DIP-40_W15.24mm_Socket | IC4 | HD68B45SP (Hitachi) or MC68B45P (Motorola), 2 MHz grade; the 6845 card's HD6845 runs this 1.5 MHz clock too |
-| 3 | 74HCT138 | DIP-16_W7.62mm_Socket | IC5, IC6, IC7 | 74HCT138 (CMOS inputs on N0-N2) |
+| 1 | HD68B45SP | DIP-40_W15.24mm_Socket | IC4 | HD68B45SP (Hitachi) or MC68B45P (Motorola): the 2 MHz grade is needed, for the write E pulse (284 ns at 1.76 MHz, DESIGN.md section 4); the 6845 card's 1 MHz HD6845 is too slow for it |
+| 3 | 74HCT138 | DIP-16_W7.62mm_Socket | IC5, IC6, IC7 | 74HCT138 (CMOS inputs on the bus address) |
 | 1 | 74LS244 | DIP-20_W7.62mm_Socket | IC8 |  |
 | 1 | 74HCT374 | DIP-20_W7.62mm_Socket | IC9 |  |
 | 1 | ATmega328P-PU | DIP-28_W7.62mm_Socket | IC10 | ATmega328P-PU with the Arduino Uno bootloader burned (ISP) before fitting |

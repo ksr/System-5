@@ -17,7 +17,7 @@ Nothing is drawn yet. The folder name `io-panel` is a working name. The bus: `do
 | Hand controls | The COSMAC ELF's **RUN** and **LOAD** toggles (RUN off pulls -RESET, LOAD on pulls -PAUSE: LOAD mode = RUN off + LOAD on, PAUSE = RUN on + LOAD on; changed 2026-10-30 from PAUSE/LOAD with the CPU Rev D netlist, so LOAD → RESET → RUN runs a loaded program), the INPUT button on -DMAIN in LOAD mode, the 8 switches as the data. Works with or without a debug board. |
 | Bus | The 36-pin interface. |
 | Layout | The board layout rules: every switch, button, LED and display on the front edge, each labelled (bit 7-0, Q, INPUT, PAUSE, LOAD); `cottageworker.com` and the board name/revision; 0.1" bypass caps. |
-| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; preorder_check `--layers 2`. Go to 4 only if routing truly fails, and ask first. |
+| Layers | **2 copper layers if at all possible** (Ken, 2026-10-30): cheaper and quicker to check; `pcb-check --layers 2`. Go to 4 only if routing truly fails, and ask first. |
 
 ## Proposed (to agree with Ken)
 
@@ -76,7 +76,9 @@ button), and that a debug board's DMA with the button held never makes this card
   the bottom-right corner (U7 bits 7-4, U8 bits 3-0). The HTIL311A footprint's drawing is on F.Fab in this copy (it ran over
   its pads on the silkscreen). U1 ('138) sits beside N0-N2 at the bottom of the connector.
 - **2 layers**, Freerouting (869 segments, 21 vias), GND pours both sides. `preorder_check --layers 2`: **PASS** (ERC 0,
-  DRC 0, parity 0, netlist 64/64, bypass caps 0.1", schematic redrawn). Not ordered.
+  DRC 0, parity 0, netlist 64/64, bypass caps 0.1", schematic redrawn). Not ordered. That is the older check,
+  `tools/preorder_check.py`; before an order the board has to pass `pcb-check` (every system since 2026-11-06;
+  `hardware/BUILD-RULES.md`, section 2).
 - To check before an order: the M9040P toggles still to be had (or a pin-compatible vertical SPDT toggle: 3 pins on 4.7 mm),
   the switch lever direction against a real part (labels assume the lever closes the common to the far end), Ken's look at
   the pictures.
