@@ -10,6 +10,12 @@ Plans (the procedure, jumpers and what each step proves are in BRINGUP.md beside
            set-up and a test screen to check on the monitor
   all      the three cards together: the combined address map, no card answering in another's space, the CRTC
            and the RAM not double-mapped, the CF card undisturbed by memory traffic
+BUSDRV-C only (the 36-pin card):
+  bus36    the bus Rev D with no CPU card: every pulled line at rest, each open-collector line (-RESET -INT -EF -EF1
+           -EF2 -EF3 -PAUSE -DMAIN) low alone and back up, the pull-downs and pull-ups of the driven lines
+  load     CPU Rev D and a memory card in place, the DEBUG ribbon on and the CPU card's JP1 on EXT, and the bus driver
+           never bus master: the cable, RESET and LOAD, a program into RAM by DMA IN with the clock stepped, RUN (the
+           program reads itself back, and the bus driver checks every byte on the bus), -PAUSE, a bus reset
 
 Run against the real card (the Nano's USB port is found automatically):
   python3 bringup.py memory
@@ -19,6 +25,8 @@ Run against the real card (the Nano's USB port is found automatically):
 Run against the simulated backplane (the netlist models; nothing to plug in):
   python3 bringup.py --sim memory
   python3 bringup.py --sim memory --fault stuck:mem:3:0       (see what a stuck data line looks like)
+  python3 bringup.py --sim load                               (BUSDRV-C: CPU Rev D in place, a program loaded and run)
+  python3 bringup.py --sim load --fault nocable               (the DEBUG ribbon left off)
 
 Each step prints PASS, FAIL, WARN (works, but look at it), INFO or LOOK (check by eye on the card or the monitor).
 The exit status is 1 if any step failed.
@@ -647,7 +655,177 @@ class Bringup:
                     "The IDE card must ignore memory cycles (N = 0): check the 74LS138 (IC4) enables and the latch strobe.")
 
     # ------------------------------------------------------------------ plans
+    # ------------------------------------------------------------------ BUSDRV-C: the 36-pin bus, and the CPU card in place
+    OC_LINES = ("-RESET", "-INT", "-EF", "-EF1", "-EF2", "-EF3", "-PAUSE", "-DMAIN")
+    PULLED = (("TPA", 0), ("TPB", 0), ("-MRD", 1), ("-MRW", 1), ("-VMA", 1))        # the bus Rev D's RN3 / RN4
+    RN = "the bus Rev D's resistor networks RN1-RN4 hold these lines (hardware/bus/kicad/rev-d)"
+
+    def snap(self):
+        """the SNAP line as {name: text}"""
+        return self.bd.fields(self.bd.snap())
+
+    def s_c_connect(self, st):
+        st.info("bus driver: %s" % " / ".join(self.bd.banner))
+        s = self.bd.status(); st.info(s)
+        if "bus=on" not in s:
+            st.fail("the bus has no power", "Power the backplane; the bus driver runs its expanders from bus +5V.")
+            return
+        if self.bd.board() != "C":
+            st.fail("this plan needs BUSDRV-C: the card has no third expander (U3 at 0x22)",
+                    "BUSDRV-B reaches the 30-pin bus only. Check U3 and its 0.1 uF if this is a BUSDRV-C.")
+
+    def s_x_idle(self, st):
+        f = self.snap(); st.info(self.bd.lines[0] if self.bd.lines else "")
+        for name in self.OC_LINES + ("-MRD", "-MRW", "-VMA"):
+            if f.get(name) != "1": st.fail("%s reads low with nothing pulling it" % name, "A card in the backplane holds it, or it is shorted to ground.")
+        for name in ("TPA", "TPB"):
+            if f.get(name) != "0": st.fail("%s reads high with nothing driving it" % name, "No pull-down on it, or a card drives it: this plan is for an empty backplane.")
+        if f.get("N") != "0": st.fail("N0-N2 read %s with nothing driving them" % f.get("N"), "A pull-down missing on N0-N2 (RN3).")
+        if f.get("D") != "FF": st.fail("D0-D7 read %s with nothing driving them" % f.get("D"), "A pull-up missing on a data line (RN1), or a card drives the bus.")
+        if st.status == "PASS": st.info("every pulled line rests where its resistor holds it; A0-A7, Q and SC0 have none")
+
+    def s_x_lines(self, st):
+        down = set()                                           # lines found without a pull-up: they stay where they were put
+        for name in self.OC_LINES:
+            self.bd.line(name, True); f = self.snap()
+            if f.get(name) != "0": st.fail("%s does not go low when the bus driver pulls it" % name, "U2 / U3 of the bus driver, or its solder joint to the bus pin.")
+            also = [n for n in self.OC_LINES if n != name and n not in down and f.get(n) != "1"]
+            if also: st.fail("pulling %s low also takes %s low" % (name, " ".join(also)), "A short between two bus lines: look between neighbouring pins of the slots and of U2 / U3.")
+            self.bd.line(name, False); f = self.snap()
+            if f.get(name) != "1":
+                down.add(name)
+                st.fail("%s stays low after it is let go: no pull-up on it" % name, "Check the resistor network on that line: " + self.RN + ".")
+        if st.status == "PASS": st.info("each of %s goes low alone and comes back up" % " ".join(self.OC_LINES))
+
+    def s_x_bus(self, st):
+        def let_go():
+            self.bd.master(False); return self.snap()
+        for name, rest in self.PULLED:
+            self.bd.master(True); self.bd.cmd(name, 1); f = let_go()        # driven to its active level, then released
+            if f.get(name) != str(rest):
+                st.fail("%s stays %s after it is let go: no %s on it" % (name, f.get(name), "pull-down" if rest == 0 else "pull-up"),
+                        "Check the resistor network on that line: " + self.RN + ".")
+        self.bd.master(True); self.bd.cmd("N", 7); f = let_go()
+        if f.get("N") != "0": st.fail("N0-N2 read %s after N = 7 is let go: a pull-down missing" % f.get("N"), "RN3 of the bus Rev D.")
+        self.bd.master(True); got = self.rd_after_release(0x00); self.bd.master(False)
+        if got != 0xFF:
+            st.fail("D0-D7 read %02X after 00 is let go: no pull-up on %s" % (got, bits_text(~got & 0xFF)), "RN1 of the bus Rev D.")
+        if st.status == "PASS": st.info("TPA, TPB and N0-N2 fall back low, -MRD, -MRW, -VMA and D0-D7 come back high")
+
+    def rd_after_release(self, v):
+        self.charge(v); return self.bd.value("RD-DATABUS")
+
+    def s_x_debug(self, st):
+        d = self.bd.dbg(); f = self.snap()
+        st.info("DEBUG header (J4) inputs: CLOCK=%s SC0=%s SC1=%s; bus SC0=%s" % (d.get("CLOCK"), d.get("SC0"), d.get("SC1"), f.get("SC0")))
+        if (d.get("CLOCK"), d.get("SC0"), d.get("SC1")) != ("1", "1", "1"):
+            st.warn("the DEBUG inputs do not all read 1 with no cable on J4 (the expander pulls them up)",
+                    "A cable is on J4, or a short at U3's GPB0-2.")
+        try:
+            self.bd.clock_test(); st.warn("CLK OUT is followed on the DEBUG cable: a CPU card is connected", "This plan is for the backplane without the CPU card.")
+        except S.CardError:
+            st.info("no CPU card answers on the DEBUG cable, as expected")
+
+    def load_image(self, n=48):
+        """a program that reads its own n bytes one after the other, then sets Q and idles: every byte of the load
+        comes back on the bus, where the bus driver can see it with the CPU card in place"""
+        prog = bytes([0xF8, 0x00, 0xB1, 0xA1, 0xF8, n, 0xA2, 0x41, 0x22, 0x82, 0x3A, 0x07, 0x7B, 0x00])
+        return prog + bytes((0xA5 ^ (i * 29)) & 0xFF for i in range(n - len(prog)))
+
+    def s_l_cable(self, st):
+        try: st.info(self.bd.clock_test())
+        except S.CardError as e:
+            st.fail(str(e).split("Error: ")[-1], "Fit the 6-way ribbon from the bus driver's J4 to the CPU card's J2 (DEBUG), and put the CPU card's "
+                    "JP1 on EXT: LOAD mode by the clock needs the bus driver to be the 1802's clock.")
+            return
+        d = self.bd.dbg(); st.info("DEBUG inputs: CLOCK=%s SC0=%s SC1=%s" % (d.get("CLOCK"), d.get("SC0"), d.get("SC1")))
+
+    def s_l_modes(self, st):
+        want = {"reset": ("0", "1"), "load": ("0", "0")}
+        for m in ("reset", "load"):
+            self.bd.mode(m); got = self.bd.cpu_mode(); f = self.snap()
+            if got != m.upper() or (f.get("-RESET"), f.get("-PAUSE")) != want[m]:
+                st.fail("MODE %s: the bus shows cpu=%s -RESET=%s -PAUSE=%s" % (m.upper(), got, f.get("-RESET"), f.get("-PAUSE")),
+                        "-RESET is on U2 and -PAUSE on U3 of the bus driver; another card (the IO panel's RUN and LOAD toggles) can hold them too.")
+        if st.status == "PASS": st.info("RESET (-RESET low) and LOAD (-RESET and -PAUSE low) are on the bus; the 1802 is in LOAD mode")
+
+    def s_l_load(self, st):
+        img = self.load_image(); self.image = img
+        try:
+            first = self.bd.dma_load(img)
+        except S.CardError as e:
+            msg = str(e).split("Error: ")[-1]; hint = "See what the card found; the LOAD steps are in the sketch's header."
+            if "-DMAIN" in msg: hint = "-DMAIN (slot position 34, U3 GPA4): something else holds it, or it does not reach the CPU card's U7."
+            elif "CLK OUT" in msg or "TPA" in msg: hint = "The DEBUG ribbon (J4 to the CPU card's J2) and the CPU card's JP1 on EXT."
+            elif "-MRW" in msg or "-MRD" in msg: hint = "The 1802 made a DMA cycle (SC0 low) with the wrong strobes: check -MRD and -MRW at the CPU card."
+            st.fail(msg, hint); return
+        if first != 0: st.fail("the first byte went to %04X, not 0000" % first, "LOAD mode did not start from RESET: R(0) was not cleared.")
+        else: st.info("%d bytes by DMA IN to 0000-%04X, each address read off the bus as it was written" % (len(img), len(img) - 1))
+
+    def trace(self, edges):
+        import cputrace
+        return cputrace.cycles([(e, cputrace.bits(*h)) for e, h in self.bd.clk(edges)])
+
+    def s_l_run(self, st):
+        img = getattr(self, "image", None)
+        if img is None: st.skip("nothing was loaded"); return
+        self.bd.mode("run"); cy = self.trace((len(img) * 4 + 12) * 32)
+        k = next((i for i, c in enumerate(cy) if c["rd"] or c["wr"]), None)      # past the initialization cycle
+        if k is None: st.fail("the 1802 made no memory cycle in RUN", "The clock: the DEBUG ribbon and JP1 on EXT."); return
+        cy = cy[k:]; first = cy[0]; a0 = (first["hi"] << 8) | (first["lo"] or 0)
+        if a0 != 0 or first["d"] != img[0] or not first["vma"]:
+            st.fail("the first fetch after RUN is %04X = %02X%s, not 0000 = %02X from RAM" % (a0, first["d"], "" if first["vma"] else " (-VMA high: the EPROM)", img[0]),
+                    "LOAD mode did not set the CPU card's LOADED flag (U8A), so the boot map put the EPROM at 0000.")
+            return
+        seen = {}
+        for c in cy:
+            if c["rd"] and not c["wr"]: seen[(c["hi"] << 8) | (c["lo"] or 0)] = c["d"]
+        missing = [a for a in range(len(img)) if a not in seen]; wrong = [a for a in range(len(img)) if a in seen and seen[a] != img[a]]
+        if wrong:
+            st.fail("%d byte(s) read back wrong, first %04X: loaded %02X, read %02X" % (len(wrong), wrong[0], img[wrong[0]], seen[wrong[0]]),
+                    "The byte was not on the data lines through the DMA write, or the memory card took a second write.")
+        elif missing: st.fail("the program did not get to %04X (and %d more): it did not run as loaded" % (missing[0], len(missing) - 1))
+        elif not any(c["q"] for c in cy): st.fail("the program read every byte but Q never rose")
+        else: st.info("the program ran from 0000 in RAM and read all %d bytes back as loaded; Q is high" % len(img))
+
+    def s_l_pause(self, st):
+        self.bd.mode("pause"); held = self.bd.clk(64); self.bd.mode("run"); free = self.bd.clk(64)
+        if len(held) > 1: st.fail("the bus changed %d times in 64 clock edges with -PAUSE low" % (len(held) - 1), "-PAUSE does not reach the 1802's WAIT (the CPU card's U7).")
+        elif len(free) < 4: st.fail("the bus stayed still after -PAUSE was let go")
+        else: st.info("-PAUSE low holds every bus line through 64 clock edges; let go, the cycles go on")
+
+    def s_l_reset(self, st):
+        img = getattr(self, "image", None)
+        if img is None: st.skip("nothing was loaded"); return
+        self.bd.mode("reset"); self.bd.mode("run"); cy = [c for c in self.trace(160) if c["rd"]]    # (past the initialization cycle)
+        if not cy: st.fail("no fetch after RESET then RUN"); return
+        c = cy[0]; a0 = (c["hi"] << 8) | (c["lo"] or 0)
+        if a0 == 0 and c["d"] == img[0] and c["vma"]: st.info("a reset from the bus keeps LOADED: RUN starts the loaded program again (the CPU card's own RESET/RUN switch, or power-on, brings HBIOS back)")
+        else: st.fail("after RESET then RUN the first fetch is %04X = %02X%s" % (a0, c["d"], "" if c["vma"] else " from the EPROM"),
+                      "A reset from the bus should leave the CPU card's LOADED flag set.")
+
+    def plan36(self, name):
+        s = self.step
+        s("C1", "bus driver, bus power, BUSDRV-C", self.s_c_connect)
+        if self.steps[-1].status == "FAIL": return
+        if name == "bus36":
+            s("X1", "every pulled line at rest", self.s_x_idle)
+            s("X2", "open-collector lines: low alone, and back up", self.s_x_lines)
+            s("X3", "pull-downs and pull-ups of the driven lines", self.s_x_bus)
+            s("X4", "DEBUG header with no cable", self.s_x_debug)
+        else:
+            s("L1", "DEBUG cable: CLK OUT reaches the 1802", self.s_l_cable)
+            if self.steps[-1].status == "FAIL": return
+            s("L2", "RESET and LOAD on the bus", self.s_l_modes)
+            s("L3", "a program into RAM by DMA IN", self.s_l_load)
+            if self.steps[-1].status == "FAIL": self.bd.mode("run"); return
+            s("L4", "RUN: the program reads itself back", self.s_l_run)
+            s("L5", "-PAUSE holds the 1802", self.s_l_pause)
+            s("L6", "a bus reset keeps the loaded program", self.s_l_reset)
+            self.bd.mode("run")
+
     def plan(self, name):
+        if name in ("bus36", "load"): return self.plan36(name)
         s = self.step
         s("B1", "bus driver, bus power, bus master", self.s_connect)
         if self.steps[-1].status == "FAIL": return
@@ -685,13 +863,21 @@ class Bringup:
         if not self.a.keep: self.bd.master(False)
 
 
-SIM_CARDS = {"memory": ("mem",), "cf": ("ide",), "video": ("video",), "all": ("mem", "video", "ide")}
+SIM_CARDS = {"memory": ("mem",), "cf": ("ide",), "video": ("video",), "all": ("mem", "video", "ide"),
+             "bus36": (), "load": ("mem",)}
+FAULTS = ("--fault: stuck:CARD:BIT:LEVEL, empty:REF, addr:BIT:LEVEL, card-jumpers:J, nodrive or legacy; with BUSDRV-C also "
+          "nocable, jp1int, stuck-line:NAME:LEVEL, nopull:NAME, hold-dmain or early-data")
 
 
 def sim_driver(a):
-    from backplane import Backplane
+    """the simulated card and backplane. The older plans run on BUSDRV-B and the 30-pin backplane, or (--busdrv C) on
+    BUSDRV-C in a bus Rev D with no CPU card; bus36 and load are BUSDRV-C's own: the bus Rev D empty, and with a memory
+    card and CPU Rev D, its DEBUG header cabled to the bus driver's and its JP1 on EXT."""
+    from backplane import Backplane, Backplane36
     from fwsim import FwCard
-    kw = dict(cards=SIM_CARDS[a.plan], jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev)
+    rev_c = a.plan in ("bus36", "load") or getattr(a, "busdrv", "B") == "C"
+    kw = dict(cards=SIM_CARDS[a.plan], jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev); fw = {}
+    if rev_c: kw["cpu"] = a.plan == "load"
     for f in a.fault or []:
         k, *rest = f.split(":")
         if k == "stuck": kw.setdefault("stuck", {})[rest[0]] = (int(rest[1]), int(rest[2]))
@@ -699,12 +885,17 @@ def sim_driver(a):
         elif k == "nodrive": kw["drive"] = False
         elif k == "addr": kw["addr"] = (int(rest[0]), int(rest[1]))
         elif k == "card-jumpers": kw["jumpers"] = rest[0].upper()      # the card jumpered unlike --jumpers says
-        elif k == "legacy": kw["_legacy"] = True
-        else: raise SystemExit("--fault: stuck:CARD:BIT:LEVEL, empty:REF, addr:BIT:LEVEL, card-jumpers:J, nodrive or legacy")
-    legacy = kw.pop("_legacy", False)
-    bp = Backplane(**kw)
+        elif k == "legacy": fw["legacy"] = True
+        elif not rev_c: raise SystemExit(FAULTS)
+        elif k == "nocable": kw["cable"] = False                       # the DEBUG ribbon left off
+        elif k == "jp1int": kw["jp1"] = "INT"                          # the CPU card's clock jumper on its own oscillator
+        elif k == "stuck-line": kw.setdefault("stuck_lines", {})[rest[0].lstrip("-")] = int(rest[1])   # e.g. stuck-line:DMAIN:0
+        elif k == "nopull": kw.setdefault("nopull", []).append(rest[0].lstrip("-"))                    # e.g. nopull:PAUSE, nopull:D
+        elif k in ("hold-dmain", "early-data"): fw["load_fault"] = k     # the firmware doing a LOAD step wrongly
+        else: raise SystemExit(FAULTS)
+    bp = (Backplane36 if rev_c else Backplane)(**kw)
     if a.rom: bp.load_rom(read_file(a.rom), a.rom_base)
-    return S.BusDriver(transport=FwCard(bp, legacy=legacy)), bp
+    return S.BusDriver(transport=FwCard(bp, rev="C" if rev_c else "B", **fw)), bp
 
 
 def hexaddr(s):
@@ -716,10 +907,13 @@ def hexaddr(s):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="System-5 card bring-up from the bus driver card", epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("plan", choices=("memory", "cf", "video", "all"))
+    ap.add_argument("plan", choices=("memory", "cf", "video", "all", "bus36", "load"))
     ap.add_argument("--port"); ap.add_argument("--log", action="store_true", help="show the serial traffic")
     ap.add_argument("--sim", action="store_true", help="the simulated backplane (netlist models) instead of the card")
-    ap.add_argument("--fault", action="append", help="simulator only: stuck:mem:3:0, empty:IC5, addr:4:0, card-jumpers:RRR-----EEEEEEE-, nodrive, legacy (old firmware)")
+    ap.add_argument("--busdrv", choices=("B", "C"), default="B", help="--sim: the card that runs memory, cf, video and all "
+                    "(C: BUSDRV-C in a bus Rev D with no CPU card); bus36 and load are always BUSDRV-C")
+    ap.add_argument("--fault", action="append", help="simulator only: stuck:mem:3:0, empty:IC5, addr:4:0, card-jumpers:RRR-----EEEEEEE-, nodrive, "
+                    "legacy (old firmware); BUSDRV-C: nocable, jp1int, stuck-line:DMAIN:0, nopull:PAUSE, hold-dmain, early-data")
     ap.add_argument("--jumpers", default=DEFAULT_JUMPERS, help="memory card blocks 0-F: R RAM, E EPROM, - open (default %(default)s)")
     ap.add_argument("--mem-rev", default="D", choices=("D", "C", "B-built"), help="memory card revision (default D)")
     ap.add_argument("--full", action="store_true", help="test every RAM byte (minutes on the real card)")

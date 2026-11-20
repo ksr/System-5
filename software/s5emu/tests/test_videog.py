@@ -23,7 +23,7 @@ class Card(unittest.TestCase):
         self.assertEqual(s & 0xC0, 0x80)          # card ID 10
         self.assertEqual(s & 0x30, 0x20)          # GFX fitted, MONITOR = NTSC
         m.kbd.press("A"); self.assertTrue(m.read(self.STAT) & 1)         # KEY-READY
-        self.assertTrue(m.ef(3))                  # and the bus -EF (EF3 on CPU Rev A, jumper KBD-EF)
+        self.assertTrue(m.ef(3))                  # and the bus -EF (EF3 on CPU Rev A; JP3 KBD FLAG as set)
         self.assertEqual(m.read(self.KEY), ord("A")); self.assertFalse(m.read(self.STAT) & 1)
 
     def test_no_ports(self):

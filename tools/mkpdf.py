@@ -82,7 +82,7 @@ class Doc:
         full = os.path.normpath(os.path.join(os.path.dirname(self.path), target))
         if full in self.docmap:
             return "#%s%s" % (self.docmap[full], "-" + frag if frag else "")
-        return "https://github.com/ksr/elf/blob/main/%s" % full     # (another book's, or a source file)
+        return "https://github.com/ksr/System-5/blob/main/%s" % full     # (another book's, or a source file; the public copy)
 
     # ---- blocks
     def convert(self, text):

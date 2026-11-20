@@ -4,7 +4,8 @@
 As the software sees it (DESIGN.md sections 2 and 3): memory-mapped, no I/O ports (Ken, 2026-11-17)
   7000-77FF   text RAM (the IDT7134's bus port, 2K); row r, column c at 7000 + 64r + c
   7800        write: the 6845's address register        7801  the 6845's data register (reads R14-R17)
-  7802        read: the key (ASCII; reading it clears KEY-READY); EF3 = a key waits (bus -EF, jumper KBD-EF)
+  7802        read: the key (ASCII; reading it clears KEY-READY); EF3 = a key waits (the bus -EF: the TEXT board's
+              JP3 KBD FLAG as set; it can pick -EF1, -EF2 or -EF3 instead, which this model does not follow)
   7804        read: status: 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR (1 = IBM 5151, 512 x 256),
               5 GFX-PRESENT, 7..6 = 10 (card ID)
               write: control: 0 TEXT-OFF, 1 GFX-ON, 2 XOR, 3 DPAGE, 4 CPAGE, 5 MOUSE-ON; -RESET clears it.  The register

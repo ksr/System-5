@@ -18,6 +18,8 @@ Written after the 2026-10-09 order, when two boards were routed on four copper l
   8. PLANES      tools/kicad/plane_check.py, on boards with inner-layer zones: each plane one piece, every pin of its
                  net reaches it, no other net's pad inside it, no tracks on the plane layer
   9. PICTURES    one PNG per copper layer, drawn from the zip's own gerbers, written next to the zip for a look by eye
+                 (each pad as the shape its aperture is, since 2026-11-19: until then every pad was a circle, and a
+                 rounded-rectangle pin 1 or an octagonal bus pad showed as a speck)
   10. SCHEMATIC  the redrawn schematic PDF kept up to date (Ken, 2026-10-28): reports/netlist.net proven against the
                  board, then tools/kicad/sch/gen_schematic.py redraws and proves the card's schematic/ and make_book.py
                  rebuilds docs/manual/pdf/system5-schematics.pdf (skipped for a board with no schematic/spec.py)
@@ -158,9 +160,48 @@ def main(brd, zpath, layers):
 def draw(g, out, px=8):
     """the tracks and pads of one copper gerber (fills drawn faintly), so missing tracks show at a glance"""
     from PIL import Image, ImageDraw
+    import math
     m = re.search(r'%FSLAX\d(\d)', g); dec = int(m.group(1)) if m else 6
+    # each aperture as the shape it is (2026-11-19: every pad was drawn as a circle of the aperture's first number, so a
+    # RoundRect pad, pin 1 of KiCad's DIPs, was a 0.25 mm speck (its first number is the corner radius), an oval pad a
+    # circle of its x size, and an OutlineNP pad, the cards' octagonal bus pads, whose first number is negative, a
+    # 1.0 mm dot; found by the YACC1-D session, confirmed by the pcb-check session. The gerbers were right):
+    #   ("C", d)  ("R", w, h)  ("O", w, h)  ("P", [corners], corner radius)  ("U",) a shape not known here
+    def turn(pts, deg):
+        r = math.radians(deg); c, s = math.cos(r), math.sin(r)
+        return [(u * c - w * s, u * s + w * c) for u, w in pts]
+    free = {}                                             # KiCad's FreePolyN, a pad of a shape of its own: the corners are
+    for m in re.finditer(r'%AM(\w+)\*(.*?)%', g, re.S):    # in the macro itself (one outline, primitive 4), and the
+        for prim in m.group(2).replace("\n", "").split("*"):   # aperture's one number is the rotation
+            f = [q.strip() for q in prim.split(",")]
+            if f[0] == "4" and len(f) > 6 and not any("$" in q for q in f[1:-1]):
+                try:
+                    k = int(float(f[2])); xy = [float(q) for q in f[3:3 + 2 * k]]
+                    free[m.group(1)] = list(zip(xy[0::2], xy[1::2]))
+                except ValueError: pass
     aps = {}
-    for a in re.finditer(r'%ADD(\d+)([A-Za-z]+)[^,]*,([\d.]+)', g): aps[int(a.group(1))] = float(a.group(3))
+    for a in re.finditer(r'%ADD(\d+)([A-Za-z_0-9]+),?([^*]*)\*%', g):
+        n, kind = int(a.group(1)), a.group(2)
+        try: v = [float(q) for q in a.group(3).split("X") if q != ""]
+        except ValueError: v = []
+        if kind == "C" and v: aps[n] = ("C", v[0])
+        elif kind in ("R", "O") and len(v) >= 2: aps[n] = (kind, v[0], v[1])
+        elif kind == "RoundRect" and len(v) >= 9:           # KiCad's macro: the radius, then four corners
+            aps[n] = ("P", list(zip(v[1:9:2], v[2:9:2])), v[0])
+        elif kind.startswith("Outline") and len(v) >= 7:    # KiCad's OutlineNP: N corners, then a rotation (degrees, ccw)
+            k = (len(v) - 1) // 2
+            aps[n] = ("P", turn([(v[2 * i], v[2 * i + 1]) for i in range(k)], v[2 * k]), 0.0)
+        elif kind == "RotRect" and len(v) >= 3:             # KiCad's RotRect: length, width, rotation
+            aps[n] = ("P", turn([(-v[0] / 2, -v[1] / 2), (v[0] / 2, -v[1] / 2), (v[0] / 2, v[1] / 2), (-v[0] / 2, v[1] / 2)], v[2]), 0.0)
+        elif kind in ("HorizOval", "VertOval") and len(v) >= 5:   # KiCad's turned oval: width, then its two ends' centres
+            aps[n] = ("P", [(v[1], v[2]), (v[3], v[4])], v[0] / 2)
+        elif kind in free:                                  # FreePolyN: the macro's corners, turned by the aperture's number
+            aps[n] = ("P", turn(free[kind], v[0] if v else 0.0), 0.0)
+        else:                                               # a shape not known here: an orange 1 mm dot, so that it shows
+            aps[n] = ("U",)                                 # (until 2026-11-19 a dot of the first number's size, which for
+            #                                                 a FreePoly, whose number is an angle, was a disc 270 mm across:
+            #                                                 the pcb-check session, whose pictures read every shape)
+    width = lambda ap: aps[ap][1] if ap in aps and aps[ap][0] == "C" else 0.2      # a track is drawn with a round aperture
     x = y = 0; ap = 10; reg = False; segs = []; fl = []; regpts = []; polys = []
     for tok in re.split(r'\*', g.replace("\n", "")):
         tok = tok.strip("%")
@@ -173,8 +214,8 @@ def draw(g, out, px=8):
         gx, gy, op = (a.group(4), a.group(5), a.group(6)) if a.group(6) else (a.group(1), a.group(2), a.group(3))
         nx = int(gx) / 10 ** dec if gx else x; ny = int(gy) / 10 ** dec if gy else y
         if reg: regpts.append((nx, ny))
-        elif op == "1": segs.append((x, y, nx, ny, aps.get(ap, 0.2)))
-        elif op == "3": fl.append((nx, ny, aps.get(ap, 1.0)))
+        elif op == "1": segs.append((x, y, nx, ny, width(ap)))
+        elif op == "3": fl.append((nx, ny, aps.get(ap, ("C", 1.0))))
         x, y = nx, ny
     pts = [(s[0], s[1]) for s in segs] + [(s[2], s[3]) for s in segs] + [(f[0], f[1]) for f in fl] + [p for q in polys for p in q]
     if not pts: Image.new("RGB", (200, 100), "white").save(out); return
@@ -186,8 +227,27 @@ def draw(g, out, px=8):
     for a, b, c, e, w in segs:
         dr.line([P(a, b), P(c, e)], fill=(200, 40, 40), width=max(1, int(w * px)))   # every width: a 2026-10-27 review
                                                                                  # found 2.5 mm feeds left out (w < 2.0)
-    for a, b, w in fl:
-        r = max(1, w * px / 2); cx, cy = P(a, b); dr.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(40, 40, 40))
+    PAD = (40, 40, 40)
+    for a, b, s in fl:
+        cx, cy = P(a, b)
+        if s[0] == "C":
+            r = max(1, s[1] * px / 2); dr.ellipse([cx - r, cy - r, cx + r, cy + r], fill=PAD)
+        elif s[0] == "R":
+            w, h = max(1, s[1] * px / 2), max(1, s[2] * px / 2); dr.rectangle([cx - w, cy - h, cx + w, cy + h], fill=PAD)
+        elif s[0] == "O":                                 # an obround: its short side's half is the ends' radius
+            w, h = max(1, s[1] * px / 2), max(1, s[2] * px / 2)
+            dr.rounded_rectangle([cx - w, cy - h, cx + w, cy + h], radius=min(w, h), fill=PAD)
+        elif s[0] == "U":
+            r = px / 2; dr.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(240, 140, 0))
+        else:                                             # a polygon; with a radius, rounded: a circle at each corner and
+            pts = [P(a + u, b + v) for u, v in s[1]]      # a band of that width along each side, as the macro draws it
+            if len(pts) > 2: dr.polygon(pts, fill=PAD)    # (bands as polygons: PIL's wide lines are a pixel off-centre)
+            if s[2] > 0:
+                r = s[2] * px
+                for (u, v), (u2, v2) in zip(pts, pts[1:] + pts[:1]):
+                    dr.ellipse([u - r, v - r, u + r, v + r], fill=PAD)
+                    n = math.hypot(u2 - u, v2 - v) or 1.0; ox, oy = -(v2 - v) / n * r, (u2 - u) / n * r
+                    dr.polygon([(u + ox, v + oy), (u2 + ox, v2 + oy), (u2 - ox, v2 - oy), (u - ox, v - oy)], fill=PAD)
     im.save(out)
 
 

@@ -4,7 +4,7 @@ The next System-5 video card (Ken, 2026-11-01): 64-column text plus a one-bit gr
 mouse, on **two boards** joined by a short ribbon. It replaces the 6845 card (Rev B) and the IO card (its keyboard; the
 1861 comes out). Status: **both boards drawn, reworked to the memory map and routed (2026-11-17), not ordered**;
 both pass `pcb-check`, Ken's check before an order on every system since 2026-11-06 (TEXT no failures, 0 warnings;
-GFX no failures, 1 warning: no power LED, which TEXT has; [`kicad/README.md`](kicad/README.md#before-ordering),
+GFX the same since it got its own power LED that evening; [`kicad/README.md`](kicad/README.md#before-ordering),
 "Before ordering"). KiCad masters in `kicad/text-1.0` and `kicad/gfx-1.0`, generated from each board's `gen/netlist.py`
 and `gen/place.py` by `kicad/common/build.sh` ([README.md in `kicad/`](kicad/README.md)).
 
@@ -15,8 +15,9 @@ register, so either CPU card will do. VIDEO-G uses no port at all: port 4 is fre
 ELF/OS boot loader's `OUT 4` is harmless. HBIOS backwards compatibility is not a concern (Ken). The boards, the
 VIDEO-G HBIOS, s5emu's model and GBASIC were all reworked the same day; the port version is in the git history.
 
-It is YACC1's Video V2.0 (`~/Developer/YACC1-D/hardware/cards/video/kicad/v2.0/v20_netlist.py`, theory
-`docs/cards/video-v2.md`, PS/2 firmware `embedded/video-ps2`; copied, never modified) moved onto the System-5 bus and
+It is YACC1's Video V2.0 (in the YACC1-D repository, <https://github.com/ksr/YACC1-D>:
+`hardware/cards/video/kicad/v2.0/v20_netlist.py`, theory `docs/cards/video-v2.md`, both removed there on 2026-11-18
+and kept in its history before commit `4f9950f`; PS/2 firmware `embedded/video-ps2`; copied, never modified) moved onto the System-5 bus and
 cut down, so the parts below keep V2.0's circuit wherever the text says nothing else.
 
 ## 1. The two boards
@@ -26,9 +27,10 @@ cut down, so the parts below keep V2.0's circuit wherever the text says nothing 
 | **TEXT** | VIDEO-G 1.0 TEXT | bus decode (every register is memory-mapped), 6845, text RAM, character ROM, dot clock, the status register, PS/2 **keyboard**, the dot combine and both video outputs | **yes**: a 64-column text card with a keyboard (text always on) |
 | **GFX** | VIDEO-G 1.0 GFX | graphics RAM (two pages), its address multiplexers and slot logic, the Y register, the graphics shifter, the **control register (7804)**, PS/2 **mouse** | no: it takes the display timing and every decode from TEXT |
 
-Both are System-5 cards (the 30-pin connector where every card has it), 4 layers (In1 GND, In2 +5V), in
-neighbouring slots. **GFX is the standard 141 x 96 mm card; TEXT is 188 x 96 mm** - the same width along the
-backplane, bus edge, connector and card-guide corners, 47 mm taller. Its 24 ICs (four 600-mil or 28-pin) and the DB9
+Both are System-5 cards, 4 layers (In1 GND, In2 +5V), in neighbouring slots: GFX with the 30-pin connector where
+every card has it, TEXT with the 36-pin one since 2026-11-18 (its positions 1-30 in the same place; section 9).
+**GFX is the standard 141 x 96 mm card; TEXT is 188 x 106.6 mm** - the same bus edge and card-guide corner at the GND
+end, 47 mm taller, and 10.4 mm more along the backplane at the +5V end for the six added positions. Its 24 ICs (four 600-mil or 28-pin) and the DB9
 (21 mm deep at the front edge) need about 11,000 mm2 of socket cells, against the standard card's ~9,000 usable; even
 with the keyboard moved off it would need ~167 mm. **Approved by Ken, 2026-11-17: 188 mm fits.** A **40-pin ribbon
 (2 x 20 IDC, about 10 cm)** joins them: both headers lie along the same side edge, 88-148 mm from the bus edge, so
@@ -52,7 +54,7 @@ changed except the CPU EPROM's video driver (section 8).
 | 14 | -MRW | text RAM, write strobes, 6845 R/-W | window writes |
 | 15-22 | A0-A7 | high byte (latched), A0-A10 | A0-A5 |
 | 24, 28, 29 | N2, N1, N0 | not used: no I/O ports (2026-11-17) | - |
-| 25 | -EF | KEY-READY, open collector, jumper KBD-EF | - |
+| 25 | -EF | KEY-READY, open collector, when JP3 KBD FLAG picks it (as set; or -EF1, -EF2, -EF3 on the 36-pin connector, 2026-11-18) | - |
 | 26 | -VMA | block decode | - |
 | 27 | -RESET | control register, ATmega | flags, ATmega |
 | 10, 23 | Q, -INT | not used | not used |
@@ -117,8 +119,9 @@ writes while -MRW is low, as for any memory.
 | 7C00-7C3F | **graphics window: pixel line Y** (64 bytes, bit 7 = leftmost dot), repeated through 7FFF | the same | GFX |
 
 7803, 7805 and 7807 repeat 7802, 7804 and 7806 (A0 is decoded only for the 6845); 7802 takes no write. KEY-READY also
-pulls the bus **-EF** low (jumper KBD-EF; CPU Rev A's JP1 row 3 = EF3), so a program can wait with `BN3` and then read
-7802; CPU Rev D takes -EF on EF4, so the VIDEO-G HBIOS polls status bit 0 instead. The 6845 sits where the 6845 card
+pulls a bus flag line low: the one JP3 KBD FLAG picks, -EF1, -EF2, -EF3 or -EF (2026-11-18; set to **-EF**, which was
+the only choice until then). On -EF, CPU Rev A's JP1 row 3 makes it EF3, so a program can wait with `BN3` and then
+read 7802; CPU Rev D takes -EF on EF4, so the VIDEO-G HBIOS polls status bit 0 instead. The 6845 sits where the 6845 card
 has it. Ports 1 and 4-7 are free: port 4 is the IO panel's, and the ELF/OS boot loader's `OUT 4` (it shows the sector
 numbers, the ELF hex-display habit) goes there, as on an ELF.
 
@@ -176,17 +179,17 @@ boards, keyboard mode with PD7 open) loads a 74HCT374 (read at 7802) and sets **
 of 7802 clears it at TPB. Codes as the old PAK-VI keyboard sent them: ASCII with Enter $0D, Backspace $08, Esc $1B, Ctrl-C $03, Delete
 $7F; F1-F12 $80-$8B, the editing and arrow keys $90-$9A, Shift + those +$40 (single bytes: HBIOS echoes and stores
 every byte, so VT100 sequences would show; `#define KEYS_VT100 1` gives V2.0's). Caps Lock and its LED in the firmware.
-Ready about 1.5 s after a bus reset (bootloader, then the keyboard's self-test). KEY-READY drives the bus **-EF** low through a 7416 gate, with a jumper **KBD-EF** (off: the card
-leaves -EF alone, e.g. with the IO card still in). The ATmega's reset comes from the bus -RESET (open collector, as on
+Ready about 1.5 s after a bus reset (bootloader, then the keyboard's self-test). KEY-READY drives a bus flag line low through a 7416 gate (IC23D, open collector): the jumper block **JP3 KBD FLAG** (2 x 4, one shunt)
+picks -EF1, -EF2, -EF3 or -EF, and with no shunt the card leaves all four alone (e.g. with the IO card still in). It is set to -EF. The ATmega's reset comes from the bus -RESET (open collector, as on
 V2.0); FTDI header for its bootloader. PS/2 jack (Mini-DIN-6, MD-60SM) on the front edge, +5 V through a 0.5 A PTC.
 
-**Jumpers:** BLOCK (2 x 4, 7 = 7000), MONITOR (NTSC / MDA), VSYNC +/-, KBD-EF. **Bus pull-ups:** 10k on -EF,
+**Jumpers:** BLOCK (2 x 4, 7 = 7000), MONITOR (NTSC / MDA), VSYNC +/-, KBD FLAG (2 x 4 since 2026-11-18: -EF1, -EF2, -EF3 or -EF; it was KBD-EF, on or off). **Bus pull-ups:** 10k on -EF,
 -VMA and -RESET (section 1, "The bus").
 
 **Chips (24, `kicad/text-1.0/BOM.md`):** IDT7134, HD68B45, AT28C64B, ATmega328P, 74HCT373, 74LS85, 3 x 74HCT138,
 74LS244 (status), 74HCT374 (key), 74LS374 (code), 74LS166, 74LS175, 74F163A, 2 x 74LS04, 74HCT08, 74LS08, 74LS32,
 74LS10, 74LS86, 7416, 74HCT74. CMOS-input (HCT) parts wherever a chip listens to the 1802's address lines.
-**Board: 188 x 96 mm** (section 1).
+**Board: 188 x 96 mm** (section 1); 188 x 106.6 mm since 2026-11-18, with the 36-pin connector (section 9).
 
 ## 5. GFX board
 
@@ -310,7 +313,72 @@ panel's. HBIOS backwards compatibility is not a concern.
 
 Settled 2026-11-17 (Ken): **TEXT stays 188 mm tall** (it fits the card cage); the **right-angle DB9 stays on the
 board** for the IBM 5151; and the **2026-11-02 silkscreen rule applies** (every part's value beside its reference,
-outside the part: the bypass capacitors' 100n too), although the boards were drawn just before it.
+outside the part: the bypass capacitors' 100n too), although the boards were drawn just before it. And **GFX gets
+its own power LED** (LED1 PWR through R7, 330 ohm, as TEXT's LED1), level with TEXT's at the front edge.
+
+Settled 2026-11-18 (Ken):
+- **The keyboard flag on any of the four bus flag lines** ("on video change keyboard to ef to be a select of 1 of 4
+  efs"): JP3 is a 2 x 4 block now, KBD FLAG; one shunt puts KEY-READY (open collector, IC23D) on -EF1, -EF2, -EF3 or
+  -EF. It is set to -EF, as before, which both CPU cards reach (CPU Rev D's EF blocks then take any line to any 1802
+  flag input). -EF1 to -EF3 are on the slot's positions beyond +5V, which a 30-pin card does not reach, so **TEXT has
+  the 36-pin bus connector** (Ken's choice of four ways: the full connector, the board grown at that end only): its
+  positions 1-30 are where the 30-pin connector's pins were, 31-36 run on past +5V, and the board is 10.4 mm taller
+  at the +5V end, **188 x 106.6 mm**. No part moved; the ribbon header J6 keeps its place against GFX's J4. The block
+  sits in the new strip by J1's -EF pins, each pair named. A card with this connector does not fit the 2009 backplane
+  (`docs/manual/bus.md`, "The 36-pin extension"); GFX stays a 30-pin card.
+- **SV1 with a label that says what it is** ("can sv1 have better label"): `SV1 ADDRESS BLOCK`, `SHUNT = 0`,
+  `A15 ONLY = 7000`, and A15, A14, A13, A12 over its four pairs (it read `SV1 BLOCK 1-2=7000`).
+- **The power LEDs by their function alone** ("remove label ld1 and center pwr"): `PWR`, level with the LED's middle,
+  on both boards (`pcb-check.ini` exempts LED1 from the reference rule, as on the other new cards).
+- **No note on GFX's silkscreen** ("remove all the text on gfx 512x200/ ..."): the four lines about the modes and
+  registers are gone from the board; section 3 has them.
+
+Found while doing that, 2026-11-18, and put right on both boards (silkscreen only, the copper untouched):
+- **The bus connector's plastic body was not in its footprint.** J1 is a single-row right-angle pin header: its body
+  lies on the board between the pads and the card edge, 1.5 to 4.0 mm from the pads (the photos of the built MEM3-E
+  and BUSDRV-B show it). The C30 / C36 footprints had only pads and a courtyard round them, so the label placer and
+  `pcb-check` both took that strip for free board: `J1 BUS` was printed there on both boards, part of it under the
+  header, and so was half of TEXT's `JP1 MONITOR 1-2 NTSC 2-3 5151`. The footprints now carry the body (F.Fab), a
+  courtyard round it and KiCad's 3D model of the header, so the renders show the connector and no label goes under it:
+  `J1 BUS` stands past the header's +5V end on GFX and beside the pin names, between IC1 and IC2, on TEXT.
+- **TEXT's JP1 by its name, its settings at its ends:** `JP1 MONITOR` under the jumper (card standing), `NTSC` at
+  pin 1's end and `5151` at pin 3's, as JP2 has `+` and `-`. When the 36-pin connector went in, `J1 BUS` had taken the
+  old label's place and the placer dropped JP1's label without a word; `common/make_board.py` now stops when a label
+  finds no room.
+- **GFX's bus pins by the backplane's names** (`+5V` and `-RESET`, as on TEXT and the other new cards; the C30
+  footprint's own texts said `VCC` and `-RES`).
+- **JP3's four names 0.5 mm further from the block** (2026-11-19): each began on the block's outline, so its minus
+  sign ran into it and `-EF1` read as `EF1` with a tick. They start 0.3 mm off the outline now.
 
 The character ROM image: `firmware/video-g-chargen/video-g-chargen.bin` (System-5's own 6845-card font, 128 characters
 with lower case, centred in the 8-dot cells; a wider 8 x 8 font can replace it later).
+
+## 10. Found by the netlist model (2026-11-20)
+
+`software/s5emu/s5emu/hwvideog.py` runs both boards from their netlists (`python3 -m s5emu --hw --video g`), each
+memory cycle in the 1802's own order: -MRD falls at 1.5 T, while A0-A7 still carry the **high** address byte, and the
+low byte comes at 2.5 T. The decode is right at every address (the map of section 3, every BLOCK setting, TEXT alone,
+both READY flip-flops, -RESET; Elf/OS v5 boots on the all-netlist machine with no bus event), and the multiplexers and
+the write slot do what section 5 says, to its own limit (a whole -WE from every counter phase with -MRW low for 11 dot
+clocks, 917 ns, and not with 10). Three things show that these notes did not say. Nothing is changed for them: the
+boards are as they were, and `tests/test_hw_videog.py` records each as found.
+
+1. **The 6845 is enabled in the high-byte time of the other registers' reads.** IC5 and IC6 take A1 and A2 from the
+   bus lines, so from 1.5 T to 2.5 T a read at 78xx or 79xx decodes as 7800/7801 (A9 and A10 are 0 there): -RDCRTC is
+   low, E is high and the 6845 is on the bus, whatever register the low byte then names. At 7Axx and 7Bxx (A9 = 1) it
+   is the key latch. Nothing else drives then, the 1802 does not look, and KEY-READY is not cleared (that waits for
+   TPB). So every read of 7802, 7804 or 7806 first gives the 6845 a whole read of its address register (E high for
+   about a clock), and at 2.5 T the bus passes from the 6845 to the key latch or the status buffer in one step: the
+   6845's data hold against the other part's enable time, a few tens of nanoseconds for `s5emu.timing` to weigh.
+2. **A read of 7801 moves RS while E is high.** For the same reason E rises with A8 on RS, and A0 arrives a clock
+   later: RS goes from 0 to 1 under a high E, so the 6845's address set-up to E (tAS) is not met (7900 the other way;
+   7800 and 7901 keep RS still). Writes are right: their E is TPB's. No System-5 program reads 7801 today (the
+   VIDEO-G HBIOS and GBASIC only write the 6845); a read of R14-R17 would rest on the chip following a late RS.
+   Both go away if the read enables (or the 6845's read E) wait for the low address byte.
+3. **A window write can get a second, cut-short -WE.** A write that begins just before a character boundary has its
+   whole -WE in the first slot and still has -MRW low when the next slot's count 9 comes: -WE falls again and -MRW's
+   rise ends it (GWR is in the -WE gate). The same byte goes to the same cell, address and data still held, so
+   nothing is lost.
+
+Not in the model: the dot chain, the syncs and the 6845's own counters (played by `videog.py`), and anything that is a
+matter of nanoseconds rather than of order.

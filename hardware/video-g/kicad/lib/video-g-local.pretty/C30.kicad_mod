@@ -3,6 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
+	(descr "System-5 30-pin bus edge connector (Eagle's C30), 0.1 in pitch: pad 1 +5V to pad 30 GND. The part is a single-row right-angle pin header: its plastic body (drawn on F.Fab) lies on the board between the pads and the card edge, 1.5 to 4.04 mm from the pads, on this footprint's +y side (the card edge, with the bus edge on the left as drawn and the footprint at -90; the pin names are on the other side); its pins run on past the edge. Nothing is printed under the body (2026-11-18).")
 	(property "Reference" "U$1"
 		(at 0 0 180)
 		(unlocked yes)
@@ -442,17 +443,8 @@
 			(justify left bottom)
 		)
 	)
-	(fp_rect
-		(start -37.85 -1.02)
-		(end 37.85 1.02)
-		(stroke
-			(width 0.05)
-			(type solid)
-		)
-		(fill no)
-		(layer "F.CrtYd")
-		(uuid "c3fff483-e869-529c-a5b1-162af369427d")
-	)
+	(fp_rect (start -38.1 1.5) (end 38.1 4.04) (stroke (width 0.1) (type default)) (fill no) (layer "F.Fab") (uuid "c3f04ebf-5f61-5b49-b778-1fccda104104"))
+	(fp_rect (start -38.1 -1.02) (end 38.1 4.29) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd") (uuid "4c7da125-17ac-5742-9fae-0a04f5f54966"))
 	(pad "1" thru_hole roundrect
 		(at -36.83 0)
 		(size 1.524 1.524)
@@ -844,4 +836,9 @@
 		(uuid "789e3594-60b4-4f41-be67-044b85b81662")
 	)
 	(embedded_fonts no)
+	(model "${KICAD10_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x30_P2.54mm_Horizontal.step"
+		(offset (xyz 36.83 0 0))
+		(scale (xyz 1 1 1))
+		(rotate (xyz 0 0 90))
+	)
 )

@@ -1,9 +1,129 @@
-# IO panel card Rev A: design notes (draft)
+# IO panel card Rev A: design notes
+
+**Status (2026-11-18):** the card as Ken set it on 2026-11-17/18 — IN and OUT ports and INPUT's EF line on jumpers, a
+DS12885 real-time clock, the TIL311s turned, the LEDs labelled by function, and (later on 2026-11-18) the bus
+address on four more TIL311s — is drawn, routed and checked; not ordered. The sections "Changes of 2026-11-17/18" and
+"The bus address on four TIL311s" below are the current state; the sections before them are the 2026-10-30 design.
+
+**A serial port since 2026-11-20 (Ken):** a 16C550 UART with a MAX232 and a DE-9 socket, the card 1.75 in longer for
+it (7.50 x 4.00 in, still two layers). Drawn on a test branch, `io-panel-serial`, and merged into `main` the same day at
+Ken's word ("ok if check is clean i will want to merge into main for this card and order this card"): `pcb-check
+--tests` showed no failures and 0 warnings at `eebc2ed`. "Programming the card" below is the software's view of the
+whole card; "The serial port" further down is the circuit and the layout. Not ordered yet.
 
 The new IO card: System-5's front panel. LEDs, switches and two TIL311 hex displays on an I/O port, a Q LED, an INPUT button
 on an EF line, and the machine's hand controls (PAUSE, LOAD) on the 36-pin bus. It replaces the 2005 IO card
-(`hardware/io-1861-keyboard/`: its keyboard moves to the video card Rev C, its 1861 is dropped). Started 2026-10-30 (Ken).
-Nothing is drawn yet. The folder name `io-panel` is a working name. The bus: `docs/manual/bus.md`, "The 36-pin extension".
+(`hardware/io-1861-keyboard/`: its keyboard moves to the video card (VIDEO-G's TEXT board), its 1861 is dropped). Started 2026-10-30 (Ken).
+The folder name `io-panel` is a working name. The bus: `docs/manual/bus.md`, "The 36-pin extension".
+
+## Programming the card: ports, flags and registers
+
+*(Written 2026-11-20, for Ken's "what is the io programming model for all parts of IO board".)*
+
+An 1802 has seven I/O ports, 1 to 7. `OUT n` (opcode `6n`) puts M(R(X)) on the bus and adds 1 to R(X); `INP n`
+(opcode `68 + n`) puts the bus in D and in M(R(X)). The card's ports are picked by jumpers; the table shows them as set.
+
+### The ports, by number
+
+| Port | `OUT n` | `INP n` | Jumper |
+|---|---|---|---|
+| 4 | the byte is latched: the eight LEDs (BIT 7-0) and the two hex digits OUT D7-D4, OUT D3-D0 show it | the eight toggles (BIT 7-0), up = 1 | JP2 (OUT) and JP1 (IN): each any port 1-7, each on its own |
+| 6 | **select**: `00`-`7F` = a register of the clock (DS12885); `80`-`87` = register 0-7 of the UART (16C550) | nothing (the card does not drive the bus) | JP4: the pair 2/3, 4/5 or 6/7 |
+| 7 | **data**: writes the register selected | reads the register selected | JP4 (the same pair) |
+
+The rest of the machine, for the whole map: port 1 is the 2005 IO card's keyboard (free once that card is out), 2 and 3
+are the IDE card's (register select and data), 5 is free.
+
+### What is not a port
+
+| Part | How a program sees it |
+|---|---|
+| INPUT button | a flag: low on the bus line JP3 picks (-EF1, -EF2, -EF3 or -EF; set to -EF1) while it is pressed. With CPU Rev D that is EF1: `B1` (`34`) branches while it is down, `BN1` (`3C`) while it is up |
+| Q LED | lit while Q is set: `SEQ` (`7B`), `REQ` (`7A`) |
+| Address display (A15-A12 ... A3-A0) | nothing to program: the address of the last machine cycle, held while the clock is stopped |
+| RUN/RESET, LOAD | the hand controls: RUN off resets, LOAD on pauses, both = LOAD mode, where each INPUT press stores the toggles at M(R0) and adds 1 to R0 (one DMA IN) |
+| Interrupts | the clock's IRQ and the UART's INTR can each pull the bus -INT low: JP4's last row and JP7, both open as set |
+
+### The clock: select `00`-`7F`
+
+| Register | |
+|---|---|
+| `00` seconds, `02` minutes, `04` hours | `01`, `03`, `05`: the alarm's |
+| `06` day of the week (1 = Sunday), `07` date, `08` month, `09` year (00-99) | |
+| `0A` | A: bit 7 UIP (an update is in progress), bits 6-4 = `010` to run the oscillator |
+| `0B` | B: bit 7 SET (stop the clock to set it), bit 2 DM (1 = binary, 0 = BCD), bit 1 (1 = 24-hour) |
+| `0C`, `0D` | C: the interrupt flags (a read clears them); D: bit 7 VRT (the battery is good) |
+| `0E`-`7F` | 114 bytes of RAM kept by the battery (JP5 clears them) |
+
+HBIOS v1.0.8 has the driver: `f_gettod` (F815) and `f_settod` (F818), binary and 24-hour, Mike Riley's convention.
+
+### The serial port: select `80`-`87`
+
+A 16C550, so the registers every 16550 program knows. The clock is the card's own 1.8432 MHz oscillator:
+divisor = 115200 / baud (12 = 9600, 6 = 19200, 3 = 38400, 1 = 115200). Only bits 7 and 2-0 of the select byte count
+for the UART, so `88`-`FF` repeat `80`-`87`; use `80`-`87`.
+
+| Select | Read (`INP 7`) | Write (`OUT 7`) |
+|---|---|---|
+| `80` | RBR: the character received | THR: a character to send. With DLAB set: DLL, the divisor's low byte |
+| `81` | IER | IER: bit 0 received data, bit 1 THR empty, bit 2 line status, bit 3 modem status. With DLAB set: DLM |
+| `82` | IIR: bit 0 = 0 while an interrupt waits, bits 3-1 which one | FCR: bit 0 FIFOs on, bit 1 / bit 2 clear the receive / send FIFO |
+| `83` | LCR | LCR: `03` = 8 bits, no parity, 1 stop; bit 7 = DLAB |
+| `84` | MCR | MCR: DTR, RTS, OUT1, OUT2 (none of them leaves the card), bit 4 = loop back |
+| `85` | LSR: bit 0 = a character is waiting, bit 5 = THR empty, bit 6 = all sent | |
+| `86` | MSR: `00` (CTS, DSR, DCD and RI are tied off on the card) | |
+| `87` | a scratch byte | a scratch byte |
+
+Set it up, then send and receive (X = P for the `OUT`s, so each takes the byte after it; R2 is the stack pointer):
+
+```
+        sex  r3
+        out  6
+        db   83h            ; LCR
+        out  7
+        db   80h            ;   DLAB on
+        out  6
+        db   80h            ; DLL
+        out  7
+        db   12             ;   9600 baud
+        out  6
+        db   81h            ; DLM
+        out  7
+        db   0
+        out  6
+        db   83h            ; LCR
+        out  7
+        db   03h            ;   8 bits, no parity, 1 stop; DLAB off
+
+wait:   sex  r3
+        out  6
+        db   85h            ; LSR
+        sex  r2
+        inp  7
+        ani  01h            ; a character waiting?
+        bz   wait
+        sex  r3
+        out  6
+        db   80h            ; RBR / THR
+        sex  r2
+        inp  7              ; the character, in D and at M(R2)
+        out  7              ; send it back (M(R2); R2 + 1)
+        dec  r2
+        br   wait
+```
+
+(That program is `tests/test_hw.py`'s `test_a_program_echoes_the_serial_line_on_the_netlist_cards`: it runs on the
+emulator's gate-level model of CPU Rev D and this card. To send without echo, wait for LSR bit 5 first.)
+
+### Three things to know
+
+- **Always select before the data port.** The select byte is held in a latch on the card (U22) and in the DS12885;
+  both power up holding anything. It cannot be read back.
+- **One select for both chips.** A routine that uses port 6 between another routine's `OUT 6` and its `OUT 7` /
+  `INP 7` changes what that one reaches. That matters only when an interrupt routine uses the clock or the UART:
+  keep interrupts off across the pair then (or select again after them).
+- **Moving JP4 moves both chips.** On 2/3 the pair meets the IDE card, on 4/5 the panel's own port 4 (move JP1 / JP2
+  first). 6/7 is the setting to keep.
 
 ## Decided (Ken, 2026-10-30)
 
@@ -11,8 +131,8 @@ Nothing is drawn yet. The folder name `io-panel` is a working name. The bus: `do
 |---|---|
 | Output | **8 LEDs** and **2 TIL311** hex displays showing the byte written by `OUT 4`, latched in a **74HCT374**. |
 | Input | **8 switches**, **eight toggle switches** (Ken, 2026-10-30), read by `INP 4` through a **74HCT244**. |
-| Port | **Port 4** for both (ports 1-3 are the keyboard and the IDE card). The card decodes it itself from N0-N2 and -MRD (no bus -INP/-OUT). |
-| INPUT button | On **-EF1** (open collector) → the CPU's EF1. |
+| Port | **Port 4** for both (ports 1-3 are the keyboard and the IDE card). The card decodes it itself from N0-N2 and -MRD (no bus -INP/-OUT). **Since 2026-11-17: any port 1-7, IN and OUT each on its own jumper block (set to 4).** |
+| INPUT button | On **-EF1** (open collector) → the CPU's EF1. **Since 2026-11-17: -EF1, -EF2, -EF3 or -EF on a jumper (set to -EF1).** |
 | Q LED | From bus Q (pin 10), through a buffer. |
 | Hand controls | The COSMAC ELF's **RUN** and **LOAD** toggles (RUN off pulls -RESET, LOAD on pulls -PAUSE: LOAD mode = RUN off + LOAD on, PAUSE = RUN on + LOAD on; changed 2026-10-30 from PAUSE/LOAD with the CPU Rev D netlist, so LOAD → RESET → RUN runs a loaded program), the INPUT button on -DMAIN in LOAD mode, the 8 switches as the data. Works with or without a debug board. |
 | Bus | The 36-pin interface. |
@@ -57,7 +177,7 @@ button), and that a debug board's DMA with the button held never makes this card
   without it the switches left the bus as -MWR rose, up to 140 ns before memory D's delayed WE (CD4050B) latches them;
   DRIVE holds them until -MRD falls in the next cycle, as INP 4 already does.
 - **Hand controls (ELF-style):** SW10 RUN/RESET and SW11 LOAD ground -RESET and -PAUSE directly (no driver chips; the CPU
-  card's Schmitt buffers take the bounce). INPUT (SW9) is debounced (R9 10k, C1 470 nF, Schmitt: about 5 ms).
+  card's Schmitt buffers take the bounce). INPUT (SW9) is debounced (R1 10k, C1 470 nF, Schmitt: about 5 ms; the press counts at the first contact, the release once the input has stayed open about 1.7 ms).
 - **Data switches: eight vertical SPDT toggles, SW1-SW8** (Ken, 2026-10-30: "vertical, just like the YACC1 IO card";
   Marquardt M9040P, the YACC1 footprint): common = the bit, ends on +5V and GND, so no pull-downs.
   The front edge is 4.00 in: the 8 data toggles, INPUT, RUN, LOAD, 10 LEDs and two TIL311s need two or more rows near it
@@ -67,9 +187,355 @@ button), and that a debug board's DMA with the button held never makes this card
   data A-D, 5 latch strobe and 8 blanking to GND, 1 LED supply straight to +5V, 14 Vcc, 4/10 decimal points unused.
 - **No pull-ups on the bus lines** here: the CPU Rev D and the bus Rev D have them.
 
+## Changes of 2026-11-17/18 (Ken): jumpers, the real-time clock, the layout
+
+- **Ports on jumpers.** JP1 IN PORT and JP2 OUT PORT (2x7 each): a jumper across row n makes port n the card's input or
+  output port; set to 4. JP3 INPUT EF (2x4): INPUT's open-collector flag on -EF1, -EF2, -EF3 or -EF; set to -EF1. RN1
+  (10k x8, a SIP) holds every jumper's common high with no jumper: no port, no flag.
+- **Real-time clock** (Ken: "add a realtime clock to io card with a selectable io"; then "rtc as planned"): U13
+  **DS12885+**, Intel bus timing (MOT low), CS tied low, RESET tied high; Y1 32.768 kHz (6 pF); BT1 a **CR2032 in a flat
+  holder, Keystone 103** (an upright holder stands about 22 mm, more than the 21.3 mm between cards at the 1 in slot pitch),
+  straight on VBAT (the DS12885 switches over itself). **JP4 RTC** (2x7) picks the port pair: one jumper on A2, A4 or A6
+  (the address register's port), one on D3, D5 or D7 (the data port); set to 6 and 7. Its last row, INT, puts the clock's
+  open-drain IRQ on the bus -INT (off; RN1 pulls IRQ up).
+  - Strobes, one 74HCT02 (U12) and two spare gates: OSTB_L = NAND(MRD_H, TPB) (U6D), low in TPB of every memory read, so
+    of every OUT. AS = NOR(address select, OSTB_L) (U12A): an OUT to the address port latches the byte as TPB ends.
+    R/W = NOT NOR(data select, OSTB_L) (U12B, U12C): an OUT to the data port writes it on R/W's rise. DS = NOT NOR(data
+    select, MRD_H) (U12D, U5C): low through an INP of the data port, while the clock drives D0-D7. (First drawn with a
+    74HCT14 and a 74HCT10; one chip fewer this way, to make room for the battery.)
+  - Software: HBIOS **v1.0.8** (`firmware/hbios/v1.0.8/`): f_gettod / f_settod on ports 6 and 7, as Mike Riley's BIOS
+    answers them for the ELF2000's clock (month, day, year since 1972, hour, minute, second; binary, 24-hour), and
+    f_getdev bit 4. ELF/OS reads the time through them.
+- **TIL311s turned -90** (Ken: "bottom of display towards bus connector"), at the top of the front edge, as on his YACC1
+  IO card; the eight bit LEDs, Q and PWR in a column below them.
+- **LEDs labelled by their function alone** (BIT 0-7, Q, PWR; Ken, 2026-11-18): `pcb-check.ini` exempts LED1-LED10 from
+  the reference-on-the-silkscreen rule, with that reason.
+- **Layout:** the top row U5, U6, U4, U12 at a 12 mm pitch, then Y1 and U13 (the crystal beside X1 / X2); RN1, R9, C1
+  between the rows; the middle row as before; U1, JP4, C2 and BT1 at the bottom; JP1-JP3 along the bottom edge. The board's
+  name and `cottageworker.com` on end in the free column between the toggles and the LEDs' resistors, at 270 degrees, so
+  that they read left to right with the card standing in the bus, connector down (Ken, 2026-11-18: "IO needs changing";
+  at 90 degrees they stood upside down). (Since moved to the bottom edge as drawn, and every other text turned to 270:
+  "Lengthened to 5.75 in" below.)
+- **Crystal:** X1 and X2 drawn by `make_board.py` (short, locked, F.Cu); no other track or via under them on B.Cu (a
+  keep-out the GND pour still fills) or between U12 and Y1 on F.Cu, as the DS12885 data sheet asks.
+- **+5V:** 0.5 mm (the Power class), as pcb-check wants. Freerouting left a gap or two on every seed until two runs were
+  drawn by `make_board.py`, locked on B.Cu: C9 along the top margin to the TIL311s' supply pins and back to C10, and J1's
+  +5V to C7. Then seed 0 routed every net. Since 2026-11-18 Freerouting's input lists those locked runs in a fixed order
+  too (`tools/kicad/dsn_order.py`: before, they came in KiCad's order and a rebuild could route differently); on that
+  input seed 0 left D0 to U13 open and seed 1 routes every net, so `gen/route.py` has `ROUTE_SEED = 1`, and a rebuild
+  gives the same tracks every time.
+- **The 0.1 uF footprint's silkscreen outline** (`s5io.pretty/C025-050X050`, this board's copy) is drawn at the body:
+  Eagle's 5 x 5 mm outline stood out of the courtyard, past the board edge at C15.
+- **To check before an order:** the M9040P toggles still to be had; the switch lever direction against a real part;
+  the Keystone 103 and the DS12885+ in stock; Ken's look at the pictures and the fab's viewer.
+
+## The bus address on four TIL311s (Ken, 2026-11-18)
+
+Ken: "add 4 TIL-311 to IO card that shows current address being put on bus, it will help during load and also
+debugging"; the card stays 5.50 x 4.00 in (his choice, against a taller card or 5 V LEDs; lengthened to 5.75 in the
+same evening for the displays' labels: below).
+
+- **Circuit.** The 1802 puts the high address byte on A0-A7 while TPA is high, then the low byte to the end of the
+  cycle. **U18 74HCT573** latches the high byte (LE = TPA: it follows A0-A7 during TPA and holds them as TPA falls, as
+  CPU Rev D's own 74HCT373 does); **U19 74HCT573** the low byte (LE = TPB: it holds them as TPB falls, at the end of
+  the cycle). Their outputs ADR15-ADR8 and ADR7-ADR0 drive **U14 (A15-A12), U15 (A11-A8), U16 (A7-A4) and U17
+  (A3-A0)**, TIL311s like U7 and U8 (strobe low, so transparent; blanking low). The display shows the last machine
+  cycle's address and holds it while the clock is stopped; in LOAD mode the 1802 idles on R0, so it shows the address
+  the next byte goes to, and steps on with each DMA IN.
+- **Why latches, not the TIL311s' own.** A TIL311's data inputs are TTL (up to 1.6 mA each), and on CPU Rev D the
+  1802 drives A0-A7 straight from its pins, too weakly for two of them per line. The 573s keep the bus to HCT inputs,
+  need no inverter (TPA and TPB as they come) and keep the displays' strobes tied low, as on U7 and U8.
+- **Room.** The bit LEDs' eight resistors are now **RN2, an isolated 1k x 8 DIP-16** (Ken's choice; R1-R8 gone, R9-R11
+  are R1-R3). Down the front edge (across the top with the card standing): U14-U17, then U7 and U8 after a 2.6 mm gap
+  that holds C9, then Q, PWR and INPUT. Each bit LED stands level with its toggle (above it when standing), its bit
+  number between it and the displays; each display's name and job sit in a gap between two bit LEDs, beside it. The
+  toggles' labels are at 270 degrees ("SW8 BIT 7", the 0 and 1 marks too), which frees a column for U18, RN2 and U19
+  between the logic and the toggles; U11 moved 1 mm. The board's name runs along the bottom edge as drawn (up the
+  right-hand side when standing). C9 and C10 (the six TIL311s' supply rail) and C16, C17 (the latches).
+- **Checks** (as first built; since then: below). Routed on seed 6 (`gen/route.py`; seeds 6 and 7 of 0-11 route every net); `tools/preorder_check.py
+  --layers 2` PASS (DRC 0 errors, 0 warnings; netlist 114 of 114). The emulator models it from the netlist
+  (`NetlistIOPanel.cycle()`, `address()`; test `IOPanel.test_address_display`: six addresses through the gates, the
+  display held between cycles, each TIL311's A-D pins on the right latch outputs).
+
+## Lengthened to 5.75 in; every label upright with the card standing; the front panel by function (Ken, 2026-11-18)
+
+- **All the silkscreen at 270 degrees** (Ken's rule of 2026-11-18 for every board: every text reads upright, left to
+  right, with the card standing in the bus, connector down; then "convert the IO panel silk to 270"). The name line
+  alone runs along the bottom edge as drawn (angle 0), so it reads up the right-hand side with the card standing. J1's
+  pin names stand in two staggered rows (one row at 270 would not fit the 2.54 mm pitch). The logic and the latch column
+  moved 2 mm nearer the bus to make room for the latch column's labels, and the bit LEDs turned so their pads lie across
+  the strip. `make_board.py` places each label at the first spot clear of every pad, part body, other text and the edge.
+- **5.75 × 4.00 in** (146.05 × 101.6 mm; Ken: "for IO CARD i think we need to lengthen so TIL-311 can be under each
+  display, currently too close to LED"). Until then the displays' labels sat in the gaps between the bit LEDs and the
+  displays 0.4 mm from the LEDs' bit numbers. The toggles and the bit LEDs stayed where they were on the 5.50 in card;
+  the 6.35 mm went in between the bit LEDs and the displays, and the displays, C9, Q, PWR, their resistors R2 and R3
+  and INPUT moved with the front edge. With the card standing each display's label is now under it, each resistor's
+  under it.
+- **The front panel labelled by its function alone**, as its LEDs already were (Ken: "remove U14 TIL-311 and others,
+  SW1..."): the displays **A15-A12, A11-A8, A7-A4, A3-A0, OUT D7-D4, OUT D3-D0** (1.0 mm: at 1.2 mm the two OUT labels
+  ran together), the toggles **BIT 7 ... BIT 0, RUN/RESET, LOAD**, the push-button **INPUT**; no SW1 ..., no U14 TIL311.
+  `pcb-check.ini` exempts U7, U8, U14-U17 and SW1-SW11 with that reason (pcb-check lets such a part go without its value
+  too since its commit `6f7035d`).
+- **C15** (U13's 0.1 uF) back where it was before the 2 mm shift: shifted, its +5V pad sat in the card-support strip's
+  keep-out, and none of twelve routing seeds reached it.
+- **No text in the card-support strips** (3.00 x 0.15 in from the bus edge along the top and bottom edges, where the
+  card guides would hide it; found that evening on the other cards): the jumper blocks' row numbers sit just under
+  their pins, JP3's columns read 1, 2, 3, EF (-EF1 ... -EF; between the battery and the strip only single characters
+  fit), the caps' labels moved off the top strip, Y1's under its crystal. The name line is "System-5 IO panel  Rev A
+  2026" (Ken: no "S5IO-A", as no "S5BUS-D" on the bus), all System-5 cards alike since then. Copper unchanged.
+- **Checks.** Of seeds 0-11 on this layout seed 1 routes every net (the others leave one to four +5V or data links
+  open); `gen/route.py` has `ROUTE_SEED = 1`. `gen/build.sh`: ERC 0, DRC 0 errors and 0 warnings, 0 unconnected, parity
+  0, netlist 114 of 114, 555 holes; `tools/preorder_check.py --layers 2` PASS; schematic redrawn, book rebuilt.
+  `pcb-check --tests` at elf `f28e9a1`: **no failures, the same 2 warnings** (U13's RCLR left open on purpose; the
+  DS12885+ not in its footprint table) and a note naming the 27 parts labelled by function.
+
+## The slot order of 2026-11-18 (Ken)
+
+Ken: "looking at the bus from the power supply end I want the right most pin to be gnd followed by the next original pin
+order all the way to +5v/vcc, then EF1, EF2, EF3, -DMAin, SC0" (-PAUSE kept, at the far end), and the slot counted from
+GND: "start counting at gnd as pin 1, there +5v is 30 and then the pins beyond 5v". So J1's positions 1-30 are the
+30-pin bus from GND (1) to +5V (30), then 31-33 -EF1..-EF3, 34 -DMAIN, 35 SC0, 36 -PAUSE (`gen/netlist.py`'s `POS`, the
+bus Rev D's; `docs/manual/bus.md`, "The 36-pin extension"). The circuit is unchanged.
+
+- **J1** is the same C36 footprint turned end for end: pad 1, GND, at the bottom as drawn. The locked +5V run to C7
+  starts at J1's +5V pad wherever `POS` puts it (position 30), no longer at "pad 4".
+- **The bus pins' names** follow `POS`. "-PAUSE", at the end pin beside the card-support strip, is too long for
+  0.8 mm text level with its pin (it shrank to 0.7 mm, under DRC's 0.8 mm minimum): a long name at an end pin may now
+  go one column further out, or 0.5 or 1.0 mm towards the middle, before it shrinks. It sits in a third column, 0.5 mm
+  below its pin, at 0.8 mm.
+- **Routing.** With the new order, of seeds 0-8, 10 and 11, seeds 2, 3 and 10 routed every net (9 ran on past ten
+  minutes). Then the slot was renumbered from GND: no signal moved, but Freerouting's result follows the order of its
+  input, pin names included, and with J1's new pin numbers none of seeds 0-11 routed every net (four ran on past eight
+  minutes). So `gen/route.py` gives Freerouting J1 as it was before the renumbering (`j1_by_place`: the connector turned
+  back, each pin under its old number; the same pads, nets and places), and turns J1's placement back in the session
+  file before the import, which would otherwise turn the connector round on the board under its tracks (the first try
+  did: 43 shorts in DRC). `ROUTE_SEED = 2`: 1953 segments, 62 vias.
+- **Checks.** `gen/build.sh`: ERC 0, DRC 0 errors and 0 warnings, 0 unconnected, parity 0, netlist 114 of 114;
+  `tools/preorder_check.py --layers 2` PASS; schematic redrawn, book rebuilt. `pcb-check --tests` at elf `31c54a8` (pcb-check `60fd275`, 2026-11-18):
+  **no failures, the same 2 warnings** (U13's RCLR left open on purpose; the DS12885+ not in its footprint table), the
+  36 bus pins on J1 as defined, the emulator's IO panel tests passing. (Its note that -DMAIN is pulled up on another
+  board: the bus Rev D's RN2 and CPU Rev D's RN1, 10k each.)
+- **Two layers, decided** (Ken, 2026-11-18: first "maybe make io 4 layers", then "no need for io to be 4 layers if it
+  routes on 2"): this is the densest of the 36-pin cards, about 2,000 track segments, and most routing seeds leave a
+  link or two open on two layers, so each change to it means a seed search. It routes completely, and stays two layers
+  for as long as it does (his rule of 2026-10-30: two layers if at all possible, ask before four).
+- The card no longer fits the 2009 backplane (its +5V pin would meet D2 there): it needs the bus Rev D.
+
+## JP5, the clock's RAM-clear jumper (Ken, 2026-11-18)
+
+pcb-check warned that U13's pin 21, RCLR, was left floating, and Ken's ruling was "change add jumper". **JP5** is a
+2-pin header from RCLR (pin 1) to GND (pin 2).
+
+- **What a shunt does** (DS12885 data sheet): RCLR held low clears the chip's 114 bytes of general-purpose RAM, never
+  the clock and calendar, and only while the chip runs from its battery, the power off. So to clear the RAM: power off,
+  fit the shunt for a moment, take it off again. Left fitted, the RAM would be cleared at every power-off (the clock
+  keeps time all the same). **Open, nothing changes.** RCLR has its own pull-up inside the chip, and the data sheet
+  forbids an outside one, so there is none; it is meant for a hand-made short like this, not for a driver. (The data
+  sheet is not in `../private-resources`: check this wording against it before relying on the jumper.)
+- **Where:** at the top edge beside U13, above the BIT 7 toggle (Ken's rule: jumpers near an edge), in the strip between
+  C16 and C10. Labelled at 270, upright with the card standing: `JP5 RTC` / `RAM CLR` under it and `FIT =` / `CLEAR`
+  over it, 0.8 mm (the strip is 5 mm deep, hence the short lines). Nothing covers them.
+- **Routing and checks:** with the jumper, seed 0 routes every net (1870 segments, 66 vias; 1, 4 and 7 leave one +5V
+  link open). Freerouting spends about nine minutes on this board after its autorouter is done (route optimization),
+  so a seed takes ten minutes to judge. `gen/build.sh`: ERC 0, DRC 0 errors and 0 warnings, 0 unconnected, parity 0,
+  netlist 115 of 115, 561 holes; `tools/preorder_check.py --layers 2` PASS. `pcb-check --tests` at elf `e0dcd53`
+  (2026-11-18, by the pcb-check session): **no failures, 1 warning** (the DS12885+ not in its footprint table; the
+  RCLR warning is gone).
+- **A full-size print:** `io-panel-rev-a-1to1.pdf` (Ken, 2026-11-18: "can i print a pdf of io card 1:1 to check switch
+  hole size"), remade by `gen/build.sh` (`tools/kicad/print_1to1.py`): print at 100 %, measure the 100 mm line, lay the
+  switches on their pads.
+- The emulator does not model RCLR (`s5emu/rtc.py`); its IO panel tests pass with the jumper in the netlist.
+
+## The switches are YACC1's (Ken, 2026-11-18)
+
+Ken: "be sure io card switches are the same as those used on yacc1 io or at least compatible footprint hole size".
+The ten toggles (SW1-SW8 the bits, SW10 RUN/RESET, SW11 LOAD) are `s5io:M9040P`, whose pads are those of the built
+YACC1 IO card's footprint (YACC1-D `hardware/cards/io/kicad/v1.1`, `io-v1.1-eagle:M9040P`), compared file against file:
+three oval pads 5.41 x 2.71 mm, 4.699 mm apart, 1.8034 mm holes; only the description and an added courtyard differ. So
+the Marquardt M9040P toggles of that card fit here. **INPUT (SW9) stays a 6 mm push-button** (`SW_PUSH_6mm`, four pads,
+1.1 mm holes): on the YACC1 card IN0 is another M9040P position, and Ken chose to keep the button here.
+
+**The toggle's body on the fab layer at full size** (Ken, 2026-11-19: "yes draw the toggle outline full size"). Eagle's
+M9040P had the sketch of the lever there, 8.2 x 10.3 mm, and the body's outline on the silkscreen alone, so the checks
+and the full-size print took the toggle for shorter than it is (nothing stood under one: the labels round the toggles
+are placed by hand, outside the courtyard). `s5io.pretty/M9040P` now has the outline on F.Fab too: 8.64 mm wide at the
+middle, 13.36 mm long, the corners cut. No pad, label or track changed: a new build gives the same silkscreen and the
+same Freerouting input, so the drawing alone was put into the routed board (`tools/kicad/fp_update.py --lib`), on all
+ten toggles; the bus Rev D's SW1 the same way. Copper and silkscreen checked identical; DRC 0 errors and 0 warnings;
+`tools/preorder_check.py --layers 2` PASS; `pcb-check --tests` at elf `e5322e4` (pcb-check `f93259d`): **no failures,
+1 warning** (the DS12885+ not in its footprint table, as before), every text clear of the parts with the toggles at
+their true size.
+
+## The bus header drawn as the part it is; "J1 BUS" out from under it (the night of 2026-11-18)
+
+J1 is a single-row right-angle pin header: its plastic body lies on the board between the pads and the card edge, 1.5
+to 4.0 mm from the pads, and its pins run on past the edge (the photos of the built MEM3-E and BUSDRV-B show it). The
+C36 footprint had pads and a courtyard round them and no body, so `gen/make_board.py` printed `J1 BUS` in that strip,
+at the connector's middle, and `pcb-check` passed it: under the header on a built card. Found on VIDEO-G (its
+`kicad/README.md`). `s5io.pretty/C36` now carries the body (F.Fab), a courtyard round body and pads, and KiCad's 3D
+model of the header, so the render shows the connector. `J1 BUS` stands on the board side of the pin names, in the gap
+between U2 and U1 (the nearest free place to the connector's middle: U2's pins leave no room beside the names there).
+No other label moved. The board has no silkscreen-only build, so `gen/build.sh` ran in full: the footprint's drawing is
+not in Freerouting's input, which came out the same as before, and so did the route (1870 segments, 66 vias: every
+track, via, pad and zone identical). DRC 0 errors and 0 warnings; `tools/preorder_check.py --layers 2` PASS.
+`pcb-check --tests` at elf `a330195` (2026-11-19, by the pcb-check session): **no failures, 1 warning** (the DS12885+
+not in its footprint table, as before); its earlier passes had the label under the header, which it could not see.
+
+## A `+` at the battery holder (Ken, 2026-11-19)
+
+Asked by the pcb-check session, "Add a + beside the battery holder on the IO panel and the YACC1 I/O card V1.2?", Ken
+said: "Yes, both". The holder's footprint (Keystone 103) has its `+` on the fab layer, inside the holder, so with the
+holder soldered in and the cell fitted nothing on the board said which end is positive. The silkscreen now has a `+`
+level with pad 1 (VBAT), in the 2 mm between JP4's end and the holder, and the holder's label follows it on the same
+line: `+ BT1 CR2032`, right under the holder's positive tab with the card standing. The label stood there alone
+before, centred on the pad, and moved 5.9 mm along the line; no other label moved. Silkscreen only: `gen/build.sh` ran
+in full, with the same Freerouting input and the same route (1870 segments, 66 vias; every track, via, pad and zone
+identical). DRC 0 errors and 0 warnings; `tools/preorder_check.py --layers 2` PASS. `pcb-check --tests` at elf
+`bb0b711` (2026-11-19, pcb-check `1525f36`, whose LABELS line reads every silkscreen text): **no failures, 1 warning**
+(the DS12885+ not in its footprint table, as before); every text clear of the parts, the `+` among them.
+
+## The serial port (Ken, 2026-11-20)
+
+Ken: "for io card create a test branch for adding serial io and db 9 to board, ok to lengthen board". His two choices:
+a 16C550 UART with its own clock and a MAX232, as on his YACC1 I/O card; the DE-9 on the side edge, in a new strip
+between the logic and the panel. Drawn on the branch `io-panel-serial`; merged into `main` the same day, once
+`pcb-check` was clean.
+
+### The circuit
+
+| Part | | |
+|---|---|---|
+| U20 | 16C550 UART, DIP-40 (XR16C550, TL16C550C, PC16550D) | D0-D7 on the bus; A0-A2 and CS0 from U22; CS1 high, -CS2 and -ADS low; WR = RTC_WR, -WR high; -RD = UART_RD_L, RD low; MR = RESET_H; -BAUDOUT to RCLK; -CTS, -DSR, -DCD, -RI tied high and RTS, DTR, OUT1, OUT2 open, as on the YACC1 card |
+| X1 | 1.8432 MHz oscillator, half-size (8-pin DIP) can | to XIN; XOUT open. Divisor 12 = 9600 baud, 3 = 38400 |
+| U22 | 74HCT573 | the select latch: LE = RTC_AS; D0, D1, D2 -> UA0-UA2 (the UART's A0-A2), D7 -> SEL_UART; four latches spare |
+| U21 | MAX232, C22-C25 four 1 uF | SOUT -> T1IN, T1OUT = TX_OUT; RX_IN -> R1IN, R1OUT -> SIN; the second channel not used (T2IN and R2IN to GND) |
+| JP6 | 2 x 3 header, "TX PIN" | the null-modem block, as the YACC1 card's JP1: shunts on 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a straight cable to a PC or a USB adapter); 3-5 and 4-6 = sends on 3, hears on 2. The silkscreen's 2 and 3 stand over the two positions |
+| J2 | DE-9 socket, right-angle | pins 2 and 3 through JP6, 5 and the shell to GND, the others open. The footprint is KiCad's own for a right-angle socket with the pin pattern of the YACC1 I/O card's (built, V1.1): pins 2.77 mm apart in rows 2.84 mm apart, mounting holes 25 mm apart |
+| JP7 | 1 x 2 header, "UART INT" | fitted: the UART's INTR (through a gate of U9, open collector) pulls the bus -INT low. Open as set |
+| C18-C21 | 0.1 uF | U20, U21, U22, X1 |
+
+What changed in the card that was there: the DS12885's CS (U13 pin 13), tied low until now, is SEL_UART; U11's second
+flip-flop and one of U9's four spare gates, both unused until now, make the UART's read strobe and invert its INTR;
+RN1's pin 8 pulls that interrupt line up. Nothing else.
+
+### One port pair for two chips
+
+The 1802 has seven ports, and System-5 uses 2 and 3 (IDE), 4 (this panel) and 6 and 7 (the clock); 1 and 5 are left,
+which are not a pair. So the UART shares the clock's pair (JP4, set to 6 and 7), the way Mike Riley's ELF2000 puts its
+UART, clock and disk behind one select register. The DS12885 uses seven bits of the byte written to the address port
+(00-7F) and ignores the eighth; that eighth bit picks the chip. U22 holds it, with the same strobe and at the same
+moment as the DS12885 holds its own copy (RTC_AS, as TPB ends):
+
+- bit 7 = 0: the DS12885, as before. HBIOS v1.0.8's clock driver writes plain register numbers and needs no change
+  (its test on the gate-level machine passes on this netlist).
+- bit 7 = 1: the UART, register = bits 2-0 (80-87).
+
+A UART with a jumper block of its own would need a fourth 14-pin chip for its strobes and a free pair of ports that
+the machine does not have; if Ken wants it anyway, it is a small change.
+
+### The read strobe: why the UART does not use the clock's
+
+The clock's read strobe is "this port, and -MRD high": RTC_RD = NOR(RTCD_L, MRD_H). That is how RCA's own parts
+tell an INP from an OUT, and it has a wrinkle (CDP1802 data sheet, figures 10 and 11): the N lines carry the port
+number from the first clock of the cycle, but in an OUT the 1802 takes -MRD low only a clock and a half later.
+For that clock and a half an OUT looks like an INP:
+
+```
+clock          0    1    2    3    4    5    6    7    0
+OUT 7   N      ___/=================== 7 ==================\___
+        -MRD   ~~~~~~~~~~\__________________________________/~~
+        RTC_RD ___/~~~~~~\_____________________________________     a read strobe that should not be
+        RTC_WR ____________________________________/~~~~\______     TPB: the write
+INP 7   N      ___/=================== 7 ==================\___
+        -MRD   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        -MWR   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~\_________/~~~~~~~~~~     the 1802 writes the byte to memory
+        RTC_RD ___/~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\___
+        -RD    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\_______________/~~     the UART's, from U11B
+```
+
+A DS12885 does not mind being read for a moment before it is written (only its register C changes when read, and
+nobody writes that one). A 16550 does: a write to THR (register 0) would first read register 0, which is RBR, and a
+read of RBR takes the received character out. Every character sent would throw one away.
+
+So the UART's -RD is the !Q of U11's second flip-flop, used by its two asynchronous inputs alone: -MWR (the bus's
+-MRW) on its preset, RTC_RD on its clear. -MWR goes low only in a cycle that writes memory, and of the cycles in
+which RTC_RD is high only an INP does. !Q goes low when -MWR falls in an INP of the data port (clock 5) and stays low
+after -MWR rises, until the port's select goes away at the end of the cycle: the 1802 has the data on the bus for the
+second half of the cycle, through its write to memory and past the edge where it latches D. With RTC_RD low, the clear
+holds !Q high; with both inputs low (a memory write anywhere else) a 74HCT74 drives both outputs high, so !Q stays
+high then too. `tests/test_hw.py` (`test_serial_port_read_strobe`) runs every port in both directions through the
+gates and checks each phase.
+
+The same wrinkle makes the 74HCT244 put the toggles on the bus for that clock and a half at the start of an OUT 4
+(the IN and OUT ports being the same number). Nothing else drives the bus then, so it does no harm: it is what a
+CDP1852 pair does on any 1802.
+
+**Left as it was, for Ken to decide:** the clock still gets RTC_RD_L with the early pulse. Giving the DS12885 the new
+strobe as well (its DS = UART_RD_L; each chip's own select decides which answers) would take that pulse away and
+free U5's third gate. It is one line in `gen/netlist.py`.
+
+### The strobes against a 16550's limits
+
+From TI's TL16C550C data sheet (SLLS177I, section 5.7, read on 2026-11-20; older 16550s such as the PC16550D ask for
+two to three times as long), with the 1802 at 2 MHz, one clock = 500 ns:
+
+| | The chip wants | The card gives |
+|---|---|---|
+| Write strobe (WR2, pin 19, active high) | 40 ns or more | TPB of the OUT: 500 ns |
+| Data valid before the strobe ends (the chip takes the byte on its trailing edge) | 15 ns | the memory has had the byte on the bus since early in the cycle |
+| Data held after the strobe ends | 5 ns | about 200 ns: -MRD stays low for half a clock after TPB |
+| Read strobe (RD1, pin 21, active low) | 40 ns or more | clock 5 to the end of the cycle: about 1.5 us |
+| Data on the bus after the strobe starts | within 45 ns | the 1802 writes it to memory at clock 7, 1 us later, and takes it into D after that |
+| Register and chip select steady round either strobe | 7 ns before, 20 ns after | held in U22 from one OUT to the address port until the next |
+| MR (active high) | 1 us | as long as -RESET is low |
+
+The other write and read inputs are tied to their idle levels, as the data sheet asks: WR1 (pin 18) high, RD2 (pin
+22) low. ADS low makes the chip follow A0-A2 and its selects directly. A read of the receiver buffer takes the
+character out ("DR is cleared by reading all of the data in the receiver buffer register or the FIFO"), which is why a
+stray read strobe matters.
+
+### The layout
+
+- **7.50 x 4.00 in (190.5 x 101.6 mm)**, 1.75 in longer; the whole panel (toggles, bit LEDs, displays, Q, PWR, INPUT,
+  the name) moved out with the front edge, and JP5 kept its place.
+- **J2 at the top edge as drawn**, which is the left side with the card standing in the bus, seen from the parts side;
+  past the 3.00 in card-guide strip. It faces off the board: its mounting holes 10.22 mm from the edge, as on the
+  YACC1 I/O card, so its flange is 0.7 mm inside the edge and its shroud beyond it.
+- The MAX232 lies behind J2 with its line pins towards it and its four capacitors on the other side; JP6 beside it,
+  under J2's pins 2 and 3 (behind an edge connector is as near the edge as a jumper can be there; the YACC1 card has
+  its own in the same place). The UART stands below, D0-D7 on its bus side, with its select latch and its oscillator
+  on its left, the oscillator beside XIN. JP7 at the bottom edge.
+- Two layers still. Two things are drawn by `gen/make_board.py` and locked, as the displays' +5V rail already was;
+  everything else is Freerouting's. (1) The six short links between J2, JP6 and the MAX232: each signal sits on two
+  pins diagonally across JP6's middle column, and Freerouting left J2's pin 2 open on two seeds of three. (2) The
+  serial block's +5V, 0.5 mm on the back: C19, the MAX232 and C24, down to a rail under the MAX232's capacitors from
+  which C20, U22, U20 and C18 hang; U20's tied-off inputs down its own pin column; C21 and the oscillator. Without
+  it every seed tried left one to four +5V links open. For the same reason the MAX232's unused T2IN is tied to GND
+  (the YACC1 card ties it to +5V): it sits in the middle of the chip's line side.
+
+### In the emulator
+
+`software/s5emu/s5emu/uart.py` is the 16C550 as behaviour (registers, DLAB, loop mode, the receive and THR-empty
+interrupts; no time: a character written is sent at once). The netlist card (`hw.NetlistIOPanel`) plays it on its own
+pins as the gates drive them (CS0, WR, -RD, A0-A2, MR, INTR), and since then runs each INP and OUT in the
+order the 1802 makes it (N first, then -MRD; -MWR; TPB), which is what shows the early pulse. The fast machine
+(`machine.IOPanel`) has the UART on ports 6 and 7 the same way. `serial_in()` / `serial_out()` on the netlist card,
+`uart.receive()` / `uart.sent()` on either, are the line. Tests: four in `tests.test_hw.IOPanel` (the shared ports,
+the read strobe, the interrupt and reset, and a program on CPU Rev D that echoes the line), one in `tests.test_machine`.
+
+### Not done
+
+- No BIOS support: HBIOS's serial entries are stubs. A driver (and perhaps a console on the serial line) is the next
+  step if the port stays.
+- No TTL-level header beside the DE-9 (the YACC1 I/O card V1.2 has one for a USB cable). Easy to add.
+- No modem lines on the DE-9; the UART's inputs are tied off, so software that waits for CTS will wait for ever.
+- The emulator does not pass the card's -INT on to the 1802 (nor the clock's): the interrupt is tested at the card.
+- Not through `s5emu.timing`, which does not know the panel: the strobes were set against the data sheet by hand
+  ("The strobes against a 16550's limits", above).
+
 ## Board (2026-10-30): `gen/make_board.py`
 
-- **5.50 × 4.00 in**, J1 = `s5io:C36` (as CPU Rev D), its pins named on the silkscreen; the card-support strips kept free.
+- **5.50 × 4.00 in** (5.75 since 2026-11-18: above), J1 = `s5io:C36` (as CPU Rev D), its pins named on the silkscreen; the card-support strips kept free.
 - **Front panel as on Ken's YACC1 IO card** (Ken, 2026-10-30): eight vertical M9040P toggles in a column (BIT 7 at the top,
   each labelled 0 / 1 at its ends), then RUN/RESET (RUN / RESET) and LOAD (OFF / LOAD); INPUT push-button beside LOAD;
   the eight bit LEDs (7 … 0), Q and PWR in a column at the front edge with their resistors; the two TIL311s side by side in

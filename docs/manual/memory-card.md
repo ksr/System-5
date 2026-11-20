@@ -9,6 +9,7 @@ The total is 64K: each block holds RAM, EPROM or nothing, never both.
 *MEM3-E, the memory card in the machine (photo 2026-11-15).*
 
 - **In the machine: Rev E** (MEM3-E), `hardware/memory/kicad/rev-e/`: ordered 2026-10-20, built and brought up on 2026-10-31 (`bringup/README.md` there). Its circuit is Rev D's, net for net: Rev C (2005) plus three fixes. Rev E is a proper 4-layer board (GND and VCC planes); the Rev D boards ordered 2026-10-09 are scrap.
+- **Next: Rev F** (MEM3-F), `hardware/memory/kicad/rev-f/`, drawn 2026-11-18, not ordered: Rev E with its silkscreen upright for a card standing in the bus, and **EEPROM sockets**. A 2 x 3 jumper block per EPROM socket (JP1 for IC5, JP2 for IC3) lets it take a 27C256 as before (shunts 1-3 and 2-4) or a 28C256 EEPROM on pins 1 (A14) and 27 (!WE): read-only with 3-5 alone (R6 / R7, 47k, hold !WE high), or written by the 1802 with 4-6 as well (!WE on WR). Its README has the settings and what never to fit.
 - **Before it: Rev B, reworked** (PCB Fab Express FXA5474, 2005), the memory card in the machine until October 2026 (the last section).
 - Design review of Rev B, with the fault that the rework and Rev C fix: `hardware/memory/REVIEW.md`.
 - The 2005 description (Rev A): `hardware/memory/eagle/rev-a/ops.html`.

@@ -3,7 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "CAPACITOR\n\ngrid 2.5 mm, outline 5 x 5 mm")
+	(descr "CAPACITOR\n\ngrid 2.5 mm; body 4.0 x 2.5 mm (F.Fab, a dipped 0.1 uF), courtyard 0.25 mm beyond it (VIDEO-G, CPU Rev D and the IO panel, 2026-11-17); on the IO panel the silkscreen outline is the body's (2026-11-18: Eagle's 5 x 5 mm outline stood out of the courtyard, past the board edge at C15)")
 	(property "Reference" "C1"
 		(at -2.286 -2.54 180)
 		(unlocked yes)
@@ -55,26 +55,8 @@
 		)
 	)
 	(duplicate_pad_numbers_are_jumpers no)
-	(fp_line
-		(start -2.413 -2.032)
-		(end -2.413 2.032)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "4f05893e-d2e5-428c-94c8-fde6e732fee8")
-	)
-	(fp_line
-		(start -2.159 -2.286)
-		(end 2.159 -2.286)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "f5ac9dfe-c61f-42b2-b75e-e73368338577")
-	)
+	
+	
 	(fp_line
 		(start -0.254 -0.762)
 		(end -0.254 0)
@@ -135,70 +117,12 @@
 		(layer "F.SilkS")
 		(uuid "019a06ec-fd2c-4fc7-979b-0019e525adc3")
 	)
-	(fp_line
-		(start 2.159 2.286)
-		(end -2.159 2.286)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "b703be44-1c0c-47fc-8d3f-1c3e7f522b1d")
-	)
-	(fp_line
-		(start 2.413 -2.032)
-		(end 2.413 2.032)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "32ecac62-f67c-4c86-b58a-3203eaa484d1")
-	)
-	(fp_arc
-		(start -2.413 -2.032)
-		(mid -2.338605 -2.211605)
-		(end -2.159 -2.286)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "c0580349-6eb4-4641-87b5-d9dcffc1e82e")
-	)
-	(fp_arc
-		(start -2.159 2.286)
-		(mid -2.338605 2.211605)
-		(end -2.413 2.032)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "98b5bd67-87d5-4802-bc02-d31d053df625")
-	)
-	(fp_arc
-		(start 2.159 -2.286)
-		(mid 2.338605 -2.211605)
-		(end 2.413 -2.032)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "90d6492b-f321-4c45-9a9f-3f9658f6ac23")
-	)
-	(fp_arc
-		(start 2.413 2.032)
-		(mid 2.338605 2.211605)
-		(end 2.159 2.286)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(layer "F.SilkS")
-		(uuid "fa01c56d-5257-4d20-a720-5b87b41f413b")
-	)
+	
+	
+	
+	
+	
+	
 	(fp_line
 		(start -0.381 0)
 		(end -0.762 0)
@@ -218,6 +142,64 @@
 		)
 		(layer "F.Fab")
 		(uuid "37a69ffc-c7ed-4b0c-b02c-5e55003ef6b9")
+	)
+	(fp_line
+		(start -2.12 -1.37)
+		(end 2.12 -1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start 2.12 -1.37)
+		(end 2.12 1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start 2.12 1.37)
+		(end -2.12 1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start -2.12 1.37)
+		(end -2.12 -1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_rect
+		(start -2.25 -1.5)
+		(end 2.25 1.5)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "632ca86f-7f24-5dc3-a20b-a0b9037b2d16")
+	)
+	(fp_rect
+		(start -2 -1.25)
+		(end 2 1.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "5ce7a09e-7019-5bed-8666-33b7c9df69b7")
 	)
 	(pad "1" thru_hole roundrect
 		(at -1.27 0)

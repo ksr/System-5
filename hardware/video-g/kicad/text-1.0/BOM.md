@@ -1,6 +1,6 @@
 # VIDEO-G 1.0 TEXT - bill of materials
 
-Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-17). Every IC goes in a socket.
+Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11-18). Every IC goes in a socket.
 
 | Qty | Value | Footprint | References | What to buy |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11
 | 1 | 74HCT74 | DIP-14_W7.62mm_Socket | IC24 |  |
 | 1 | 12MHz | Crystal_HC49-U_Vertical | Y1 | 12 MHz, HC-49/U |
 | 1 | 16MHz | Crystal_HC49-U_Vertical | Y2 | 16 MHz, HC-49/U, 18-20 pF load |
-| 1 | System-5 bus | C30 | J1 |  |
+| 1 | System-5 bus (36) | C36 | J1 | 1 x 36 right-angle pin header, 2.54 mm, single row (cut from a 1 x 40): its plastic body lies between the pads and the card edge, the pins out past the edge |
 | 1 | RCA | RCA | J2 | RCA jack, right-angle PCB mount (YACC1 V1.0 card's footprint) |
 | 1 | DB9 F | F09HP | J3 | DE-9 female, right-angle PCB mount (F09HP footprint: 2.74 mm pitch, 2.54 mm between rows) |
 | 1 | KEYBOARD | MiniDIN6_MD-60SM | J4 | Same Sky (CUI Devices) MD-60SM, date code after 2022-03-03 |
@@ -36,7 +36,7 @@ Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11
 | 1 | BLOCK | PinHeader_2x04_P2.54mm_Vertical | SV1 | 2 x 4 pin header + 1 shunt on 1-2 (block 7, 7000); each fitted shunt is a 0 bit |
 | 1 | MONITOR | PinHeader_1x03_P2.54mm_Vertical | JP1 | 1 x 3 pin header + shunt: 1-2 NTSC, 2-3 IBM 5151 |
 | 1 | VSYNC | PinHeader_1x03_P2.54mm_Vertical | JP2 | 1 x 3 pin header + shunt: 1-2 +VSYNC, 2-3 -VSYNC (5151) |
-| 1 | KBD-EF | PinHeader_1x02_P2.54mm_Vertical | JP3 | 1 x 2 pin header + shunt: fitted = the keyboard flag on the bus -EF |
+| 1 | KBD FLAG | PinHeader_2x04_P2.54mm_Vertical | JP3 | 2 x 4 pin header + 1 shunt: the keyboard flag on -EF1, -EF2, -EF3 or -EF (set to -EF, the fourth pair) |
 | 1 | 0.5A PTC | Fuse_Bourns_MF-RHT050 | F1 | Bourns MF-RHT050 (0.5 A hold, radial) |
 | 1 | PWR | LED_D5.0mm | LED1 |  |
 | 1 | 10k x4 | R_Array_SIP5 | RN1 | 10k x4 BUSSED, pin 1 common, 5-pin SIP (e.g. Bourns 4605X-101-103LF) |

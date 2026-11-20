@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.pat
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import asm1802                                                                # noqa: E402
 
-PROGRAMS = ["cls"]                         # each is <name>/<name>.asm -> <name>/<name>
+PROGRAMS = ["cls", "vgdemo"]               # each is <name>/<name>.asm -> <name>/<name>
 
 
 def assemble(name):

@@ -11,7 +11,7 @@ The bus itself is in [bus.md](bus.md); each card has its own chapter; programmin
 
 | Card | Revision in the machine | What it does | Chapter |
 |---|---|---|---|
-| Backplane | the 2009 PCB: six 36-pin slots, no regulator (System-4's was Vero board) | the 30-pin bus (plus -EF1-3, -INP, -OUT, -IOM on the 36-pin slots), power | [bus.md](bus.md) |
+| Backplane | the 2009 PCB: six 36-pin slots, no regulator (System-4's was Vero board) | the 30-pin bus (plus -EF1-3, -DMAIN, SC0 and -PAUSE on the 36-pin slots: [bus.md](bus.md), "The 36-pin extension"), power | [bus.md](bus.md) |
 | CPU | Rev A, reworked | CDP1802, clock, reset and run control, the high-address latch, the 4K boot EPROM and its remap, -VMA | [cpu-card.md](cpu-card.md) |
 | Memory | Rev E (MEM3-E), built 2026-10-31 | 32K RAM + 32K EPROM sockets; each 4K block can be RAM, EPROM or empty | [memory-card.md](memory-card.md) |
 | 6845 video | Rev B | 64 × 16 text display from BYTE (May 1979): dual-port video RAM at 7000, CRTC at 7800, composite out | [video-6845-card.md](video-6845-card.md) |

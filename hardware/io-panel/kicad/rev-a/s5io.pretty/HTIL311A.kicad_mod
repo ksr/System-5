@@ -3,7 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
-	(descr "From Ken's YACC1 IO card (io-v1.1-eagle:HTIL311A); its drawing moved from F.SilkS to F.Fab for the IO panel (2026-10-30: it ran over the pads). LED DISPLAY\n\n8-mm 1 character dot matrix, 2 decimal points")
+	(descr "From Ken's YACC1 IO card (io-v1.1-eagle:HTIL311A); its drawing moved from F.SilkS to F.Fab for the IO panel (2026-10-30: it ran over the pads). LED DISPLAY\n\n8-mm 1 character dot matrix, 2 decimal points; courtyard 0.25 mm beyond the body and pads (IO panel, 2026-11-17)")
 	(property "Reference" "HI0"
 		(at -1.27 -10.16 0)
 		(unlocked yes)
@@ -391,6 +391,17 @@
 		(fill yes)
 		(layer "F.Fab")
 		(uuid "cce38c45-5a65-4442-b54d-562300aa3251")
+	)
+	(fp_rect
+		(start -5.330 -9.902)
+		(end 5.330 9.902)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "6f073365-fb40-4fae-acf7-09650f0e08c9")
 	)
 	(pad "1" thru_hole oval
 		(at -3.81 -7.62)

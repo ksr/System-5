@@ -19,7 +19,9 @@ System-5's: everything memory-mapped in the card's block, no I/O ports (Ken, 202
     28C64 IC12 (A0-A2 = RA0-RA2) -> shifter IC13; IC14 delays reverse/cursor and DE two characters; the combine:
     dot = (text AND TEXT-ON) OR GDOT, or the XOR of the two when XORM; 7416 to the RCA composite and the DB9.
     TEXT-ON, XORM and GDOT come from GFX (its control register); alone, RN2/RN3 hold text on, XOR off, GDOT low
-  * keyboard: ATmega328P IC10 loads IC9 (LDDATA) and sets KEY-READY (IC24B); a read of 7802 clears it at TPB
+  * keyboard: ATmega328P IC10 loads IC9 (LDDATA) and sets KEY-READY (IC24B); a read of 7802 clears it at TPB. KEY-READY
+    also pulls one bus flag line low (IC23D, open collector): JP3 picks -EF1, -EF2, -EF3 or -EF (Ken, 2026-11-18), the
+    first three on the 36-pin connector's positions 31-33
   * J6: the 40-pin ribbon to GFX (common/ribbon.py, shared with the GFX netlist)
 
 Pin numbers are the physical DIP pins and match the KiCad symbols (checked by check()). Active-low nets start with '-'.
@@ -32,13 +34,13 @@ import ribbon
 CARD = "VIDEO-G 1.0 TEXT"
 PROJ = "video-g-text"
 REV = "1.0"
-DATE = "2026-11-17"
+DATE = "2026-11-18"
 SUBTITLE = "64 x 25 / 64 x 32 text, memory-mapped at 7000-7FFF, PS/2 keyboard; with the GFX board: 512 x 200 / 512 x 256 graphics"
 FLAG_NETS = ("PS2VCC",)
 SCH_NOTES = [
     "VIDEO-G 1.0 TEXT (hardware/video-g/DESIGN.md): the System-5 text card of VIDEO-G; works alone, or with the GFX board on the J6 ribbon.",
     "Memory-mapped, no I/O ports (2026-11-17). Block jumper SV1: 1-2 only = block 7. 7000-77FF text RAM (IDT7134); 7C00-7FFF the GFX window (WSEL).",
-    "Registers (7800-7BFF, pairs repeating): 7800/7801 the 6845 (RS = A0); 7802 key (+ bus -EF while KEY-READY, JP3); 7804 status / control (GFX); 7806 mouse / Y (GFX).",
+    "Registers (7800-7BFF, pairs repeating): 7800/7801 the 6845 (RS = A0); 7802 key (+ a bus flag line while KEY-READY: JP3 picks -EF1, -EF2, -EF3 or -EF); 7804 status / control (GFX); 7806 mouse / Y (GFX).",
     "Status: 0 KEY-READY 1 MOUSE-READY 2 VSYNC 3 DE 4 MONITOR 5 GFX-PRESENT, 7-6 = 10. Reads while -MRD is low; writes while -MRW is low during TPB.",
     "6845: E = the -MRD time on a read, TPB within -MRW on a write; R/-W from IC24A, set by -MRD and cleared by -MRW, steady while E is high.",
 ]
@@ -53,7 +55,7 @@ LOC = "video-g-local"
 
 # ---- parts: reference -> (value, symbol lib:name, footprint lib:name, what it does) ------------------------------------
 PARTS = {
-    "J1":   ("System-5 bus", "Connector_Generic:Conn_01x30", LOC + ":C30", "30-pin bus connector"),
+    "J1":   ("System-5 bus (36)", "Connector_Generic:Conn_01x36", LOC + ":C36", "36-pin bus connector (positions from GND)"),
     "IC1":  ("74HCT373", "74xx:74LS373", DIP[20], "A8-A15 latch, transparent while TPA is high"),
     "IC2":  ("74LS85", "74xx:74LS85", DIP[16], "block decode: A12-A15 = BLOCK jumper, enabled by VMA"),
     "IC3":  ("IDT7134", LOC + ":IDT7134", DIPW[48], "text RAM, dual port: bus 7000-77FF on the right, 6845 on the left"),
@@ -90,7 +92,8 @@ PARTS = {
              "card block: fitted = 0; 1-2 only = block 7 (7000)"),
     "JP1":  ("MONITOR", "Connector_Generic:Conn_01x03", FP_H % 3, "1-2 NTSC (64 x 25), 2-3 MDA / IBM 5151 (64 x 32)"),
     "JP2":  ("VSYNC", "Connector_Generic:Conn_01x03", FP_H % 3, "DB9 pin 9: 1-2 +VSYNC, 2-3 -VSYNC (5151)"),
-    "JP3":  ("KBD-EF", "Connector_Generic:Conn_01x02", FP_H % 2, "fitted: KEY-READY drives the bus -EF"),
+    "JP3":  ("KBD FLAG", "Connector_Generic:Conn_02x04_Odd_Even", "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical",
+             "one shunt: KEY-READY onto -EF1, -EF2, -EF3 or -EF (set to -EF)"),
     "F1":   ("0.5A PTC", "Device:Polyfuse", "Fuse:Fuse_Bourns_MF-RHT050", "keyboard +5 V"),
     "LED1": ("PWR", "Device:LED", "LED_THT:LED_D5.0mm", "power"),
     "RN1":  ("10k x4", "Device:R_Network04", "Resistor_THT:R_Array_SIP5", "BLOCK pull-ups (bussed, pin 1 common)"),
@@ -142,11 +145,17 @@ for cap in DECOUPLE:
 c("+5V", "C26.1"); c("GND", "C26.2")
 
 # ---- the bus (J1) ----------------------------------------------------------------------------------------------------
-BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 11: "TPA", 12: "TPB",
-       13: "-MRD", 14: "-MRW", 15: "A0", 16: "A1", 17: "A2", 18: "A3", 19: "A4", 20: "A5", 21: "A6", 22: "A7",
-       25: "-EF", 26: "-VMA", 27: "-RESET", 30: "GND"}         # N0-N2 (24, 28, 29) not used: no I/O ports
-for pin, net in BUS.items():
-    c(net, "J1.%d" % pin)
+# The 36-pin connector since 2026-11-18 (Ken: "on video change keyboard to ef to be a select of 1 of 4 efs": -EF1 to -EF3
+# are on the slot's positions beyond +5V, which a 30-pin card does not reach). BUS: the 30-pin bus as a 30-pin card
+# numbers it; POS: the slot's 36 positions counted from GND, as the bus Rev D has them (its gen/netlist.py)
+BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 10: "Q", 11: "TPA", 12: "TPB",
+       13: "-MRD", 14: "-MRW", 15: "A0", 16: "A1", 17: "A2", 18: "A3", 19: "A4", 20: "A5", 21: "A6", 22: "A7", 23: "-INT",
+       24: "N2", 25: "-EF", 26: "-VMA", 27: "-RESET", 28: "N1", 29: "N0", 30: "GND"}
+POS = [BUS[i] for i in range(30, 0, -1)] + ["-EF1", "-EF2", "-EF3", "-DMAIN", "SC0", "-PAUSE"]   # position 1..36, from GND
+UNUSED = {"Q", "-INT", "N0", "N1", "N2", "-DMAIN", "SC0", "-PAUSE"}      # N0-N2: no I/O ports; the rest: not this card's
+for i, net in enumerate(POS):
+    if net not in UNUSED:
+        c(net, "J1.%d" % (i + 1))
 c("+5V", "RN2.1")                                          # RN2 pull-ups (the 2009 bus has none on these)
 for k, net in enumerate(("-EF", "-VMA", "-RESET", "LDDATA", "TEXTON")):
     c(net, "RN2.%d" % (2 + k))
@@ -273,7 +282,8 @@ for i, (d, q) in enumerate(L373):
 c("+5V", "IC24.12", "IC24.10"); c("KCLR", "IC24.13"); c("KREADY", "IC24.9")
 c("-RDKEY", "IC20.9"); c("TPBN", "IC20.10"); c("KRDT", "IC20.8")           # IC20C: low while 7802 is read, at TPB
 c("KRDT", "IC19.4"); c("-RESET", "IC19.5"); c("KCLR", "IC19.6")           # IC19B: ... or -RESET
-c("KREADY", "IC23.9"); c("EFOC", "IC23.8", "JP3.1"); c("-EF", "JP3.2")    # IC23D: -EF low while a key waits
+c("KREADY", "IC23.9"); c("EFOC", "IC23.8", "JP3.2", "JP3.4", "JP3.6", "JP3.8")   # IC23D, open collector: low while a key
+c("-EF1", "JP3.1"); c("-EF2", "JP3.3"); c("-EF3", "JP3.5"); c("-EF", "JP3.7")    # waits, on the flag line JP3's shunt picks
 
 # ---- J6: the ribbon to GFX (pin map in common/ribbon.py) -------------------------------------------------------------
 c("DOTCLK", "R11.1"); c("RDOTCLK", "R11.2")
@@ -284,7 +294,7 @@ for pin, sig in ribbon.PINS.items():
 
 # ---- pins left open (a no-connect flag each) -------------------------------------------------------------------------
 NO_CONNECT = {
-    "J1": [10, 23, 24, 28, 29], "IC2": [5, 7], "IC4": [16, 17, 34, 35], "IC5": [14, 13, 12, 11, 10, 9, 7],
+    "J1": [i + 1 for i, n in enumerate(POS) if n in UNUSED], "IC2": [5, 7], "IC4": [16, 17, 34, 35], "IC5": [14, 13, 12, 11, 10, 9, 7],
     "IC6": [11, 10, 9, 7], "IC7": [14, 11, 10, 9, 7], "IC11": [19], "IC12": [1, 26], "IC14": [3, 6, 11, 14],
     "IC15": [11], "IC16": [10], "IC17": [2, 10, 12], "IC18": [8], "IC22": [8], "IC24": [6, 8],
     "IC10": [5, 11, 13, 17, 18, 19, 21],
@@ -305,6 +315,7 @@ BUY = {
     "RN1": "10k x4 BUSSED, pin 1 common, 5-pin SIP (e.g. Bourns 4605X-101-103LF)",
     "RN2": "10k x5 BUSSED, pin 1 common, 6-pin SIP (e.g. Bourns 4606X-101-103LF)",
     "RN3": "10k x5 BUSSED, pin 1 common, 6-pin SIP (e.g. Bourns 4606X-101-103LF)",
+    "J1": "1 x 36 right-angle pin header, 2.54 mm, single row (cut from a 1 x 40): its plastic body lies between the pads and the card edge, the pins out past the edge",
     "J2": "RCA jack, right-angle PCB mount (YACC1 V1.0 card's footprint)",
     "J3": "DE-9 female, right-angle PCB mount (F09HP footprint: 2.74 mm pitch, 2.54 mm between rows)",
     "J4": "Same Sky (CUI Devices) MD-60SM, date code after 2022-03-03",
@@ -312,7 +323,7 @@ BUY = {
     "J5": "1 x 6 pin header, 2.54 mm (an FTDI cable programs the ATmega)",
     "SV1": "2 x 4 pin header + 1 shunt on 1-2 (block 7, 7000); each fitted shunt is a 0 bit",
     "JP1": "1 x 3 pin header + shunt: 1-2 NTSC, 2-3 IBM 5151", "JP2": "1 x 3 pin header + shunt: 1-2 +VSYNC, 2-3 -VSYNC (5151)",
-    "JP3": "1 x 2 pin header + shunt: fitted = the keyboard flag on the bus -EF",
+    "JP3": "2 x 4 pin header + 1 shunt: the keyboard flag on -EF1, -EF2, -EF3 or -EF (set to -EF, the fourth pair)",
     "F1": "Bourns MF-RHT050 (0.5 A hold, radial)",
     "Y1": "12 MHz, HC-49/U", "Y2": "16 MHz, HC-49/U, 18-20 pF load",
     "C26": "47 uF electrolytic, 16 V or more, radial 6.3 mm, 2.5 mm pitch",

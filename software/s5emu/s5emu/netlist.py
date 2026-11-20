@@ -10,8 +10,12 @@ Board reworks are edits on the netlist, so they stay data a photo can correct:
   lift(ref, pin)                  the pin is bent out of its socket: it leaves its net (it floats)
   wire(ref, pin, to_ref, to_pin)  a wire from the lifted pin to another pin: it joins that pin's net
   short(net_a, net_b)             a jumper: the two nets become one
+  refit(ref, value, {pin: fn})    another chip in the socket whose pins do other jobs (a 28C256 in a 27C256 socket)
+Two boards that work as one (VIDEO-G's TEXT and GFX, joined by a ribbon):
+  join(other, prefix)             the other board's parts and nets come in under a prefix; the supplies are shared.
+                                  A jumper() per conductor then makes each cable wire one net
 """
-import re
+import os, re
 from collections import namedtuple
 
 Part = namedtuple("Part", "ref value lib")
@@ -69,6 +73,21 @@ class Netlist:
             if r == ref and fn == function: return p
         raise KeyError("%s has no pin %s" % (ref, function))
 
+    # ------------------------------------------------------------------ a second board
+    SUPPLIES = ("VCC", "+5V", "GND")
+
+    def join(self, other, prefix):
+        """take in another board's netlist: each of its parts and nets under `prefix` (IC1 -> GFX.IC1), the supply nets
+        under their own names, so both boards share them. Nothing else is connected yet: a cable is a jumper() per
+        conductor"""
+        for ref, part in other.parts.items():
+            if prefix + ref in self.parts: raise ValueError("join: %s is already a part" % (prefix + ref))
+            self.parts[prefix + ref] = Part(prefix + ref, part.value, part.lib)
+        for (ref, pin), (net, fn) in other.pins.items():
+            self.pins[(prefix + ref, pin)] = (net if net in self.SUPPLIES else prefix + net, fn)
+            self.pintype[(prefix + ref, pin)] = other.pintype.get((ref, pin), "")
+        self.edits.append("joined with %s (its parts and nets as %s...)" % (os.path.basename(os.path.dirname(os.path.dirname(other.path))), prefix))
+
     # ------------------------------------------------------------------ reworks
     def lift(self, ref, pin):
         pin = str(pin); net, fn = self.pins[(ref, pin)]
@@ -88,6 +107,15 @@ class Netlist:
         """a different chip in the socket (same pinout): e.g. the CPU card's 74LS374 where the schematic has a 373"""
         old = self.parts[ref]; self.parts[ref] = Part(ref, value, lib)
         self.edits.append("%s fitted as %s (schematic: %s)" % (ref, value, old.value))
+
+    def refit(self, ref, value, functions):
+        """another chip in the socket, same footprint, some pins with other jobs: e.g. a 28C256 EEPROM where the board
+        has a 27C256, pin 1 A14 (the 27C256's VPP) and pin 27 ~{WE} (its A14). functions: {pin: the new chip's name}"""
+        old = self.parts[ref]; self.parts[ref] = Part(ref, value, old.lib)
+        for pin, fn in functions.items():
+            net, _ = self.pins[(ref, str(pin))]; self.pins[(ref, str(pin))] = (net, fn)
+        self.edits.append("%s fitted as %s (schematic: %s): %s" % (
+            ref, value, old.value, ", ".join("pin %s %s" % (p, fn) for p, fn in functions.items())))
 
     def short(self, net_a, net_b):
         if net_a == net_b: return

@@ -130,10 +130,15 @@ in (`timing.py` PARTS). Compared with Rev A as built at 2 MHz and at 1.76 MHz:
   HD46505RP fitted. Options: a faster CRTC grade on the video card (the 1.5 / 2 MHz grades, MC68A45 / MC68B45 or the
   equivalent HD46505 grade, have a much shorter minimum E high time: to check against their data sheets), or run the CPU
   Rev D at 1.79 MHz with a 3.579545 MHz oscillator (X1 is a socketed DIP-8 can: no board change).
-- **Decided (Ken, 2026-10-30): keep 2 MHz** and fit a faster CRTC grade on the video card Rev C; its timing goes into
-  `timing.py` once the part is chosen.
+- **Decided (Ken, 2026-10-30): keep 2 MHz** and fit a faster CRTC grade on the video card that runs with it (VIDEO-G
+  takes an HD68B45); its timing goes into `timing.py` once the part is chosen.
 - **T6 is down to 15 ns** worst case at 2 MHz (the IDE card ends DIOR at TPB's fall, memory D's WE is -MWR through a
   CD4050B). Typical timing and bus capacitance add margin; a later IDE or memory revision could hold DIOR longer.
+- **Memory Rev F's 28C256 (2026-11-18):** with a 28C256 in IC5 that the CPU can write (JP1 3-5 and 4-6), its !WE is
+  the RAMs' WR (-MWR through IC8, a CD4050B). `timing.py` checks its write from Rev F's netlist (`memory F` rows; the
+  AT28C256-15's limits typed in from memory, to verify against its data sheet): at 2 MHz the write pulse is at least
+  815 ns (tWP 100: +715), the data is set up with 2255 ns to spare (tDS 50), and the address and !CE settle 1015 ns
+  before !WE falls; at 1.76 MHz each margin is larger. Test `test_timing.RevDAt2MHz.test_memory_rev_f_28c256_write`.
 - **Start-of-cycle contention:** a read that moves from the CPU card's EPROM to another card's chip may overlap by up to
   ~110-170 ns worst case (Rev A at 2 MHz, R13 not counted: 7-62 ns), because the HCT decode (74HCT373 → 74HCT20 →
   74HCT00 × 2) is slower than Rev A's LS chain; the worst path is the boot flip-flop's own cycle. Like C1/C2, noise only:

@@ -59,7 +59,8 @@ def on_config(config):
                 else: continue
                 rev = folder[4:] if folder.startswith("rev-") else folder
                 status = fab.get((card, rev.lower()))
-                label = "Rev %s" % (rev.upper() if len(rev) == 1 else rev) + (" (%s)" % status if status else "")
+                name = rev.upper() if len(rev) == 1 else "-".join(w.capitalize() for w in rev.split("-")) if re.fullmatch(r"[a-z](-[a-z]+)+", rev) else rev
+                label = "Rev %s" % name + (" (%s)" % status if status else "")      # (rev-b-clean is "Rev B-Clean", rev-b-clean-keyboard "Rev B-Clean-Keyboard")
                 items.append({label: "hardware/%s/kicad/%s/%s" % (card, folder, page_name)})
     return config
 

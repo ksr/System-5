@@ -63,6 +63,8 @@ PARTS = {
     "CD4042B": dict(d_q=220, le_q=300, clk_q=300, setup=100, hold=120, src="TI/RCA CD4042B, VDD = 5 V"),
     "62256-70": dict(taa=70, tace=70, toe=35, tdw=30, tdh=0, thz=25, src="Cypress CY62256LL-70 (memory Rev D RAM)"),
     "27C256-20": dict(taa=200, tace=200, toe=75, tdf=60, thz=60, src="Atmel AT27C256R-20"),
+    "28C256-15": dict(taa=150, tace=150, toe=70, tas=0, tah=50, twp=100, tds=50, tdh=0, twc_ms=10,
+                      src="Atmel AT28C256-15 (memory Rev F's EEPROM option; typed in from memory, to verify)"),
     "2732A-30": dict(taa=300, tace=300, toe=120, tdf=100, thz=100, src="Fujitsu MBM2732A-30 (CPU boot EPROM, as fitted)"),
     "IDT7134-35": dict(taa=35, tace=35, toe=25, tdw=20, thz=20, src="IDT7134SA35 (6845 card video RAM, as fitted)"),
     "MC6845": dict(e_high=450, tas=140, tah=10, tddr=320, tdhr=20, tdsw=195, tdhw=10,
@@ -332,6 +334,22 @@ def analyse(f_mhz=1.76, root=None, cpu_rev="A-built"):
         row("memory D", "%s write: address and CE settled before WE falls" % d.ref, we_fall[0], sel[0], chain(sel[1]))
         dat = _lat(arr, d.data, P["tdw"], only=("D_cpu",))
         row("memory D", "%s write: data set up before WE rises" % d.ref, we_rise[0], dat[0], chain(dat[1]))
+
+    # ---- memory card Rev F with a 28C256 in IC5 that the CPU can write (JP1 3-5 and 4-6): its !WE is WR, the RAMs' strobe
+    memf = NetlistMemoryCard("F-28C256-W"); ft = CardTiming("memory F", memf.nl, memf.c)
+    arr, viol = ft.propagate("write", bus_events(T, "write", vma=vma)); viol_all += viol
+    for d in memf.chips:
+        if d.kind != "ROM" or not d.we: continue
+        P = PARTS["28C256-15"]
+        we_rise = arr[d.we].get("MWR_rise"); we_fall = arr[d.we].get("MWR_fall")
+        sel = max(x for x in [_lat(arr, d.addr, 0, skip=("MWR_rise",)), _lat(arr, [d.ce], 0, skip=("MWR_rise", "MWR_fall"))] if x)
+        row("memory F", "%s 28C256 write: address and CE settled before WE falls (tAS %d)" % (d.ref, P["tas"]),
+            we_fall[0], sel[0] + P["tas"], chain(sel[1]))
+        row("memory F", "%s 28C256 write: WE pulse width (tWP %d)" % (d.ref, P["twp"]),
+            we_rise[0] - we_fall[1], P["twp"], chain(we_fall[2]))
+        dat = _lat(arr, d.data, P["tds"], only=("D_cpu",))
+        row("memory F", "%s 28C256 write: data set up before WE rises (tDS %d)" % (d.ref, P["tds"]),
+            we_rise[0], dat[0], chain(dat[1]))
 
     # ---- 6845 card
     vid = NetlistVideoCard(Video6845(), "B"); vt = CardTiming("6845 B", vid.nl, vid.c)

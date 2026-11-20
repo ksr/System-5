@@ -6,14 +6,35 @@ ordered; not built.
 
 | Folder | Board | Size | ICs | Parts list |
 |---|---|---|---|---|
-| `text-1.0/` | VIDEO-G 1.0 TEXT: 6845 + IDT7134 text, status register, PS/2 keyboard, RCA + DB9, every decode (all memory-mapped, 7000-7FFF) | **188 x 96 mm** (47 mm taller than a standard card: Ken keeps it, 2026-11-17) | 24 | [`text-1.0/BOM.md`](text-1.0/BOM.md) |
-| `gfx-1.0/` | VIDEO-G 1.0 GFX: 62256 graphics (two pages), Y and control registers, PS/2 mouse | 141 x 96 mm (standard) | 19 | [`gfx-1.0/BOM.md`](gfx-1.0/BOM.md) |
+| `text-1.0/` | VIDEO-G 1.0 TEXT: 6845 + IDT7134 text, status register, PS/2 keyboard, RCA + DB9, every decode (all memory-mapped, 7000-7FFF) | **188 x 106.6 mm** (47 mm longer than a standard card: Ken keeps it, 2026-11-17; and since 2026-11-18 10.4 mm more at the +5V end, for the 36-pin bus connector) | 24 | [`text-1.0/BOM.md`](text-1.0/BOM.md) |
+| `gfx-1.0/` | VIDEO-G 1.0 GFX: 62256 graphics (two pages), Y and control registers, PS/2 mouse, PWR LED | 141 x 96 mm (standard) | 19 | [`gfx-1.0/BOM.md`](gfx-1.0/BOM.md) |
 
 Both: 4 layers (F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid +5V plane: MEM3-E's stack-up), the
-System-5 30-pin connector and card-guide keep-outs where every card has them, the 2 x 20 ribbon header along the same
+System-5 bus connector (GFX the 30-pin one; TEXT the 36-pin one since 2026-11-18, for its keyboard flag's choice of four
+EF lines: its positions 1-30 where the 30-pin connector's pins were, the board grown at the +5V end) and card-guide
+keep-outs where every card has them, the 2 x 20 ribbon header along the same
 side edge 88-148 mm from the bus edge (TEXT J6, GFX J4: a straight 40-way cable between neighbouring slots; pin map
 `common/ribbon.py`). Silkscreen per Ken's rules: every reference outside its part with the IC type beside it, jacks,
-jumpers and the LED labelled by function, the board name and cottageworker.com.
+jumpers and the LED labelled by function, the board name and cottageworker.com. **Since 2026-11-18 every text reads
+upright with the card standing in the bus, connector down** (Ken's rule for every board; he asked for it on TEXT and
+GFX that day): KiCad angle 270, each label at the first spot clear of every pad, part, other text and the card-guide
+strips, under its part with the card standing first (`common/silk.py` with `tools/kicad/silk270.py`); the bus pins'
+names in two staggered columns (the backplane's names on both boards: `+5V`, `-RESET`); the jumpers' settings at their
+ends (TEXT's JP1 NTSC / 5151, JP2 + / -); the name line alone at angle 0 along the bottom edge as drawn, just above the
+guide strip (up the right-hand side standing). The copper did not change: `common/silk.py <board>` rewrote the
+silkscreen of the routed boards, every track, via, pad and zone checked the same.
+
+**The bus connector is drawn as the part it is since the night of 2026-11-18.** J1 is a single-row right-angle pin
+header: its plastic body lies on the board between the pads and the card edge, 1.5 to 4.0 mm from the pads, and its
+pins run on past the edge (the photos of the built MEM3-E and BUSDRV-B show it). The C30 and C36 footprints had pads
+and a courtyard round them and nothing else, so the label placer and `pcb-check` both took that strip for free board:
+`J1 BUS` was printed there on both boards, part of it under the header, and half of TEXT's JP1 label with it. Both
+footprints now carry the body (F.Fab), a courtyard round body and pads, and KiCad's 3D model of the header, so the
+renders show the connector and the placer keeps every label off it. `J1 BUS` stands past the header's +5V end on GFX
+and beside the pin names, between IC1 and IC2, on TEXT; TEXT's `JP1 MONITOR` is under its jumper in the corner past
+the header's GND end, `NTSC` and `5151` at the jumper's ends. Silkscreen only, again: `common/silk.py <board>` brings
+J1's drawing up to its library file (`tools/kicad/fp_update.py`) and places the labels afresh, and it and
+`common/make_board.py` now stop with an error when a label finds no room (the label had been left out without a word).
 
 ## Files (per board)
 
@@ -33,9 +54,18 @@ jumpers and the LED labelled by function, the board name and cottageworker.com.
 exported netlist = `netlist.py`), `make_board.py`, `route.py` (Freerouting in and out, the inner layers as planes),
 `route_leftovers.py` (the few connections Freerouting leaves; copied from MEM3-E's), `silk.py` (every label, also on
 a routed board: `<KiCad python> common/silk.py <board>` changes the silkscreen only), `bom.py`, `build.sh`.
-`lib/video-g-local`: IDT7134, Mini-DIN, RCA and DB9 from YACC1's Video V2.0 (copied), System-5's C30 bus connector and
-0.1" bypass-cap footprints (the C30 labels' stroke raised to 0.15 mm for the fab; 2026-11-17: a courtyard on both and
-an F.Fab body, 4.0 x 2.5 mm, on the cap, so that `pcb-check` knows where they are and finds each cap's "100n").
+`lib/video-g-local`: IDT7134, Mini-DIN, RCA and DB9 from YACC1's Video V2.0 (copied), System-5's C30 bus connector
+(GFX), the 36-pin C36 (TEXT; the other 36-pin cards' footprint) and 0.1" bypass-cap footprints (the C30 labels'
+stroke raised to 0.15 mm for the fab; 2026-11-17: a courtyard on both and an F.Fab body, 4.0 x 2.5 mm, on the cap, so
+that `pcb-check` knows where they are and finds each cap's "100n"; 2026-11-18: the right-angle header's body, a
+courtyard round it and its 3D model on C30 and C36, above; 2026-11-19: the RCA jack's body on F.Fab, the outline its
+silkscreen has, for `pcb-check`'s new BODIES line, which names a part with nothing drawn on the fab layer: TEXT's J2
+was the one. `J2 RCA COMPOSITE` moved 0.15 mm with it, the label placer going by the body where it had gone by the
+courtyard). The DB9, Eagle's F09HP, had only its nine pins' tails on the fab layer, 11 x 3.6 mm of a 31 x 14 mm
+connector, which `pcb-check` took for the whole part (its BODIES line names such a drawing since its `0e99e19`): the
+connector's outer line is on F.Fab now, and `J3 DB9 TTL 5151` keeps its place by a spot of its own in `place.py`, the
+1.5 mm between the DB9's back and R4's lead being narrower than the placer's steps. `common/silk.py <board>` brings
+the drawing of every part from this library up to its file before it places the labels.
 
 ## Rebuild
 
@@ -53,17 +83,26 @@ the parts' drawn outlines: KiCad lists components, images and pins in a differen
 and Freerouting's result follows that order and even the outlines (adding two courtyards turned a complete route into
 one that stalled), so one build of TEXT left VMA open where the build before had routed everything. Now the same
 `gen/` files give the same board. `ROUTE_SEED` in `gen/place.py` shuffles the order reproducibly when one leaves a
-net open: TEXT uses 7 (seeds 0-10 tried: nine routed every net, 7 soonest). GFX has none (0); **its routed board is
-the 2026-11-17 build's from before the fixed order**, updated in place since (silkscreen and courtyards: copper
-untouched), so `build.sh` would route GFX afresh.
+net open: TEXT uses 7 (seeds 0-10 tried: nine routed every net, 7 soonest). GFX uses 0, the sorted order: rebuilt
+the evening of 2026-11-17 with its power LED, it routed every net at once (1697 track segments, 97 vias). The ordering
+code is `tools/kicad/dsn_order.py` since then, shared with CPU Rev D (`route.py` gives the same input as before).
+
+**TEXT was routed again on 2026-11-18**, for the 36-pin connector and the 2 x 4 KBD FLAG block: seed 7 still routes
+every net (2616 track segments, 133 vias; 3 minutes of routing, then 72 minutes of Freerouting's optimization, so a
+full build of TEXT takes about an hour and a quarter). The silkscreen work after it did not need another: a new build
+gives Freerouting the same input, byte for byte but for the file's own path, and the same silkscreen to the micrometre
+(checked in a copy of the tree).
 
 After a build: `python3 common/bom.py <board>` and, for the book, `python3 tools/kicad/sch/gen_schematic.py <board>/schematic` and
 `python3 tools/kicad/sch/make_book.py`.
 
 ## Before ordering
 
-**`pcb-check`, the check before an order (Ken, every system, since 2026-11-06; `hardware/BUILD-RULES.md`, section 2),
-2026-11-17 at commit `fb6ef67`, both boards with `--tests`:**
+**`pcb-check`, the check before an order (Ken, every system, since 2026-11-06; `hardware/BUILD-RULES.md`, section 2):
+both boards as they are now, with `--tests`, 2026-11-19: GFX at elf `77257f1` (run by the pcb-check session); TEXT at
+`77257f1` (the same), at `688e6ed` after its four KBD FLAG names moved 0.5 mm off JP3's outline, at `b4692e9`
+(pcb-check `bd032dd`, with its new BODIES line) after the RCA jack's body went on the fab layer, and at `b2252b7`
+(pcb-check `0b45f65`) after the DB9's; GFX again at `b2252b7` without its tests, the board unchanged:**
 
 ```sh
 ~/Developer/pcb-check/pcb-check hardware/video-g/kicad/text-1.0/video-g-text.kicad_pcb hardware/video-g/kicad/text-1.0/video-g-text-gerbers.zip --layers 4 --tests
@@ -72,15 +111,17 @@ After a build: `python3 common/bom.py <board>` and, for the book, `python3 tools
 
 | Board | Result | For Ken's eye |
 |---|---|---|
-| TEXT | **no failures, 0 warnings** | NOTE: EFOC, the 7416's open-collector keyboard flag, is pulled up on "another board": it reaches the bus -EF through the KBD-EF jumper JP3, and -EF has RN2 on TEXT and the backplane's pull-ups |
-| GFX | **no failures, 1 warning** | WARN: no power LED (GFX has none; TEXT carries the PWR LED) |
+| TEXT | **no failures, 0 warnings** (the 36 bus pins on J1 as the bus definition has them; fit 188.1 x 106.7 mm; netlist 162 of 162; J1's body on F.Fab and no text under it or under any other part; BODIES: every part drawn with its body) | NOTE: EFOC, the 7416's open-collector keyboard flag, is pulled up on "another board": it reaches a bus flag line through JP3, and -EF has RN2 on TEXT and the backplane's pull-ups; -EF1 to -EF3 have the bus Rev D's only |
+| GFX | **no failures, 0 warnings** (the 30 bus pins on J1; netlist 124 of 124; no text under J1's body or any other part) | - |
 
 Every other line passes on both: the copper rebuilt from the gerbers against the schematic, the design review, the
 silkscreen (name and rev, `cottageworker.com`, every reference and value, none under a part), polarity, footprints,
 fit, the layout rules (with `bus_edge = left` in `pcb-check.ini`: pcb-check finds a bus connector only by a DIN 41612
 name), the bus pins against the bus Rev D's names (`tools/s5bus.py`), the fab's limits, the zip, a committed tree, one
 rev, and the system's tests (s5emu's VIDEO-G tests, GBASIC's). Both also pass `tools/preorder_check.py --layers 4`, the
-older check that `build.sh` ends with.
+older check that `build.sh` ends with (DRC 0 errors and 0 warnings). Their earlier passes (2026-11-17: TEXT at
+`fb6ef67` and `0341f8a`, GFX after its power LED; 2026-11-18 at `e4d2fd5`, the silkscreen at 270) were of the 30-pin
+TEXT, and of boards with `J1 BUS` partly under the bus header, which `pcb-check` could not see then.
 
 Still Ken's, before an order (settled 2026-11-17: TEXT stays 188 mm, the DB9 stays, every part's value on the
 silkscreen, and the card is memory-mapped, which settles the ELF/OS boot loader's `OUT 4`): a look at the renders and

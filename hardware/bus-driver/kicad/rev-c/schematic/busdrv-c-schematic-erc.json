@@ -1,0 +1,50 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-19T00:10:29",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/6454792d-6d6e-55e2-857e-4be112046fab",
+            "violations": []
+        },
+        {
+            "path": "/Expanders/",
+            "uuid_path": "/6454792d-6d6e-55e2-857e-4be112046fab/15d83217-e3bb-5241-84e9-36a1a6fffa5b",
+            "violations": []
+        },
+        {
+            "path": "/Nano/",
+            "uuid_path": "/6454792d-6d6e-55e2-857e-4be112046fab/33043578-4e18-504c-ab3d-b5d54bdbe20d",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/6454792d-6d6e-55e2-857e-4be112046fab/8f3db734-1fc6-59eb-82b3-45bd5363935f",
+            "violations": []
+        }
+    ],
+    "source": "busdrv-c-schematic.kicad_sch"
+}

@@ -39,7 +39,7 @@ or one that resets itself, sends $AA: the firmware then clears the Shift/Ctrl st
 typed while the CPU is busy wait in a 63-byte queue.
 
 The CPU's side (memory-mapped since 2026-11-17, `hardware/video-g/DESIGN.md` section 3; the firmware is the same):
-KEY-READY pulls the bus **-EF** low through a 7416 gate (jumper KBD-EF; CPU card JP1 row 3 = EF3) and shows in the
+KEY-READY pulls a bus flag line low through a 7416 gate (the TEXT board's JP3 KBD FLAG picks -EF1, -EF2, -EF3 or -EF since 2026-11-18; set to **-EF**, which CPU Rev A's JP1 row 3 makes EF3) and shows in the
 status register (7804) bit 0; a **read of 7802** gives the key and clears KEY-READY at TPB. The VIDEO-G HBIOS polls
 the status bit, which works with either CPU card. After a reset the keyboard is ready in about 1.5 s: Optiboot waits about 1 s after every external
 reset (the bus -RESET resets the ATmega too), then the keyboard's own reset takes 0.3-0.75 s. Keys pressed before

@@ -18,7 +18,7 @@ written from the netlists, an emulator that runs the real ROM, and two new board
 memory card now in the machine (Rev E), and a bus driver card (Rev B) that brought the old cards up on the bench. Since
 November 2026 System-5 runs Mike's later operating system, Elf/OS 5.1.1, in place of the ELF/OS 0.2.6 it was built
 for. The next machine is being designed too: a 36-pin bus
-with a new CPU card and a front-panel IO card ([below](#next-the-36-pin-machine)).
+with a new CPU card, a front-panel IO card and a new video card ([below](#next-the-36-pin-machine)).
 
 I'm Ken Rother. I designed and built System-5. Claude, Anthropic's AI, has been directly involved in converting the
 boards, the manual, the emulator and this site.
@@ -81,14 +81,19 @@ The six spare pins of the 36-pin slots are being given jobs: the three extra 180
 -DMAIN for front-panel control, and SC0 to show instruction fetches ([the 36-pin extension](docs/manual/bus.md)).
 New cards for it, all drawn in KiCad, none ordered yet:
 
-- **[Backplane Rev D](hardware/bus/kicad/rev-d/notes.md)** — eight 36-pin slots, power switch, fuse and
-  reverse-polarity protection.
+- **[Backplane Rev D](hardware/bus/kicad/rev-d/notes.md)** — eight 36-pin slots, a barrel jack for a 7-15 V
+  adapter, reverse-polarity protection and a 5 V switching regulator, or screw terminals for an external 5 V supply,
+  a jumper to pick the source and a power switch.
 - **[CPU Rev D](hardware/cpu/kicad/rev-d/DESIGN.md)** — just the 1802 and its 4K boot EPROM, at 2 MHz or from an
   external clock; a load-then-run flag so a program toggled in runs from RAM.
-- **[IO panel](hardware/io-panel/kicad/rev-a/DESIGN.md)** — the ELF-style front panel: eight toggles, eight LEDs, two
-  TIL311 hex displays, Q, INPUT, RUN and LOAD. The emulator already runs a program toggled in through it.
-- **[6845 video Rev C](hardware/video-6845/kicad/rev-c/DESIGN.md)** — design notes: Rev B's display with the PS/2
-  keyboard moved onto it, and a CRTC fast enough for 2 MHz.
+- **[IO panel](hardware/io-panel/kicad/rev-a/DESIGN.md)** — the ELF-style front panel: eight toggles, eight LEDs, six
+  TIL311 hex displays (the data byte and the bus address), Q, INPUT, RUN and LOAD, a battery-backed real-time
+  clock and a serial port (a 16C550 with a DE-9 socket). The emulator already runs a program toggled in through it.
+- **[VIDEO-G](hardware/video-g/DESIGN.md)** — the next video card, two boards joined by a ribbon cable: TEXT, a 6845
+  text display of 64 × 25 or 64 × 32 with a PS/2 keyboard, and GFX, graphics of 512 × 200 or 512 × 256 with a PS/2
+  mouse. Everything is memory-mapped; it is to take the place of the 6845 card and the IO card.
+- **[Bus driver Rev C](hardware/bus-driver/kicad/rev-c/DESIGN.md)** — the bench driver for all 36 lines, to pause,
+  step and load the machine with the CPU card in place; its firmware is still to be written.
 
 ## Where to start
 

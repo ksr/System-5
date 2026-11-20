@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-10-06. After the YACC1 tools/busdrv.py.
-"""Host tool for the System-5 bus driver card (BUSDRV-B, firmware embedded/bus-driver/s5-bus-driver).
+"""Host tool for the System-5 bus driver cards (BUSDRV-B and BUSDRV-C, firmware embedded/bus-driver/s5-bus-driver).
 
 Wire protocol: host sends CMD:OPERAND#, the card answers with optional "Data: ..." lines, "Complete" or "Error: ...",
 then the ">>" prompt. See the sketch header for the command list.
@@ -19,6 +19,24 @@ Usage (port auto-detected: the Nano's USB serial; --port to choose, --sim to run
   s5busdrv.py spare MASK | xrst | cmd TEXT
 Numbers accept 0x.. / $.. / plain decimal. "master on" is needed before memory and I/O commands; the tool turns it
 on for them when --auto-master is given.
+
+BUSDRV-C only (the 36-pin card; --sim --rev C simulates one with CPU Rev D and a memory card). These work with the
+CPU card in place, the DEBUG cable joining the two cards and the CPU card's JP1 on EXT:
+  s5busdrv.py mode run|reset|pause|load   the 1802's mode, by -RESET and -PAUSE
+  s5busdrv.py dmaload FILE [ADDR]         LOAD mode: the file into RAM from 0000 by DMA IN, the clock stepped by the
+                                          card; leaves the machine in LOAD mode. A file that does not start at 0000 gets
+                                          zeros below it and a jump to its start at 0000.
+  s5busdrv.py loadrun FILE [ADDR] [HZ]    dmaload, then RUN with the card's clock at HZ (default 2000000; 0 = leave
+                                          the clock stopped, for "clk N")
+  s5busdrv.py clkhz HZ | clkstop          the card's clock on CLK OUT, steady or stopped
+  s5busdrv.py clk N [--cycles]            N clock edges (16 = one machine cycle); the bus changes they made, or with
+                                          --cycles one line a machine cycle (address, R/W, data), as cputrace.py
+  s5busdrv.py dbg | clktest               the DEBUG cable's CLOCK, SC0, SC1; does CLK OUT reach the 1802?
+  s5busdrv.py line NAME on|off            pull an open-collector line low, or let it go: -EF1 -EF2 -EF3 -PAUSE -DMAIN
+                                          (and -RESET -INT -EF)
+  s5busdrv.py probe | pcount MS | ptime [MS] | pdelay 0|1     the two probe inputs: levels, edge counts, PROBE1's
+                                          period and high time, the time from a clock edge to PROBE1's next edge
+  s5busdrv.py spdir MASK | spin           SPARE5-9: which are outputs; their levels
 """
 import sys, os, time, glob, argparse
 
@@ -52,6 +70,9 @@ class BusDriver:
             raise CardError("no System-5 bus driver banner (got %r)" % self.banner)
         self.blocks = any("blocks-" in l for l in self.banner)
         self.ioblocks = any("io-2" in l for l in self.banner)       # firmware 2026-10-11: INBLK/OUTBLK, fixed I/O cycles
+        self.lines = []                                             # every line of the last answer
+        # the board: BUSDRV-C says so in its banner, or (the bus was off when the Nano started) in STATUS
+        self.rev = "C" if any("BUSDRV-C" in l for l in self.banner) else "B" if any("BUSDRV-B" in l for l in self.banner) else None
 
     # ---- protocol
     def _readline(self, deadline):
@@ -87,9 +108,9 @@ class BusDriver:
             except TimeoutError:
                 if attempt == self.retries: raise
                 time.sleep(0.3)
-        data = []
+        data = []; self.lines = lines
         for l in lines:
-            if l.startswith("Error"): raise CardError("%s -> %s" % (msg, l))
+            if l.startswith("Error"): raise CardError("%s -> %s" % (msg if len(msg) < 60 else msg[:57] + "...", l))
             if l.startswith("Data:"): data.append(l.split(":", 1)[1].strip())
         return data
 
@@ -151,6 +172,83 @@ class BusDriver:
             if self.ioblocks: self.cmd("OUTBLK", "%d,%d,%s" % (port, len(chunk), chunk.hex().upper()))
             else:
                 for b in chunk: self.out(port, b)
+
+    # ---- BUSDRV-C: the 36-pin extension, the 1802's mode, LOAD mode by the clock, the clock, the probes
+    MODES = ("RUN", "RESET", "PAUSE", "LOAD")
+
+    def board(self):
+        """'B' or 'C' (None: the bus is off, so the card cannot tell yet)"""
+        if self.rev is None and "board=C" in self.status(): self.rev = "C"
+        return self.rev
+
+    def fields(self, text):
+        """'a=1 b=x' -> {'a': '1', 'b': 'x'}"""
+        return dict(f.split("=", 1) for f in text.split() if "=" in f)
+
+    def mode(self, name):
+        """the 1802's mode: run, reset, pause or load"""
+        self.cmd("MODE", self.MODES.index(name.upper()))
+
+    def cpu_mode(self):
+        """the mode as -RESET and -PAUSE stand on the bus (another card may hold them too)"""
+        return self.fields(self.status()).get("cpu")
+
+    def line(self, name, on):
+        """an open-collector line: on = pulled low"""
+        self.cmd(name, 1 if on else 0)
+
+    def dma(self, byte):
+        """LOAD mode: one byte to M(R(0)); -> the address it went to"""
+        return int(self.cmd("DMA", byte & 0xFF, timeout=20)[0], 16)
+
+    def dma_load(self, data, progress=None):
+        """LOAD mode: the bytes to M(R(0)) on, 32 to a command; -> the address of the first. The card reads the
+        address of every write off the bus and refuses a block that does not run on from one to the next; this checks
+        the blocks against each other."""
+        data = bytes(data); first = None; i = 0
+        while i < len(data):
+            chunk = data[i:i + 32]
+            n, a = self.cmd("LOADBLK", "%d,%s" % (len(chunk), chunk.hex().upper()), timeout=30)[0].split(); a = int(a, 16)
+            if first is None: first = a
+            elif a != (first + i) & 0xFFFF:
+                raise CardError("LOADBLK: the block of byte %d went to %04X, not %04X" % (i, a, (first + i) & 0xFFFF))
+            i += len(chunk)
+            if progress: progress(i, len(data))
+        return first
+
+    def clk_hz(self, hz):
+        """a steady clock on CLK OUT; -> the rate the card could make"""
+        return int(self.cmd("CLKHZ", int(hz))[0])
+
+    def clk_stop(self): self.cmd("CLKSTOP")
+
+    def clk(self, edges):
+        """`edges` clock edges; -> [(edge, [the GPIO ports, hex])] for every change of the bus"""
+        out = []; left = edges; base = 0
+        while left > 0:
+            k = min(left, 20000); self.cmd("CLK", k, timeout=30 + k / 50)
+            for l in self.lines:
+                if l.startswith("T "):
+                    _, e, *h = l.split(); out.append((base + int(e), [int(x, 16) for x in h]))
+            base += k; left -= k
+        return out
+
+    def dbg(self): return self.fields(self.cmd("DBG", 0)[0])
+    def clock_test(self): return self.cmd("DBG", 1)[0]
+    def probe(self): return {k: int(v) for k, v in self.fields(self.cmd("PROBE")[0]).items()}
+    def pcount(self, ms): return {k: int(v) for k, v in self.fields(self.cmd("PCOUNT", int(ms), timeout=ms / 1000 + 5)[0]).items()}
+    def ptime(self, ms=1000): return {k: int(v) for k, v in self.fields(self.cmd("PTIME", int(ms), timeout=ms / 1000 + 5)[0]).items()}
+    def pdelay(self, rising): return int(self.cmd("PDELAY", 1 if rising else 0)[0])
+
+
+def load_image(runs):
+    """[(addr, bytes)] -> the bytes LOAD mode must send, from 0000 up. LOAD mode fills memory from 0000 only, and RUN
+    starts there; so a file that begins higher gets zeros below it and, at 0000, a long branch (C0 hh ll) to its start."""
+    runs = sorted(runs); end = max(a + len(d) for a, d in runs); img = bytearray(end); start = runs[0][0]
+    for a, d in runs: img[a:a + len(d)] = d
+    if start >= 3: img[0:3] = bytes([0xC0, start >> 8, start & 0xFF])
+    elif start: raise SystemExit("the file starts at %04X: no room below it for a jump at 0000" % start)
+    return bytes(img)
 
 
 def find_port():
@@ -217,13 +315,20 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="System-5 bus driver card host tool", formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     ap.add_argument("--port"); ap.add_argument("--baud", type=int, default=BAUD)
     ap.add_argument("--sim", action="store_true", help="talk to a simulated card (software/busdrv/simcard.py)")
+    ap.add_argument("--rev", choices=("B", "C"), default="B", help="--sim: which card. C = BUSDRV-C's firmware (fwsim.py) "
+                    "on the 36-pin backplane with CPU Rev D and a memory card (backplane.Backplane36)")
+    ap.add_argument("--cycles", action="store_true", help="clk: one line a machine cycle, not every bus change")
     ap.add_argument("--auto-master", action="store_true", help="take the bus for memory/I-O commands and give it back after")
     ap.add_argument("--log", action="store_true", help="show the serial traffic")
     ap.add_argument("command"); ap.add_argument("args", nargs="*")
     a = ap.parse_args(argv)
     transport = None
     if a.sim:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import simcard; transport = simcard.SimCard()
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        if a.rev == "C":
+            import backplane, fwsim; transport = fwsim.FwCard(backplane.Backplane36(cards=("mem",)), rev="C")
+        else:
+            import simcard; transport = simcard.SimCard()
     bd = BusDriver(a.port, a.baud, log=sys.stderr if a.log else None, transport=transport)
     c, x = a.command, a.args
     needs_bus = c in ("peek", "poke", "dump", "load", "save", "memtest", "out", "inp")
@@ -252,6 +357,39 @@ def main(argv=None):
         elif c == "inp": print("%02X" % bd.inp(num(x[0])))
         elif c == "spare": bd.cmd("SPARE", num(x[0]))
         elif c == "xrst": bd.cmd("XRST")
+        elif c == "mode": bd.mode(x[0]); print(bd.status())
+        elif c in ("dmaload", "loadrun"):
+            path = x[0]; rest = [num(v) for v in x[1:]]
+            if path.lower().endswith((".hex", ".ihx")): runs = read_intel_hex(path)
+            else: runs = [(rest.pop(0) if rest else 0, read_bin(path))]
+            img = load_image(runs); bd.mode("load")
+            first = bd.dma_load(img, progress=lambda i, n: print("\r%d of %d bytes" % (i, n), end="", file=sys.stderr))
+            print("", file=sys.stderr)
+            print("%04X-%04X %d bytes by DMA IN%s" % (first, first + len(img) - 1, len(img),
+                  "" if runs[0][0] == 0 else " (the file starts at %04X: a jump to it at 0000)" % runs[0][0]))
+            if c == "loadrun":
+                hz = rest[0] if rest else 2000000
+                bd.mode("run")
+                if hz: print("clock %d Hz" % bd.clk_hz(hz))
+                print(bd.status())
+        elif c == "clkhz": print("%d Hz" % bd.clk_hz(num(x[0])))
+        elif c == "clkstop": bd.clk_stop(); print(bd.status())
+        elif c == "clk":
+            st = bd.clk(num(x[0]))
+            if a.cycles:
+                import cputrace
+                for cy in cputrace.cycles([(e, cputrace.bits(*h)) for e, h in st]): print(cputrace.fmt(cy))
+            else:
+                for e, h in st: print(e, " ".join("%02X" % v for v in h))
+        elif c == "dbg": print(" ".join("%s=%s" % kv for kv in bd.dbg().items()))
+        elif c == "clktest": print(bd.clock_test())
+        elif c == "line": bd.line(x[0], x[1].lower() in ("on", "1", "low", "yes")); print(bd.snap())
+        elif c == "probe": print(" ".join("%s=%d" % kv for kv in bd.probe().items()))
+        elif c == "pcount": print(" ".join("%s=%d" % kv for kv in bd.pcount(num(x[0])).items()))
+        elif c == "ptime": print(" ".join("%s=%d" % kv for kv in bd.ptime(num(x[0]) if x else 1000).items()))
+        elif c == "pdelay": print("%d ns" % bd.pdelay(num(x[0])))
+        elif c == "spdir": bd.cmd("SPDIR", num(x[0]))
+        elif c == "spin": print("%02X" % int(bd.cmd("SPIN")[0]))
         elif c == "cmd":
             op, _, operand = " ".join(x).rstrip("#").partition(":"); [print(l) for l in bd.cmd(op, operand or 0)]
         else: ap.error("unknown command " + c)

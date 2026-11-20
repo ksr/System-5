@@ -50,8 +50,8 @@ def pins(symtext):
 
 PLACE = {"J%d" % k: (38.1 + 33.02 * (k - 1), 165.1) for k in range(1, 9)}     # the slots, side by side
 PLACE.update({"C%d" % (k + 1): (38.1 + 33.02 * (k - 1) + 12.7, 101.6) for k in range(1, 9)})
-PLACE.update({"J9": (330.2, 63.5), "C1": (355.6, 63.5), "R1": (381.0, 63.5), "D1": (381.0, 88.9),
-              "SW1": (320.04, 114.3), "F1": (342.9, 114.3), "Q1": (368.3, 114.3), "R2": (368.3, 139.7),
+PLACE.update({"J9": (330.2, 63.5), "D2": (355.6, 63.5), "C10": (381.0, 63.5), "R1": (406.4, 63.5), "D1": (406.4, 88.9),
+              "SW1": (320.04, 114.3), "U1": (355.6, 114.3), "C1": (381.0, 114.3), "JP1": (431.8, 63.5), "J10": (431.8, 101.6),
               "RN1": (342.9, 152.4), "RN2": (381.0, 152.4), "RN3": (419.1, 152.4), "RN4": (457.2, 152.4)})
 PLACE.update({"H%d" % k: (300.0 + 12.7 * ((k - 1) % 4), 240.0 + 12.7 * ((k - 1) // 4)) for k in range(1, 9)})
 F = '(effects (font (size 1.27 1.27))%s)'
@@ -75,7 +75,7 @@ for ref, (lib_id, value, fp, pinmap) in N.PARTS.items():
         prop("Value", value, X, Y + 2.54 + max([abs(p[1]) for p in P.values()] or [2.54])), prop("Footprint", fp, X, Y, True),
         prop("Datasheet", N.DOCS.get(ref, ("",))[0], X, Y, True) + ("\n" + prop("Description", N.DOCS[ref][1], X, Y, True) if ref in N.DOCS else ""), "\n".join('\t\t(pin "%s" (uuid "%s"))' % (n, U(ref, n)) for n in P), PROJ, ROOT, ref))
     for num, (px, py, ang, hidden, pname) in P.items():
-        net = pinmap.get(int(num)) if num.isdigit() else None
+        net = pinmap.get(int(num)) if num.isdigit() else pinmap.get(num)
         cx, cy = X + px, Y - py                           # symbol y is up, sheet y is down
         if hidden and net is None: continue
         if net is None:
@@ -90,20 +90,25 @@ for ref, (lib_id, value, fp, pinmap) in N.PARTS.items():
             body.append('\t(label "%s" (at %.2f %.2f %d) (fields_autoplaced yes) (effects (font (size 1.27 1.27)) (justify %s bottom)) (uuid "%s"))' % (
                 net, ex, ey, la[0], la[1], U(ref, num, "l")))
 
-# PWR_FLAGs: +5V and GND are driven from the bus connector, which KiCad sees as passive pins
-for i, net in enumerate(("+5V", "GND")):
-    x, y = 330.2, 88.9 + 12.7 * i
+# PWR_FLAGs: GND and the regulator's input come in on the barrel jack, and +5V through the source jumper and the switch,
+# which KiCad all sees as passive pins (5V_REG is driven by the regulator's output)
+for i, net in enumerate(("VIN_D", "+5V", "GND")):
+    x, y = 304.8, 76.2 + 12.7 * i
     libs["power:PWR_FLAG"] = libsym("power:PWR_FLAG")
     body.append('\t(symbol (lib_id "power:PWR_FLAG") (at %.2f %.2f 0) (unit 1)\n\t\t(exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "%s")\n%s\n%s\n%s\n%s\n\t\t(pin "1" (uuid "%s"))\n\t\t(instances (project "%s" (path "/%s" (reference "#FLG%02d") (unit 1))))\n\t)' % (
         x, y, U("flg", net), prop("Reference", "#FLG%02d" % (i + 1), x, y, True), prop("Value", "PWR_FLAG", x, y - 3.81),
         prop("Footprint", "", x, y, True), prop("Datasheet", "", x, y, True), U("flg", net, "pin"), PROJ, ROOT, i + 1))
     body.append('\t(wire (pts (xy %.2f %.2f) (xy %.2f %.2f)) (stroke (width 0) (type default)) (uuid "%s"))' % (x, y, x + 5.08, y, U("flg", net, "w")))
-    power(net, x + 5.08, y, "flag" + net)
+    if net in ("+5V", "GND"):
+        power(net, x + 5.08, y, "flag" + net)
+    else:
+        body.append('\t(label "%s" (at %.2f %.2f 0) (fields_autoplaced yes) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "%s"))' % (
+            net, x + 5.08, y, U("flg", net, "l")))
 
 notes = [
-    (25.4, 25.4, "System-5 BUS, Rev D (S5BUS-D, 2026): eight 36-pin slots, every pin bussed. Slot positions 4-33 are the 30-pin System-5 bus (+5V at 4, GND at 33)."),
-    (25.4, 30.48, "Positions 1-3: -EF1, -EF2, -EF3 (the outer end; -EF3 next to +5V). Positions 34-36: -PAUSE, -DMAIN, SC0 (the 36-pin extension). A 30-pin card plugs into positions 4-33."),
-    (25.4, 35.56, "Power: +5V and GND on the screw terminal J9, through the power switch SW1, F1 (4 A polyfuse) and Q1 (P-MOSFET: off if the supply is reversed). 220 uF bulk C1, 0.1 uF at each slot (C2-C9), power LED D1. No regulator."),
+    (25.4, 25.4, "System-5 BUS, Rev D (S5BUS-D, 2026): eight 36-pin slots, every pin bussed. Slot positions are counted from GND (Ken, 2026-11-18): 1-30 are the 30-pin System-5 bus, GND at 1, the end pin, to +5V at 30."),
+    (25.4, 30.48, "Positions 31-36, beyond +5V: -EF1, -EF2, -EF3, -DMAIN, SC0, -PAUSE (the far end), the 36-pin extension. A 30-pin card (its own pin 1 +5V, pin 30 GND) plugs into positions 30-1, flush with the GND end."),
+    (25.4, 35.56, "Power: a 7-15 V adapter on the centre-positive barrel jack J9, through D2 (Schottky: off if the plug is reversed) to U1, a TSR 3-2450N switching regulator (5 V at up to 3 A), or a regulated 5 V supply on the screw terminals J10. JP1 (one shunt: REG or EXT) picks the source; the power switch SW1 (an M9040P toggle, as the IO panel's data switches) then switches it onto +5V. C10 47 uF in, C1 220 uF bulk on +5V, 0.1 uF at each slot (C2-C9), power LED D1. No fuse."),
     (25.4, 40.64, "Pull-ups (10k): RN1 on D0-D7 (an empty read gives FF); RN2 on the open-collector lines -EF, -EF1-3, -PAUSE, -DMAIN, -INT, -RESET (they also hold with the CPU card out). Idle states with no master: RN3 pulls N0-N2, TPA, TPB down; RN4 pulls -VMA, -MRD, -MRW up."),
     (25.4, 45.72, "Pin numbers here are socket positions, not the 2009 Eagle numbers (docs/manual/bus.md). Generated by gen/make_schematic.py from gen/netlist.py."),
 ]
@@ -112,7 +117,7 @@ for x, y, txt in notes:
 
 out = ['(kicad_sch', '\t(version 20250114)', '\t(generator "eeschema")', '\t(generator_version "10.0")', '\t(uuid "%s")' % ROOT,
        '\t(paper "A2")',
-       '\t(title_block (title "System-5 bus backplane Rev D (S5BUS-D)") (date "2026-10-26") (rev "D") (comment 1 "Eight 36-pin slots, power terminal, bypass, pull-ups") (comment 2 "Generated by gen/make_schematic.py from gen/netlist.py"))',
+       '\t(title_block (title "System-5 bus backplane Rev D (S5BUS-D)") (date "2026-10-26") (rev "D") (comment 1 "Eight 36-pin slots, barrel jack and 5 V regulator or external 5 V, bypass, pull-ups") (comment 2 "Generated by gen/make_schematic.py from gen/netlist.py"))',
        '\t(lib_symbols']
 for k in sorted(libs): out.append("\t\t" + libs[k].replace("\n", "\n\t\t"))
 out.append('\t)'); out += body

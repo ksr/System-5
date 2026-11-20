@@ -70,4 +70,4 @@ The decode is the same in all three designs. A 7400 gate (IC5C) NANDs the counte
   (The 160 being a decade counter, not binary, does not matter here: the count never passes 5.)
 
 So the 74LS163 on Ken's card is the right part, and Rev B's schematic is wrong at IC8. A probable reason: Eagle's standard library has a 74160 with normal power pins, and it is pin-compatible with the 74163. Rev A used a 74163 symbol whose power pins came out as +UB/-UB, which needed the SV4 jumpers.
-Any new Rev B board (or a Rev C) should say **74LS163** at IC8. An HCT part (74HCT163) also works, but it must be a '163.
+Any new Rev B board should say **74LS163** at IC8 (Rev B-Clean does). An HCT part (74HCT163) also works, but it must be a '163.

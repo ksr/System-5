@@ -1193,7 +1193,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(symbol "Connector_Generic:Conn_01x06"
+	(symbol "Connector_Generic:Conn_02x03_Odd_Even"
 		(pin_names
 			(offset 1.016)
 			(hide yes)
@@ -1204,7 +1204,7 @@
 		(in_pos_files yes)
 		(duplicate_pin_numbers_are_jumpers no)
 		(property "Reference" "J"
-			(at 0 7.62 0)
+			(at 1.27 5.08 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1213,8 +1213,8 @@
 				)
 			)
 		)
-		(property "Value" "Conn_01x06"
-			(at 0 -10.16 0)
+		(property "Value" "Conn_02x03_Odd_Even"
+			(at 1.27 -5.08 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1245,7 +1245,7 @@
 				)
 			)
 		)
-		(property "Description" "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"
+		(property "Description" "Generic connector, double row, 02x03, odd/even pin numbering scheme (row 1 odd numbers, row 2 even numbers), script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1267,7 +1267,7 @@
 				)
 			)
 		)
-		(property "ki_fp_filters" "Connector*:*_1x??_*"
+		(property "ki_fp_filters" "Connector*:*_2x??_*"
 			(at 0 0 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1278,27 +1278,16 @@
 				)
 			)
 		)
-		(symbol "Conn_01x06_1_1"
+		(symbol "Conn_02x03_Odd_Even_1_1"
 			(rectangle
-				(start -1.27 6.35)
-				(end 1.27 -8.89)
+				(start -1.27 3.81)
+				(end 3.81 -3.81)
 				(stroke
 					(width 0.254)
 					(type default)
 				)
 				(fill
 					(type background)
-				)
-			)
-			(rectangle
-				(start -1.27 5.207)
-				(end 0 4.953)
-				(stroke
-					(width 0.1524)
-					(type default)
-				)
-				(fill
-					(type none)
 				)
 			)
 			(rectangle
@@ -1335,8 +1324,8 @@
 				)
 			)
 			(rectangle
-				(start -1.27 -4.953)
-				(end 0 -5.207)
+				(start 3.81 2.667)
+				(end 2.54 2.413)
 				(stroke
 					(width 0.1524)
 					(type default)
@@ -1346,8 +1335,19 @@
 				)
 			)
 			(rectangle
-				(start -1.27 -7.493)
-				(end 0 -7.747)
+				(start 3.81 0.127)
+				(end 2.54 -0.127)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(rectangle
+				(start 3.81 -2.413)
+				(end 2.54 -2.667)
 				(stroke
 					(width 0.1524)
 					(type default)
@@ -1357,7 +1357,7 @@
 				)
 			)
 			(pin passive line
-				(at -5.08 5.08 0)
+				(at -5.08 2.54 0)
 				(length 3.81)
 				(name "Pin_1"
 					(effects
@@ -1375,7 +1375,7 @@
 				)
 			)
 			(pin passive line
-				(at -5.08 2.54 0)
+				(at 7.62 2.54 180)
 				(length 3.81)
 				(name "Pin_2"
 					(effects
@@ -1411,7 +1411,7 @@
 				)
 			)
 			(pin passive line
-				(at -5.08 -2.54 0)
+				(at 7.62 0 180)
 				(length 3.81)
 				(name "Pin_4"
 					(effects
@@ -1429,7 +1429,7 @@
 				)
 			)
 			(pin passive line
-				(at -5.08 -5.08 0)
+				(at -5.08 -2.54 0)
 				(length 3.81)
 				(name "Pin_5"
 					(effects
@@ -1447,7 +1447,7 @@
 				)
 			)
 			(pin passive line
-				(at -5.08 -7.62 0)
+				(at 7.62 -2.54 180)
 				(length 3.81)
 				(name "Pin_6"
 					(effects
@@ -2124,12 +2124,12 @@
 		(pin "1" (uuid "0d4625a8-7528-58f3-8af2-cf403ec8b981"))
 		(instances (project "cpu-rev-d-schematic" (path "/61b003d1-aaa1-5c9b-a32e-92837005f36e/70b555aa-a1b7-5641-af8e-976004cf89dc" (reference "#PWR012") (unit 1))))
 	)
-	(symbol (lib_id "Connector_Generic:Conn_01x06") (at 210.82 66.04 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "ef19a14a-81be-5426-b288-1638767be782")
-		(property "Reference" "J2" (at 210.82 58.42 0) (effects (font (size 1.27 1.27))))
-		(property "Value" "DEBUG" (at 210.82 76.2 0) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" (at 210.82 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 210.82 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Description" "" (at 210.82 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
+	(symbol (lib_id "Connector_Generic:Conn_02x03_Odd_Even") (at 208.28 63.5 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "ef19a14a-81be-5426-b288-1638767be782")
+		(property "Reference" "J2" (at 209.55 58.42 0) (effects (font (size 1.27 1.27))))
+		(property "Value" "DEBUG" (at 209.55 68.58 0) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "Connector_IDC:IDC-Header_2x03_P2.54mm_Vertical" (at 208.28 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 208.28 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Description" "" (at 208.28 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(pin "1" (uuid "95861e56-3f14-5b76-b7f3-2fff4fa0d842"))
 		(pin "2" (uuid "f0af6c14-88e9-5986-a07b-7b150ddccb73"))
 		(pin "3" (uuid "cd4f624b-fc7a-5bd0-9934-43933206d03b"))
@@ -2138,25 +2138,25 @@
 		(pin "6" (uuid "518795e7-750f-551f-9cfc-137e22ca7c81"))
 		(instances (project "cpu-rev-d-schematic" (path "/61b003d1-aaa1-5c9b-a32e-92837005f36e/70b555aa-a1b7-5641-af8e-976004cf89dc" (reference "J2") (unit 1))))
 	)
-	(wire (pts (xy 205.74 63.5) (xy 200.66 63.5)) (stroke (width 0) (type default)) (uuid "d3c08cc3-3cc1-5e4e-9717-477232cc9656"))
-	(symbol (lib_id "power:GND") (at 200.66 63.5 270) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "5a5c27d0-9343-5a46-9427-7a706fbd658e")
-		(property "Reference" "#PWR013" (at 200.66 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Value" "GND" (at 195.06 62.6 90) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 200.66 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 200.66 63.5 0) (effects (font (size 1.27 1.27)) (hide yes)))
+	(wire (pts (xy 215.9 60.96) (xy 220.98 60.96)) (stroke (width 0) (type default)) (uuid "4a33d107-810b-5f7b-a791-015e07e43065"))
+	(symbol (lib_id "power:GND") (at 220.98 60.96 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "5a5c27d0-9343-5a46-9427-7a706fbd658e")
+		(property "Reference" "#PWR013" (at 220.98 60.96 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 226.58 60.06 270) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 220.98 60.96 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 220.98 60.96 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(pin "1" (uuid "9c395a5b-bb5e-5529-8fd6-5b2142b6da60"))
 		(instances (project "cpu-rev-d-schematic" (path "/61b003d1-aaa1-5c9b-a32e-92837005f36e/70b555aa-a1b7-5641-af8e-976004cf89dc" (reference "#PWR013") (unit 1))))
 	)
-	(wire (pts (xy 205.74 68.58) (xy 200.66 68.58)) (stroke (width 0) (type default)) (uuid "e36a7d21-e1af-5b98-af6e-c1211d8cb657"))
-	(hierarchical_label "SC0" (shape output) (at 200.66 68.58 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "7255f76f-768c-5067-acf9-81d20bb9bbd4"))
-	(wire (pts (xy 205.74 71.12) (xy 200.66 71.12)) (stroke (width 0) (type default)) (uuid "998df34e-c755-5c07-9ea6-2e51701c8530"))
-	(hierarchical_label "SC1" (shape passive) (at 200.66 71.12 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "704b630c-e47b-5f7c-9eea-80532f708294"))
-	(wire (pts (xy 205.74 73.66) (xy 200.66 73.66)) (stroke (width 0) (type default)) (uuid "c4fae4e3-3ac5-586b-9294-20508295a55e"))
-	(symbol (lib_id "power:GND") (at 200.66 73.66 270) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "507ccc7b-39bc-5bb6-a24d-7093d6c13921")
-		(property "Reference" "#PWR014" (at 200.66 73.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Value" "GND" (at 195.06 72.76 90) (effects (font (size 1.27 1.27))))
-		(property "Footprint" "" (at 200.66 73.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
-		(property "Datasheet" "" (at 200.66 73.66 0) (effects (font (size 1.27 1.27)) (hide yes)))
+	(wire (pts (xy 215.9 63.5) (xy 220.98 63.5)) (stroke (width 0) (type default)) (uuid "8cd457a3-ca1a-5975-97d5-dbd4dd4cc2f6"))
+	(hierarchical_label "SC0" (shape output) (at 220.98 63.5 0) (effects (font (size 1.27 1.27)) (justify left)) (uuid "8786d918-6784-5fed-aa2f-7be18bf5130a"))
+	(wire (pts (xy 203.2 66.04) (xy 198.12 66.04)) (stroke (width 0) (type default)) (uuid "d7358e93-de55-53d2-a34c-cbca8e77d991"))
+	(hierarchical_label "SC1" (shape passive) (at 198.12 66.04 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "d2afad52-c869-52ce-9c78-66c86e015477"))
+	(wire (pts (xy 215.9 66.04) (xy 220.98 66.04)) (stroke (width 0) (type default)) (uuid "7e5eb592-c060-51c3-a8d5-02df64c16006"))
+	(symbol (lib_id "power:GND") (at 220.98 66.04 90) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "507ccc7b-39bc-5bb6-a24d-7093d6c13921")
+		(property "Reference" "#PWR014" (at 220.98 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Value" "GND" (at 226.58 65.14 270) (effects (font (size 1.27 1.27))))
+		(property "Footprint" "" (at 220.98 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
+		(property "Datasheet" "" (at 220.98 66.04 0) (effects (font (size 1.27 1.27)) (hide yes)))
 		(pin "1" (uuid "7f1c2f98-63bc-59d2-bd5c-9448ad3a9abe"))
 		(instances (project "cpu-rev-d-schematic" (path "/61b003d1-aaa1-5c9b-a32e-92837005f36e/70b555aa-a1b7-5641-af8e-976004cf89dc" (reference "#PWR014") (unit 1))))
 	)
@@ -2204,16 +2204,17 @@
 	(wire (pts (xy 15.24 120.65) (xy 15.24 124.46)) (stroke (width 0) (type default)) (uuid "de1d4412-41d4-51ca-9f80-87e9adde9740"))
 	(wire (pts (xy 15.24 120.65) (xy 182.88 120.65)) (stroke (width 0) (type default)) (uuid "b063bb1f-028c-5bec-ba06-f76d9a63a521"))
 	(wire (pts (xy 15.24 124.46) (xy 59.69 124.46)) (stroke (width 0) (type default)) (uuid "0affafe6-89ba-505b-85e7-ef312489c248"))
-	(wire (pts (xy 160.02 66.04) (xy 160.02 85.09)) (stroke (width 0) (type default)) (uuid "a0ca9810-82b1-590e-8c8b-fe325cd938e0"))
-	(wire (pts (xy 160.02 66.04) (xy 182.88 66.04)) (stroke (width 0) (type default)) (uuid "8e45b753-e59d-551a-818a-6154b4f7f43f"))
+	(wire (pts (xy 160.02 64.77) (xy 160.02 85.09)) (stroke (width 0) (type default)) (uuid "c7202ce1-efb9-56b5-9aac-a34fc0320e25"))
+	(wire (pts (xy 160.02 64.77) (xy 182.88 64.77)) (stroke (width 0) (type default)) (uuid "1571c585-9c10-5d48-9e15-cdcfc107b537"))
 	(wire (pts (xy 160.02 85.09) (xy 167.64 85.09)) (stroke (width 0) (type default)) (uuid "0790cf30-205c-5fdb-9f95-a755a2947878"))
-	(wire (pts (xy 182.88 66.04) (xy 182.88 120.65)) (stroke (width 0) (type default)) (uuid "210240df-dfda-5bff-bb19-39b0e720dd90"))
-	(wire (pts (xy 182.88 66.04) (xy 205.74 66.04)) (stroke (width 0) (type default)) (uuid "177ba391-39ea-5abd-a137-8a74ea0f7fe8"))
-	(junction (at 182.88 66.04) (diameter 0) (color 0 0 0 0) (uuid "7207b6e3-ccde-51bf-ab40-d2a25abce452"))
+	(wire (pts (xy 182.88 63.5) (xy 182.88 64.77)) (stroke (width 0) (type default)) (uuid "8d54be89-7e95-5634-9219-41dd90f0778c"))
+	(wire (pts (xy 182.88 63.5) (xy 203.2 63.5)) (stroke (width 0) (type default)) (uuid "b1b82244-171c-5a12-a39a-48463ec9975a"))
+	(wire (pts (xy 182.88 64.77) (xy 182.88 120.65)) (stroke (width 0) (type default)) (uuid "48901784-1211-5d48-a60c-210e07eae52f"))
+	(junction (at 182.88 64.77) (diameter 0) (color 0 0 0 0) (uuid "49dbab1d-fa98-5896-ba77-3f263d657f55"))
 	(wire (pts (xy 41.91 60.96) (xy 41.91 64.77)) (stroke (width 0) (type default)) (uuid "aaf9c5a8-4f8b-52ad-a4db-bad1e76d4d52"))
 	(wire (pts (xy 41.91 60.96) (xy 129.54 60.96)) (stroke (width 0) (type default)) (uuid "1758e077-4d32-59d1-ab2c-8c2cb2e82560"))
 	(wire (pts (xy 129.54 60.96) (xy 129.54 72.39)) (stroke (width 0) (type default)) (uuid "cfdede15-a028-5ec9-8fdc-24a8a8f0755b"))
-	(wire (pts (xy 129.54 60.96) (xy 205.74 60.96)) (stroke (width 0) (type default)) (uuid "dde6a131-ce63-59a4-8d84-04a3e3bc01a3"))
+	(wire (pts (xy 129.54 60.96) (xy 203.2 60.96)) (stroke (width 0) (type default)) (uuid "a2b419b6-6319-5f09-a047-aecc97339014"))
 	(wire (pts (xy 129.54 72.39) (xy 138.43 72.39)) (stroke (width 0) (type default)) (uuid "e3989dd5-2400-5159-b5e6-23624020d1de"))
 	(junction (at 129.54 60.96) (diameter 0) (color 0 0 0 0) (uuid "0267f3c1-c5c9-5ba0-a927-4383a3713466"))
 	(wire (pts (xy 41.91 60.96) (xy 39.37 60.96)) (stroke (width 0) (type default)) (uuid "9ba1f653-1a86-5c22-a05e-61c21c6893cc"))

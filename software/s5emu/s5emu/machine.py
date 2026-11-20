@@ -11,8 +11,10 @@ Hardware facts used (see hardware/*/README, hardware/memory/REVIEW.md, firmware/
   IDE/CF     OUT 2 = register select, port 3 = data (Mike Riley's 8-bit IDE). 8-bit mode, LBA28, sectors of 512.
   Bus lines with nothing driving them read 0xFF.
 """
-import os
+import datetime, os
 from .cpu import CPU1802
+from .rtc import DS12885
+from .uart import UART16550
 
 FLOAT = 0xFF
 
@@ -99,6 +101,38 @@ class Video6845:
         pos = (((self.reg[14] << 8) | self.reg[15]) - start) & 0x7FF
         r, c = divmod(pos, cols)
         return (r, c) if r < rows else None
+
+
+class Video6845Kbd(Video6845):
+    """the 6845 card Rev B-Clean-Keyboard as the software sees it (hardware/video-6845/kicad/rev-b-clean-keyboard): Rev
+    B's text RAM at 7000-77FF; in 7800-7BFF, by A1-A2, the 6845 (7800 / 7801), the key (7802: the read takes the next
+    key into the latch and clears KEY-READY) and the status (7804: bit 0 KEY-READY, bit 7 = 1; VSYNC and DE, bits 2
+    and 3, are not counted and read 0, as in the netlist model, hw.NetlistVideoKbdCard); the same every 8 addresses.
+    Nothing at 7806 or in 7C00-7FFF, and nothing takes a write to the key or the status."""
+    REGS, REGS_END = 0x7800, 0x7C00
+
+    def __init__(self, kbd):
+        super().__init__(); self.kbd = kbd; self.latch = 0
+
+    def read(self, a):
+        if self.BASE <= a < self.BASE + self.SIZE: return self.vram[a - self.BASE]
+        if self.REGS <= a < self.REGS_END:
+            r = (a >> 1) & 3
+            if r == 0: return (self.reg[self.sel] if self.sel in (14, 15, 16, 17) else 0) if a & 1 else FLOAT
+            if r == 1:                                  # the key latch keeps its byte until the ATmega loads the next
+                if self.kbd.queue: self.latch = self.kbd.queue.pop(0)
+                return self.latch
+            if r == 2: return 0x80 | (1 if self.kbd.ready() else 0)
+        return None
+
+    def write(self, a, v):
+        if self.BASE <= a < self.BASE + self.SIZE: self.vram[a - self.BASE] = v; self.dirty = True; return True
+        if self.REGS <= a < self.REGS_END and (a >> 1) & 3 == 0:
+            if a & 1:
+                if self.sel < 18: self.reg[self.sel] = v; self.dirty = True
+            else: self.sel = v & 31
+            return True
+        return False
 
 
 class Keyboard:
@@ -268,13 +302,33 @@ class IOPanel:
     machine (--panel A; --hw --panel A runs it from its netlist instead). OUT 4 latches the byte the 8 LEDs and the two
     TIL311s show; INP 4 reads the 8 toggles; INPUT pulls -EF1 (the 1802's EF1) while it is held; RUN off holds the
     machine in reset, LOAD on pauses it, and both together are LOAD mode, where each INPUT press stores the toggles at
-    M(R0) (one DMA IN). The real card needs the 36-pin bus and CPU Rev D for INPUT, RUN and LOAD."""
+    M(R0) (one DMA IN). The real card needs the 36-pin bus and CPU Rev D for INPUT, RUN and LOAD.
+    Its real-time clock (2026-11-18), a DS12885 (rtc.py), answers on ports 6 (the register number) and 7 (the register),
+    as JP4 is set; here it starts running at the host's time, as if it had been set before.
+    Its serial port (2026-11-20), a 16C550 (uart.py), shares those two ports: a byte with
+    bit 7 set written to port 6 picks the UART's register (80h-87h), one with bit 7 clear the clock's, and port 7 then
+    reads or writes the chip picked. `uart.receive()` puts characters on its line; `uart.tx` is what it has sent."""
     name = "panel"
     port = 4
+    rtc_ports = (6, 7)
 
-    def __init__(self):
+    def __init__(self, rtc=None, uart=None):
         self.switches, self.pressed, self.run_on, self.load_on = 0, False, True, False
         self.latch = None                               # the '374 powers up undefined
+        self.rtc = rtc if rtc is not None else DS12885(start=datetime.datetime.now())
+        self.uart = uart if uart is not None else UART16550()
+        self.select = 0x00                              # the byte last written to the address port (U22 holds bits 7 and
+        #                                                 2-0; the real latch powers up undefined: here the clock is picked)
+
+    def out_addr(self, v):
+        self.select = v & 0xFF; self.rtc.write_addr(v)  # the DS12885 latches every address, selected or not
+
+    def out_data(self, v):
+        if self.select & 0x80: self.uart.write(self.select & 7, v)
+        else: self.rtc.write_data(v)
+
+    def inp_data(self):
+        return self.uart.read(self.select & 7) if self.select & 0x80 else self.rtc.read_data()
 
     def mode(self): return PANEL_MODES[(self.run_on, self.load_on)]
 
@@ -350,6 +404,8 @@ class Machine:
         if n in (2, 3): self.ide.out(n, v)
         if n == self.pixie.port: self.pixie.on = False
         if self.panel and n == self.panel.port: self.panel.latch = v
+        if self.panel and n == self.panel.rtc_ports[0]: self.panel.out_addr(v)
+        if self.panel and n == self.panel.rtc_ports[1]: self.panel.out_data(v)
         if self.watch: self.watch("o", n, v)
 
     def inp(self, n):
@@ -358,6 +414,7 @@ class Machine:
         if n == self.kbd.port: v = self.kbd.read()
         if n == self.pixie.port: self.pixie.on = True
         if self.panel and n == self.panel.port: v = self.panel.switches
+        if self.panel and n == self.panel.rtc_ports[1]: v = self.panel.inp_data()
         if self.watch: self.watch("i", n, v)
         return v
 
@@ -381,6 +438,7 @@ class Machine:
         if now == "load": self.loaded = True; self.cpurom.remap = False    # LOADED: the boot map is off, 0000 is RAM
         if now == "reset" and before != "reset":       # CLEAR low, WAIT high: the 1802 resets (R0 = 0000)
             self.cpu.reset(); self.pixie.on = False     # (in LOAD mode R0 counts the bytes instead)
+            p.uart.reset()                              # -RESET low: the UART's MR
             self.cpurom.remap = self.cpurom.loaded and not self.loaded
         self.held = now != "run"
         if now == "load" and p.pressed and not was_pressed: self.cpu.dma_in(p.switches)
@@ -398,6 +456,7 @@ class Machine:
     # ------------------------------------------------------------------ running
     def reset(self):
         self.cpu.reset(); self.cpurom.remap = self.cpurom.loaded; self.pixie.on = False; self.loaded = False
+        if self.panel: self.panel.uart.reset()          # the bus -RESET is the UART's MR (inverted on the card)
 
     def step(self):
         if self.panel and self.held:                    # reset or paused by the IO panel: no instruction
@@ -405,3 +464,15 @@ class Machine:
         c0 = self.cpu.cycles; op = self.cpu.step()
         self.pixie.advance(self.cpu, self.cpu.cycles - c0)
         return op
+
+
+class Video6845KbdMachine(Machine):
+    """System-5 with the 6845 card Rev B-Clean-Keyboard in place of the 6845 card and the IO card: Rev B's video with
+    the PS/2 keyboard on the same card, the key at 7802 and the status at 7804 (Video6845Kbd). No 1861 and nothing on
+    INP 1; EF3 is KEY-READY (the card's JP1 on the bus -EF). Use it with the VIDEO-G HBIOS (roms/hbios-video-g.rom),
+    which polls 7804 and reads 7802; the IO panel may be fitted (panel=True)."""
+    def __init__(self, **kw):
+        kw["pixie_port"] = 0                               # no IO card: port 0 is never an INP / OUT
+        super().__init__(**kw)
+        self.kbd.port = None                               # the key is memory-mapped: not on INP 1
+        self.video = Video6845Kbd(self.kbd)

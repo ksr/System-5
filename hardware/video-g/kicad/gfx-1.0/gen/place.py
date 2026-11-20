@@ -11,7 +11,7 @@ LENGTH = 140.95                                   # the standard System-5 card
 X0, Y0, Y1 = 10.025, 10.025, 106.215
 BAND, GAP = 4.8, 0.4                              # cap + label band above each socket; gap below it
 LEN = {14: 16.9, 16: 19.4, 20: 24.5, 28: 34.7}    # courtyard bottom below pin 1 (DIP sockets)
-PLACE, REFPOS, TEXTS, LABELS = {}, {}, [], {}
+PLACE, LABELS = {}, {}                           # placements; labels by function (common/silk.py)
 CAP_OF = {}                                       # IC -> its bypass cap (netlist DECOUPLE, inverted)
 
 
@@ -60,21 +60,43 @@ PLACE["R1"] = (133.0, 50.0, 0); PLACE["R2"] = (133.0, 54.0, 0); PLACE["R3"] = (1
 PLACE["J3"] = (147.5, 42.0, 0)
 PLACE["C21"] = (141.0, 67.0, 0)
 PLACE["C22"] = (140.0, 77.0, 0)
+# ---- the power LED (Ken, 2026-11-17): at TEXT's height (y 85.5) and as far in from the front edge as TEXT's, so the
+#      two PWR LEDs line up side by side in the backplane; turned round so its anode (pad 2) faces R7: one short track
+PLACE["R7"] = (138.0, 85.5, 0)
+PLACE["LED1"] = (X1 - 3.0, 85.5, 180)
 
+# ---- silkscreen (common/silk.py; Ken's rule of 2026-11-18: every text upright with the card standing, KiCad 270) ------
+# jacks, the LED and the ATmega by what they are: (one line, two lines); the rest get "ref value" by themselves
 LABELS.update({
-    "J2": "J2 MOUSE", "J3": "J3 FTDI  GND . . TX RX DTR", "J4": "J4 FROM TEXT (J6)   PIN 1", "J1": "J1\nBUS",
-    "IC11": "IC11\nATmega\n328P-PU", "C20": "C20",                       # (C20: silk.py adds the value)
+    "J2": ("J2 MOUSE", "J2\nMOUSE"), "J3": ("J3 FTDI", "J3\nFTDI"), "J4": ("J4 FROM TEXT (J6)", "J4\nFROM TEXT (J6)"),
+    "IC11": ("IC11 ATmega328P-PU", "IC11\nATmega328P-PU"), "LED1": "PWR",        # by its function alone, centred (Ken, 2026-11-18)
 })
-REFPOS.update({
-    "IC11": (119.2, 13.4, 0.8, 0, "left"), "Y1": (128.4, PLACE["Y1"][1], 0.8, 90, "c"),
-    "C20": (132.4, 33.6, 0.8, 0, "c"),                                     # above the cap: F1 is on its right
-    "C23": (117.2, PLACE["C23"][1], 0.8, 90, "c"), "C24": (130.1, PLACE["C24"][1], 0.8, 90, "c"),
-    "J2": (139.0, 16.6, 1.0, 0, "left"), "J1": (17.0, 18.1, 0.8, 0, "left"),
-    "J3": (150.3, 40.6, 0.8, -90, "left"),                                 # down the header from pin 1, clear of J2
-    "J4": (88.4, 93.8, 0.9, 0, "left"),
-})
-TEXTS = [
-    ("VIDEO-G GFX V1.0", 104.0, 89.5, 1.4, 0, "left"),                   # name and rev in one text (pcb-check)
-    ("System-5   cottageworker.com", 104.0, 91.6, 0.9, 0, "left"),
-    ("512x200 / 512x256 graphics, 2 pages  7804 control  7806 Y / mouse  7C00 window", 23.0, 101.8, 0.8, 0, "left"),   # above the card guide
-]
+# fixed texts: the FTDI header's used pins named between it and the front edge, each beside its pin (GND toward the
+# unused pin 2, DTR past pin 6); the header's pins run from pin 1 at y 42.0 down at 2.54 mm
+FIXED = [("GND", 149.8, 43.0, 0.8, 270, None), ("TX", 149.8, 49.62, 0.8, 270, None),
+         ("RX", 149.8, 52.16, 0.8, 270, None), ("DTR", 149.8, 55.5, 0.8, 270, None)]
+# the name line along the bottom edge as drawn, angle 0 (up the right-hand side with the card standing), where the
+# note stood until 2026-11-18, clear of the card-guide strip (the first 76.2 mm from the bus, 3.81 mm in from the
+# edge): the name with its revision (pcb-check wants them in one text, 1.2 mm or more), cottageworker.com beside
+# it, and the spots to try for the name
+NAME = ("System-5 VIDEO-G GFX  Rev 1.0  2026", 1.2, "cottageworker.com", 0.9,   # one naming for all (Ken, 2026-11-18)
+        [(x, Y1 - 1.7) for x in [120.0 - 1.0 * k for k in range(110)] if x > 86.5]       # beyond the guide strip
+        + [(x, Y1 - 4.95) for x in [12.0 + 1.0 * k for k in range(170)]]                 # or just above it
+        + [(x, Y0 + 1.7) for x in [96.0 + 1.0 * k for k in range(80)]]                  # or along the top edge
+        + [(x, Y0 + 4.95) for x in [12.0 + 1.0 * k for k in range(80)]])
+# no note on the board (Ken, 2026-11-18: "remove all the text on gfx 512x200/ ..."; it read "512x200 / 512x256, 2 pages,
+# 7C00 window, 7804 control, 7806 Y / mouse": hardware/video-g/DESIGN.md has it)
+NOTES = []
+# the power LED's "PWR": level with the LED's middle, just off its body on the board side (the LED is turned round:
+# its body runs from 6.77 to 1.77 mm in from the front edge)
+SPOTS = {"LED1": [(X1 - 3.0 - 1.27 - 2.5 - 1.3 - 0.2 * k, 85.5) for k in range(12)]}
+
+
+def _bus_names():
+    """the 30 bus pins by the names the backplane has for them (tools/s5bus.py: "+5V", "-RESET"), as TEXT and the other
+    new cards print them, in place of the C30 footprint's own texts (Eagle's "VCC" and "-RES") (2026-11-18)"""
+    import os, sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "..", "tools"))
+    import s5bus
+    return {str(pin): name for pin, name in s5bus.bus().items()}
+J1_NAMES = _bus_names()                            # beside J1's pads, {pad: name} (common/silk.py)

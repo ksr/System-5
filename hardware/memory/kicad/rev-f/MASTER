@@ -1,0 +1,4 @@
+Hand-maintained KiCad master (2026-11-18): Rev E's board and schematic with the EEPROM sockets (JP1, JP2, R6, R7; Ken,
+2026-11-18) and the silkscreen redone. gen/build.sh makes it from ../rev-e each run: make_schematic.py, make_board.py
+(Rev E's tracks kept and locked, the A14 copper at IC3 / IC5 pin 27 removed), route.py with Freerouting (the new
+connections only), silk.py. Not the converter's: never regenerate it from Eagle.

@@ -3,6 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
+	(descr "RCA (phono) jack, right-angle PCB mount, from the YACC1 Video V1.0 card: centre pin C1 and three shell legs S1-S3. Its body is drawn on F.Fab as on the silkscreen: the block over the pads, 14.2 x 9.1 mm, and the 7.6 mm barrel running 4.3 mm on from it (towards the card edge: the footprint is placed with the barrel's mouth at the edge). The fab-layer body since 2026-11-19 (pcb-check's BODIES line: a part with no body drawn is a part the checks cannot see).")
 	(property "Reference" "U$3"
 		(at 0 0 180)
 		(unlocked yes)
@@ -93,6 +94,14 @@
 		(uuid "0f890d0c-4749-48ae-84d1-e0a2f8384eb8")
 	)
 	(embedded_fonts no)
+	(fp_line (start -2 2) (end 12.16 2) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "85197a37-42b1-584d-aeab-2f0437ca9e7b"))
+	(fp_line (start 12.16 2) (end 12.16 -7.1) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "7908c1aa-574f-5f0b-afa5-2d1ba9b27293"))
+	(fp_line (start 12.16 -7.1) (end 8.89 -7.1) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "818c34fd-845f-5f04-8393-235763158cc5"))
+	(fp_line (start 8.89 -7.1) (end 8.89 -11.43) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "542b1a91-32a7-59a4-8e6c-598b217f3f41"))
+	(fp_line (start 8.89 -11.43) (end 1.27 -11.43) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "e4d94a09-cf15-540a-a131-828f9b19ce48"))
+	(fp_line (start 1.27 -11.43) (end 1.27 -7.1) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "5fb84d05-e147-5207-9839-6ca0cde3db46"))
+	(fp_line (start 1.27 -7.1) (end -2 -7.1) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "cf8967de-178f-59fb-a2db-760cb98cef9c"))
+	(fp_line (start -2 -7.1) (end -2 2) (stroke (width 0.1) (type solid)) (layer "F.Fab") (uuid "e1d912e7-729a-5528-b742-fc84dcfb0471"))
 	(fp_line
 		(start -2 2)
 		(end 12.16 2)

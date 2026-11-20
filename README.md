@@ -19,14 +19,14 @@ The project's website is <https://system5.cottageworker.com>. This repository is
 | CPU | `hardware/cpu` | CDP1802, clock, CM1232 power-on reset/auto-run, mode control (run/load/wait/reset), 4K EPROM, VMA reset-address remap, EF jumpers, aux connectors for the front panel and 1861 card. **In the machine: Rev A** (Jan 2005, reworked). Rev B/C are unbuilt fixes; `eagle/cpu1-prototype` = first unrouted cut with the 1861 on board. **Rev D** (2026, `kicad/rev-d/`): a new CPU card for the 36-pin bus, 2 MHz or an external clock, RESET/RUN switch. Designed, not ordered. |
 | Memory | `hardware/memory` | 2× 62256 RAM + 2× 27256 EPROM, every 4K block jumper-enabled. **In the machine: Rev E** (MEM3-E, `kicad/rev-e/`; JLCPCB, 4 layers, built 2026-10-31): the 2005 Rev C circuit with three fixes. Before it: Rev A (2004, the first card built) → B (2005; reworked, in the machine until 2026) → C, and a 2014 `rev-c-mill` variant for PCB milling. Rev D (2026) is scrap. `mem1`/`mem2` are earlier 6116-based designs. |
 | IO: 1861 video + keyboard | `hardware/io-1861-keyboard` | CDP1861 video, CDP1852 input port, I/O decode (from Mike Riley's ELF). PS/2 keyboard → **PAK-VI** (AWC Electronics PS/2-to-ASCII) → **PIC16F84** (serial→parallel, `pic-ps2-firmware/keyboard.c`) → 1852. **In the machine: Rev A** (Jan 2005), for the keyboard; the 1861 has never been tested. |
-| 6845 video | `hardware/video-6845` | 6845 alphanumeric video card based on **BYTE, May 1979**. Composite + Electrohome drive outputs. Rev A Feb 2005 (the first working card, later stripped; `eagle/rev-a/`). **In the machine: Rev B** (lower case, simplified clocking, Apr 2005): the 2005 Eagle source in `eagle/rev-b/` and the KiCad order master in `kicad/rev-b/`. |
+| 6845 video | `hardware/video-6845` | 6845 alphanumeric video card based on **BYTE, May 1979**. Composite + Electrohome drive outputs. Rev A Feb 2005 (the first working card, later stripped; `eagle/rev-a/`). **In the machine: Rev B** (lower case, simplified clocking, Apr 2005): the 2005 Eagle source in `eagle/rev-b/` and the KiCad order master in `kicad/rev-b/`. **Rev B-Clean** (2026, `kicad/rev-b-clean/`): Rev B's circuit and copper without the DB9 (composite only) and with the 6845's light-pen input tied to ground, every part drawn and the silkscreen redone. Designed, not ordered. **Rev B-Clean-Keyboard** (2026, `kicad/rev-b-clean-keyboard/`): Rev B-Clean with a PS/2 keyboard on the card (VIDEO-G TEXT's keyboard section: the key at 7802, the status at 7804), the 36-pin bus connector, and the video and keyboard jacks together at the front edge; it runs the VIDEO-G HBIOS. Designed, not ordered. |
 | CF disk (IDE) | `hardware/ide-cf` | Mike Riley's 8-bit IDE interface plus port-select jumpers; used with a CF-to-IDE adapter and a 16MB CF card. **In the machine: Rev A** (Feb 2005). |
 | Breadboard proto | `hardware/proto-breadboard` | Solderless-breadboard prototyping card. Drawn in 2005, never made. |
-| Bus driver | `hardware/bus-driver` | New, 2026: Arduino Nano and 2× MCP23017 on the bus, a test card after the YACC1 bus tester. It runs bus cycles in place of the CPU, or steps and traces the CPU. **Rev B** (BUSDRV-B, `kicad/rev-b/`; JLCPCB, 2 layers) is built and working since 2026-10-30. Rev A is scrap: routed on 4 layers, ordered from a 2-layer zip. |
-| IO panel | `hardware/io-panel` | New, 2026: the front panel as a card on the 36-pin bus. 8 toggles, 8 LEDs, two TIL311 hex displays, Q LED, INPUT button, ELF-style RUN/LOAD. Rev A (`kicad/rev-a/`) designed, not ordered. No front panel was designed in 2005: the System-4 wire-wrap panel was used via the CPU card header. |
+| Bus driver | `hardware/bus-driver` | New, 2026: Arduino Nano and 2× MCP23017 on the bus, a test card after the YACC1 bus tester. It runs bus cycles in place of the CPU, or steps and traces the CPU. **Rev B** (BUSDRV-B, `kicad/rev-b/`; JLCPCB, 2 layers) is built and working since 2026-10-30. Rev A is scrap: routed on 4 layers, ordered from a 2-layer zip. **Rev C** (BUSDRV-C, `kicad/rev-c/`, drawn 2026-11-18, not ordered): all 36 bus positions with a third MCP23017, LOAD mode by the clock, CLK OUT and probes on the Nano, a DEBUG header cabled to CPU Rev D's. |
+| IO panel | `hardware/io-panel` | New, 2026: the front panel as a card on the 36-pin bus. 8 toggles, 8 LEDs, six TIL311 hex displays (the data byte and the bus address), Q LED, INPUT button, ELF-style RUN/LOAD, a real-time clock and, since 2026-11-20, a serial port (16C550, DE-9). Rev A (`kicad/rev-a/`) designed, not ordered. No front panel was designed in 2005: the System-4 wire-wrap panel was used via the CPU card header. |
 | VIDEO-G | `hardware/video-g` | New, 2026: the next video card, two boards joined by a 40-pin ribbon. **TEXT**: 6845 text, 64 × 25 or 64 × 32, with a PS/2 keyboard. **GFX**: graphics, 512 × 200 or 512 × 256, with a PS/2 mouse. All memory-mapped in its own block, no I/O ports (2026-11-17). Version 1.0 (`kicad/`) designed, not ordered. |
 
-The machine today (2026-11-14) is the 2009 backplane with CPU Rev A, memory Rev E, 6845 Rev B, IO Rev A and IDE Rev A. The five new boards (bus Rev D, CPU Rev D, the IO panel and the two VIDEO-G boards) pass the older check, `tools/preorder_check.py`, and none is ordered. Before an order each has to pass `pcb-check`, Ken's check for the boards of all his systems since 2026-11-06 (`hardware/BUILD-RULES.md`, section 2): the two VIDEO-G boards and the bus Rev D have (VIDEO-G on 2026-11-17, with no failures).
+The machine today (2026-11-14) is the 2009 backplane with CPU Rev A, memory Rev E, 6845 Rev B, IO Rev A and IDE Rev A. The five new boards (bus Rev D, CPU Rev D, the IO panel and the two VIDEO-G boards) pass the older check, `tools/preorder_check.py`, and none is ordered. Before an order each has to pass `pcb-check`, Ken's check for the boards of all his systems since 2026-11-06 (`hardware/BUILD-RULES.md`, section 2): all five have, as they are now: the bus Rev D on 2026-11-18, the other four on 2026-11-19, after their labels were moved out from under the bus connector (and VIDEO-G TEXT got the 36-pin connector); the IO panel again on 2026-11-20, with its serial port. `STATUS.md` has every board's state.
 
 Board conventions (size 5.50" × 3.75", LED positions, labelling `KSR -- XXX#-A`,
 CAM jobs) are in `hardware/board-notes/`.
@@ -46,7 +46,8 @@ the same name but different content, the website version is kept in a
   Ken added to that monitor, `H`, `B`, `D` and `Q1` / `Q0`, and the disk calls
   always in LBA mode, which Elf/OS v5 needs; built by its `build.py`); `v1.0.5`, `v1.0.4`, `v0.9` and `old/` are
   earlier builds. `v1.0.7` (2026-11-17, burned that day, not yet in the machine) adds `@F1E0`: the code of each key pressed, as `0x31`, on the
-  bottom line of the screen, until Reset. v1.0.4 builds with `rcasm` + `srec_cat` into a ROM
+  bottom line of the screen, until Reset. `v1.0.8` (2026-11-18, emulator only) adds a driver for the IO panel's real-time
+  clock (a DS12885 on ports 6/7) behind `f_gettod` / `f_settod`, and `f_getdev` bit 4. v1.0.4 builds with `rcasm` + `srec_cat` into a ROM
   at `0xF000`. `video-g/` is a build for the VIDEO-G card (everything
   memory-mapped: the 6845 at 7800/7801, the key at 7802; 64 x 25, a faster scroll; for the emulator, not burned).
   Mike Riley's BIOS comes under his notice (`firmware/hbios/NOTICE.md`: free to use and share with the notice kept,
@@ -114,8 +115,8 @@ changed.
 ## Other projects
 
 1802 work that is not System-5 (the Netronics ELF II recreation, the 2020 COSMAC ELF PCB, the ELF2000/PicoElf
-ROMs, the ET-3400 EPROM reads and general 1802 documentation) is in its own private repository since 2026-10-26:
-`github.com/ksr/other-projects` (`~/Developer/other-projects`), split out of this one with its history.
+ROMs, the ET-3400 EPROM reads and general 1802 documentation) is in a separate private repository since 2026-10-26,
+split out of this one with its history.
 
 ## Provenance
 

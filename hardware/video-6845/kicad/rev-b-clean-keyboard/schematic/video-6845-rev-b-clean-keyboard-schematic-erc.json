@@ -1,0 +1,70 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-20T14:33:57",
+    "ignored_checks": [
+        {
+            "description": "Global label only appears once in the schematic",
+            "key": "single_global_label"
+        },
+        {
+            "description": "Four connection points are joined together",
+            "key": "four_way_junction"
+        },
+        {
+            "description": "SPICE model issue",
+            "key": "simulation_model_issue"
+        },
+        {
+            "description": "Assigned footprint doesn't match footprint filters",
+            "key": "footprint_filter"
+        }
+    ],
+    "included_severities": [
+        "error"
+    ],
+    "kicad_version": "10.0.6",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5",
+            "violations": []
+        },
+        {
+            "path": "/Decode/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/bf968886-7c84-5476-b571-641d5c5d67c0",
+            "violations": []
+        },
+        {
+            "path": "/VRAM+CRTC/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/fa4bc04e-44b2-5019-b1cd-db597ea487a7",
+            "violations": []
+        },
+        {
+            "path": "/Clocks/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/6c2fc015-bccc-5ae4-bb90-ab55968c9c42",
+            "violations": []
+        },
+        {
+            "path": "/Video/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/4d658a65-1889-5791-bde0-15d0858ec1f1",
+            "violations": []
+        },
+        {
+            "path": "/Keyboard bus/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/36bf3390-c043-5e38-906e-0e7627e71729",
+            "violations": []
+        },
+        {
+            "path": "/Keyboard/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/c1a6ff5e-4ba8-5441-b227-8aaa5079f38b",
+            "violations": []
+        },
+        {
+            "path": "/Power/",
+            "uuid_path": "/2bc30825-8413-5110-929b-d23563be73b5/34c27484-776b-5ca0-b6f7-79cf721f2f83",
+            "violations": []
+        }
+    ],
+    "source": "video-6845-rev-b-clean-keyboard-schematic.kicad_sch"
+}

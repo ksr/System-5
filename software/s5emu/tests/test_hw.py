@@ -5,6 +5,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.jo
 from s5emu.hw import HWMachine, NetlistMemoryCard, NetlistVideoCard, NetlistIDECard, NetlistIOBoard
 from s5emu.machine import Video6845
 from s5emu.shell import Shell
+ROM108 = os.path.join(HERE, "..", "roms", "hbios-1.0.8.rom")
 ROM104 = os.path.join(HERE, "..", "roms", "hbios-1.0.4.rom")
 
 
@@ -50,6 +51,40 @@ class Decode(unittest.TestCase):
         for a in (0x0000, 0x7000, 0x7FFF): self.assertEqual(readers(c, a), ["mem IC1"])
         for a in (0x8000, 0xFFFF): self.assertEqual(readers(c, a), ["mem IC5"])
         self.assertEqual(readers(c, 0x1234, vma=1), [])
+
+    def test_rev_f_is_rev_d(self):
+        """Rev F (2026-11-18) with a 27C256 in each EPROM socket and JP2 / JP1 set for it (shunts 1-3 and 2-4): from its
+        own netlist it decodes, writes and reads as Rev D, the card of record, for every 4K block as RAM, EPROM or neither,
+        down to the address inside each chip (with no shunt on 2-4, R7 / R6 would hold the EPROM's A14 high)"""
+        f, d = NetlistMemoryCard("F"), NetlistMemoryCard("D")
+        self.assertIn("jumper JP1.2-JP1.4 (short /Sheet 1/P27_HI to /Sheet 1/BUFFADDR14)", f.nl.edits)
+        for jumpers in ("RRRRRRR-EEEEEEE-", "E-R-E-R-E-R-E-R-", "R-E-R-E-R-E-R-E-", "----------------"):
+            f.set_jumpers(jumpers); d.set_jumpers(jumpers)
+            for a in range(0x0123, 0x10000, 0x1000):                     # A14 low in blocks 0-3 and 8-B, high in the rest
+                for vma, mrd, mrw in ((0, 0, 1), (0, 1, 0), (1, 0, 1), (1, 1, 0)):
+                    self.assertEqual(f.decode(a, vma, mrd, mrw), d.decode(a, vma, mrd, mrw), "%s %04X" % (jumpers, a))
+        self.assertEqual(f.bus_write(0x1234, 0, 0x5A)[0], d.bus_write(0x1234, 0, 0x5A)[0])
+        self.assertEqual(f.bus_read(0x1234, 0)[0], d.bus_read(0x1234, 0)[0])
+
+    def test_rev_f_28c256_in_ic5(self):
+        """a 28C256 EEPROM in IC5 (EPROM HI), JP1 3-5: A14 on its pin 1. Without 4-6, R6 holds its !WE high: it reads as
+        the 27C256 did (same chip address) and takes no write. With 4-6 its !WE is WR: the CPU writes it where it reads"""
+        ro, w, d = NetlistMemoryCard("F-28C256"), NetlistMemoryCard("F-28C256-W"), NetlistMemoryCard("D")
+        self.assertIn("IC5 fitted as 28C256 (schematic: 27C256/28C256): pin 1 A14, pin 27 ~{WE}", ro.nl.edits)
+        for c in (ro, w):
+            for a in (0x8123, 0xC123, 0xE456, 0x1234, 0x7FFF):
+                self.assertEqual(c.decode(a, 0, 0, 1), d.decode(a, 0, 0, 1), "%04X" % a)
+            c.program(0x8123, 0x11); c.program(0xC123, 0x22)
+            self.assertEqual(c.bus_read(0x8123, 0)[0], [("mem IC5", 0x11)])
+            self.assertEqual(c.bus_read(0xC123, 0)[0], [("mem IC5", 0x22)])
+        self.assertEqual(ro.bus_write(0x8123, 0, 0x5A), ([], ()))                     # read-only: R6 holds !WE high
+        self.assertEqual(ro.bus_read(0x8123, 0)[0], [("mem IC5", 0x11)])
+        self.assertEqual(w.bus_write(0x8123, 0, 0x5A), (["mem IC5"], ()))
+        self.assertEqual(w.bus_read(0x8123, 0)[0], [("mem IC5", 0x5A)])
+        self.assertEqual(w.bus_read(0xC123, 0)[0], [("mem IC5", 0x22)])                 # A14 reaches it: 4123 untouched
+        self.assertEqual(w.bus_write(0x1234, 0, 0xA5)[0], ["mem IC1"])                  # a RAM write reaches the RAM alone
+        self.assertEqual(w.bus_write(0x8123, 1, 0x77)[0], [])                           # -VMA high: nothing written
+        self.assertEqual(w.bus_read(0x8123, 0)[0], [("mem IC5", 0x5A)])
 
     def test_write_and_read_back_through_the_netlist(self):
         c = NetlistMemoryCard("D")
@@ -226,6 +261,216 @@ class IOPanel(unittest.TestCase):
         m = HWMachine(cpu_rom=ROM104, cpu_rev="D", panel_rev="A")
         self.assertFalse(m.ef(1)); m.panel_set(input=True); self.assertTrue(m.ef(1)); m.panel_set(input=False)
 
+    def test_jumpers_pick_the_ports_and_the_ef_line(self):
+        """JP1 / JP2 / JP3 (Ken, 2026-11-17): the IN port, the OUT port and INPUT's bus EF line, each on its own jumper"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel(in_port=1, out_port=5, ef="-EF3", rtc_ports=None)
+        self.assertEqual(p.out(5, 0x5A)[1], 0x5A); self.assertEqual(p.out(4, 0x11)[1], 0x5A)    # OUT 5 only
+        p.set(switches=0xC3); self.assertEqual(p.inp(1), 0xC3); self.assertIsNone(p.inp(5)); self.assertIsNone(p.inp(4))
+        p.set(pressed=True); self.assertTrue(p.ef("-EF3")); self.assertFalse(p.ef("-EF1")); self.assertFalse(p.ef("-EF"))
+        p = NetlistIOPanel(in_port=None, out_port=None, ef=None, rtc_ports=None)                # no jumpers: no port at all
+        for n in range(1, 8): self.assertIsNone(p.inp(n)); self.assertNotEqual(p.out(n, 0x77)[1], 0x77)
+        p.set(pressed=True); self.assertFalse(any(p.ef(e) for e in ("-EF1", "-EF2", "-EF3", "-EF")))
+
+    def test_address_display(self):
+        """the bus address on four TIL311s (Ken, 2026-11-18): U18 holds the high byte as TPA falls, U19 the low byte as
+        TPB falls (74HCT573s, so the bus sees HCT inputs); the displays keep the last cycle's address while A0-A7 change
+        between cycles, and each TIL311's data pins (3, 2, 13, 12 = A-D) take four of the latches' outputs in order"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel()
+        for a in (0x0000, 0x1234, 0xF00F, 0xA55A, 0xFFFF, 0x8001):
+            self.assertEqual(p.cycle(a), a, "%04X" % a)
+        p.c.drive(A=0x3C); p.c.settle(); self.assertEqual(p.address(), 0x8001)       # no TPA / TPB: held
+        p.cycle(0x7000, n=4, read=False); self.assertEqual(p.address(), 0x7000)     # an OUT's cycle too: any cycle
+        self.assertTrue(p.leds().startswith("ADDR 7000"))
+        net = lambda ref, pin: p.nl.net(ref, pin).split("/")[-1]
+        for ref, first in (("U14", 12), ("U15", 8), ("U16", 4), ("U17", 0)):
+            self.assertEqual([net(ref, pin) for pin in (3, 2, 13, 12)], ["ADR%d" % (first + i) for i in range(4)], ref)
+            self.assertEqual((net(ref, 5), net(ref, 8)), ("GND", "GND"), ref)        # strobe and blanking low
+        self.assertEqual((net("U18", 11), net("U19", 11)), ("TPA", "TPB"))
+
+    def test_rtc_strobes_through_the_gates(self):
+        """the DS12885 (2026-11-18) on JP4's pair: OUT to the address port pulses AS, OUT to the data port R/W, INP of it
+        holds DS low, through U6D, U12 and U5C; nothing on any other port or direction. Then a byte of its RAM and the
+        time, written and read back through the gates"""
+        import datetime
+        from s5emu.hw import NetlistIOPanel
+        from s5emu.rtc import DS12885
+        for pair in (6, 4, 2):
+            p = NetlistIOPanel(rtc_ports=pair, in_port=1 if pair != 2 else 4, out_port=1 if pair != 2 else 4)
+            for n in range(1, 8):
+                for out in (True, False):
+                    self.assertEqual(p.strobes(n, out), (n == pair and out, n == pair + 1 and out, n == pair + 1 and not out),
+                                     (pair, n, out))
+        clock = [datetime.datetime(2026, 11, 18, 2, 0, 0)]
+        p = NetlistIOPanel(rtc=DS12885(now=lambda: clock[0]))
+        p.out(6, 0x40); p.out(7, 0xA5); p.out(6, 0x41); p.out(7, 0x5A)
+        p.out(6, 0x40); self.assertEqual(p.inp(7), 0xA5); p.out(6, 0x41); self.assertEqual(p.inp(7), 0x5A)
+        self.assertIsNone(p.inp(6))                                            # the address port reads nothing
+        for reg, v in ((0x0A, 0x20), (0x0B, 0x86), (0x04, 13), (0x02, 7), (0x00, 30), (0x0B, 0x06)): p.out(6, reg); p.out(7, v)
+        clock[0] += datetime.timedelta(seconds=10)
+        got = []
+        for reg in (0x04, 0x02, 0x00): p.out(6, reg); got.append(p.inp(7))
+        self.assertEqual(got, [13, 7, 40])
+        p.set(switches=0xFF); p.out(6, 0x40); self.assertEqual(p.inp(7), 0xA5)    # the toggles stay off the bus (IN port 4)
+
+    @unittest.skipUnless(os.path.exists(ROM108), "build firmware/hbios/v1.0.8 first")
+    def test_hbios_108_sets_and_reads_the_clock_on_the_netlist_cards(self):
+        """the whole path from the netlists: CPU Rev D runs HBIOS v1.0.8, whose f_settod / f_gettod reach the IO panel's
+        DS12885 through the card's decoder, jumpers and gates (ports 6 and 7)"""
+        import datetime
+        from s5emu.rtc import DS12885
+        clock = [datetime.datetime(2026, 11, 18, 2, 0, 0)]
+        m = HWMachine(cpu_rom=ROM108, cpu_rev="D", panel_rev="A"); m.panel.rtc = DS12885(now=lambda: clock[0])
+        self.assertTrue(boot(m))
+        prog = bytes([0x90, 0xB3, 0xF8, 0x06, 0xA3, 0xD3, 0xE2,                # 0100 R3 = 0106, SEP R3; SEX R2
+                      0xF8, 0x03, 0xBF, 0xF8, 0x00, 0xAF, 0xD4, 0xF8, 0x18,    # 0107 RF = 0300; CALL f_settod
+                      0xF8, 0x03, 0xBF, 0xF8, 0x10, 0xAF, 0xD4, 0xF8, 0x15,    # 0110 RF = 0310; CALL f_gettod
+                      0xF8, 0x02, 0xBF, 0xF8, 0x00, 0xAF,                      # 0119 RF = 0200
+                      0x3B, 0x25, 0xF8, 0x45, 0x30, 0x27, 0xF8, 0x4F,          # 011F BNF 0125; 'E'; BR 0127; 0125 'O'
+                      0x5F, 0x30, 0x28])                                       # 0127 STR RF; 0128 BR 0128
+        for i, b in enumerate(prog): m.write(0x0100 + i, b)
+        for i, b in enumerate([12, 31, 54, 23, 59, 58]): m.write(0x0300 + i, b)   # 2026-12-31 23:59:58 (54 = 2026 - 1972)
+        m.kbd.press("@0100\n"); Shell(m).d.run(max_instructions=400_000)
+        self.assertEqual(chr(m.read(0x0200)), "O")
+        self.assertEqual([m.read(0x0310 + i) for i in range(6)], [12, 31, 54, 23, 59, 58])
+        self.assertEqual(m.panel.rtc.time(), datetime.datetime(2054, 12, 31, 23, 59, 58))
+        self.assertEqual(m.log.events, {})
+
+    # ---- the serial port (2026-11-20): a 16C550 on the RTC's port pair
+    @staticmethod
+    def _uart(p):
+        def wr(reg, v): p.out(6, 0x80 | reg); p.out(7, v)
+        def rd(reg): p.out(6, 0x80 | reg); return p.inp(7)
+        return wr, rd
+
+    def test_serial_port_shares_the_rtcs_ports(self):
+        """the byte written to the address port picks the chip: bit 7 set = the UART's register (U22 holds bits 7 and
+        2-0), clear = the DS12885's, whose CS is that bit. Characters go out and come in; the clock still answers"""
+        import datetime
+        from s5emu.hw import NetlistIOPanel
+        from s5emu.rtc import DS12885
+        clock = [datetime.datetime(2026, 11, 20, 5, 0, 0)]
+        p = NetlistIOPanel(rtc=DS12885(now=lambda: clock[0])); wr, rd = self._uart(p)
+        net = lambda ref, pin: p.nl.net(ref, pin).split("/")[-1]
+        self.assertEqual([net("U20", n) for n in ("12", "13", "14", "25")], ["SEL_UART", "+5V", "GND", "GND"])   # CS0, CS1, -CS2, -ADS
+        self.assertEqual([net("U20", n) for n in ("18", "19", "21", "22")], ["+5V", "RTC_WR", "UART_RD_L", "GND"])  # -WR, WR, -RD, RD
+        self.assertEqual([net("U20", n) for n in ("36", "37", "38", "39")], ["+5V"] * 4)                       # modem inputs off
+        self.assertEqual((net("U13", "13"), net("U22", "11"), net("U20", "35")), ("SEL_UART", "RTC_AS", "RESET_H"))
+        self.assertEqual((net("U20", "16"), net("X1", "5"), net("U20", "9"), net("U20", "15")), ("UCLK", "UCLK", "UBAUD", "UBAUD"))
+        wr(3, 0x80); wr(0, 12); wr(1, 0); wr(3, 0x03)                          # DLAB; divisor 12; 8 bits, no parity, 1 stop
+        self.assertEqual(p.uart.baud(), 9600); self.assertEqual((rd(3), rd(1)), (0x03, 0x00))
+        self.assertEqual(rd(5), 0x60)                                          # THR empty, nothing received
+        for c in b"Hi": wr(0, c)
+        self.assertEqual(p.serial_out(), b"Hi")
+        p.serial_in("ok"); self.assertEqual(rd(5), 0x61)
+        self.assertEqual((rd(0), rd(0), rd(5)), (ord("o"), ord("k"), 0x60))
+        wr(7, 0x5A); p.out(6, 0x40); p.out(7, 0xA5)                            # the UART's scratch byte; a byte of the RTC's RAM
+        self.assertEqual(p.inp(7), 0xA5); self.assertEqual(rd(7), 0x5A)        # each chip kept its own
+        p.out(6, 0x40); self.assertEqual(p.inp(7), 0xA5)
+        for reg, v in ((0x0A, 0x20), (0x0B, 0x06), (0x04, 13), (0x02, 7), (0x00, 30)): p.out(6, reg); p.out(7, v)
+        clock[0] += datetime.timedelta(seconds=10); p.out(6, 0x00); self.assertEqual(p.inp(7), 40)   # the clock counts
+        self.assertEqual(rd(5), 0x60); self.assertEqual(p.serial_out(), b"")   # and none of that reached the UART
+
+    def test_serial_port_read_strobe(self):
+        """the UART's -RD comes from U11B, not from the RTC's DS. The 1802 puts N out from the start of an OUT's cycle and
+        takes -MRD low 1.5 clocks later (data sheet, figure 11), so 'this port and -MRD high' is true for a moment in
+        every OUT to the data port: the DS12885's DS pulses there (it does not mind), the 16C550's -RD must not, or a
+        character written to THR would first read RBR and lose a received one. -RD is low only in an INP of the data
+        port, from -MWR's fall to the end of the cycle; WR only in TPB of an OUT to it"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel(); wr, rd = self._uart(p)
+        net = lambda ref, pin: p.nl.net(ref, pin).split("/")[-1]
+        self.assertEqual([net("U11", n) for n in ("13", "12", "11", "10", "8")], ["RTC_RD", "GND", "GND", "-MRW", "UART_RD_L"])
+        p.out(6, 0x80)                                                         # the UART, register 0
+        for n in range(1, 8):
+            for out in (True, False):
+                s = p._io(n, out, 0x80 if out else None)                       # (an OUT 6 of 80h keeps the UART picked)
+                self.assertEqual(s["urd_low"], [] if out or n != 7 else ["mwr", "tpb", "after"], (n, out))
+                self.assertEqual(s["uwr"] == (1, 0), out and n == 7, (n, out))
+                self.assertEqual((s["usel"], s["ureg"], s["rtc_sel"]), (True, 0, False), (n, out))
+        s = p._io(7, True, 0x00); self.assertEqual((s["rd_early"], s["rd"]), (0, 1))    # the RTC's DS: low early in the OUT
+        s = p._io(7, False); self.assertEqual((s["rd_early"], s["rd"]), (0, 0))         # and through the INP
+        wr(1, 0x00); p.serial_in("AB")
+        wr(0, ord("x")); wr(0, ord("y"))                                       # two characters sent with two waiting:
+        self.assertEqual((rd(0), rd(0), rd(5)), (ord("A"), ord("B"), 0x60))    # both still there, in order
+        self.assertEqual(p.serial_out(), b"xy")
+        # a memory write elsewhere (-MWR low, no port): U11B's preset and clear both low, !Q high: no read
+        c = p.c; c.drive(N=0, MRD=1, MRW=0); low = c.settle().get(p.u_rd); c.drive(MRW=1); c.settle()
+        self.assertEqual(low, 1)
+
+    def test_serial_port_interrupt_and_reset(self):
+        """INTR through a gate of U9 (open collector) to JP7: fitted, a received character pulls the bus -INT low while
+        the UART's receive interrupt is on; open, it does not. -RESET low is the UART's MR: the interrupt enables clear"""
+        from s5emu.hw import NetlistIOPanel
+        for fitted in (True, False):
+            p = NetlistIOPanel(uart_int=fitted); wr, rd = self._uart(p)
+            self.assertFalse(p.int_low())                                      # nothing asked for yet
+            wr(1, 0x01); self.assertFalse(p.int_low())
+            p.serial_in("x"); self.assertEqual(p.int_low(), fitted); self.assertEqual(rd(2) & 0x0F, 0x04)   # IIR: received data
+            self.assertEqual(rd(0), ord("x")); self.assertFalse(p.int_low()); self.assertEqual(rd(2) & 0x0F, 0x01)
+            wr(1, 0x03); self.assertEqual(p.int_low(), fitted); self.assertEqual(rd(2) & 0x0F, 0x02)        # THR empty, once
+            self.assertFalse(p.int_low())
+            wr(1, 0x01); p.serial_in("y"); p.set(run=False); p.set(run=True)   # RUN/RESET off and on: MR
+            self.assertFalse(p.int_low()); self.assertEqual(rd(1), 0x00); self.assertEqual(rd(0), ord("y"))  # RBR is kept
+
+    @unittest.skipUnless(os.path.exists(ROM108), "build firmware/hbios/v1.0.8 first")
+    def test_a_program_echoes_the_serial_line_on_the_netlist_cards(self):
+        """the whole path: CPU Rev D runs a program that sets the UART to 9600 baud and sends back each character it
+        receives, through the IO panel's decoder, jumpers, select latch and gates; the clock is read in between"""
+        m = HWMachine(cpu_rom=ROM108, cpu_rev="D", panel_rev="A"); self.assertTrue(boot(m))
+        prog = bytes([0x90, 0xB3, 0xF8, 0x06, 0xA3, 0xD3,                      # 0100 R3 = 0106, SEP R3
+                      0xE3, 0x66, 0x83, 0x67, 0x80,                            # 0106 SEX R3; OUT 6,83; OUT 7,80: LCR = DLAB
+                      0x66, 0x80, 0x67, 0x0C, 0x66, 0x81, 0x67, 0x00,          # 010B DLL = 12, DLM = 0
+                      0x66, 0x83, 0x67, 0x03,                                  # 0113 LCR = 03
+                      0xE3, 0x66, 0x85, 0xE2, 0x6F, 0xFA, 0x01, 0x32, 0x17,    # 0117 LSR: a character? no: again
+                      0xE3, 0x66, 0x80, 0xE2, 0x6F,                            # 0120 RBR -> D and M(R2)
+                      0x67, 0x22, 0x30, 0x17])                                 # 0125 OUT 7 (THR), DEC R2; BR 0117
+        for i, b in enumerate(prog): m.write(0x0100 + i, b)
+        m.kbd.press("@0100\n"); d = Shell(m).d; d.run(max_instructions=200_000)
+        self.assertEqual(m.panel.uart.baud(), 9600)
+        m.panel.serial_in("System-5"); d.run(max_instructions=20_000)
+        self.assertEqual(m.panel.serial_out(), b"System-5")
+        m.panel.out(6, 0x0D); self.assertEqual(m.panel.inp(7), 0x80)           # the DS12885's register D: its battery is good
+        m.panel.serial_in("!"); d.run(max_instructions=5_000); self.assertEqual(m.panel.serial_out(), b"!")
+        self.assertEqual(m.log.events, {})
+
+
+V5_GZ = os.path.join(HERE, "..", "..", "..", "..", "private-resources", "elf", "reference", "mike-riley", "elfos-v5", "system5",
+                     "elfos-5.1.1-system5-16mb.img.gz")
+
+
+@unittest.skipUnless(os.path.exists(V5_GZ) and os.path.exists(ROM108), "needs the Elf/OS v5 image (private-resources) and HBIOS v1.0.8")
+class SystemV5(unittest.TestCase):
+    """the whole machine from its netlists with the new cards: CPU Rev D, the IO panel (its clock through its own
+    decoder, jumpers and gates) and memory Rev F with a 28C256 in IC5 that the CPU can write (JP1 3-5 and 4-6), with the
+    6845, IDE and IO cards; HBIOS v1.0.8 boots Elf/OS v5 (about 80 s), and neither touches the EEPROM (8000-EFFF):
+    Elf/OS's memory probe (f_freemem) stops below it"""
+    def test_elfos_v5_on_cpu_rev_d_with_the_io_panels_clock(self):
+        import datetime, gzip, tempfile
+        from s5emu.rtc import DS12885
+        img = tempfile.mktemp(suffix=".img")
+        with gzip.open(V5_GZ) as f, open(img, "wb") as g: g.write(f.read())
+        try:
+            m = HWMachine(cpu_rom=ROM108, cpu_rev="D", panel_rev="A", mem_rev="F-28C256-W", disk=img); sh = Shell(m)
+            eeprom = bytes(m.memory.contents["IC5"])
+            clock = [datetime.datetime(2054, 11, 18, 3, 0, 0)]                    # 2026 in ELF/OS's years
+            m.panel.rtc = DS12885(now=lambda: clock[0], start=clock[0])
+            def until(prompt, cap=40_000_000):
+                for _ in range(0, cap, 250_000):
+                    sh.d.run(max_instructions=250_000)
+                    if not m.kbd.queue and m.video.lines()[-1].rstrip() == prompt: return
+                self.fail("no %r prompt; the screen:\n%s" % (prompt, "\n".join(m.video.lines())))
+            until("test>"); m.kbd.press("B\n"); until(":")
+            m.kbd.press("sysinfo\n"); until(":")
+            self.assertIn("  RTC       : Yes (11/18/2026 03:00:00)", [l.rstrip() for l in m.video.lines()])
+            m.kbd.press("date 1/2/2027 3:4:5\n"); until(":")
+            self.assertEqual(m.panel.rtc.time(), datetime.datetime(2055, 1, 2, 3, 4, 5))
+            self.assertEqual(m.log.events, {})                                      # no fights, nothing undefined
+            self.assertEqual(bytes(m.memory.contents["IC5"]), eeprom)              # the EEPROM untouched
+        finally:
+            os.remove(img)
+
 
 @unittest.skipUnless(os.path.exists(ROM104), "run tools/mkrom.py first")
 class Boot(unittest.TestCase):
@@ -247,6 +492,10 @@ class Boot(unittest.TestCase):
         self.assertEqual({b for _, _, b in kinds}, {7})                       # every event is in 7000-7FFF
         self.assertIn(("multi-write", ("mem IC1", "6845 IC1"), 7), kinds)               # RAM and the 6845 card's video RAM
         self.assertFalse(any(k == "fight" for k, _, _ in kinds))
+
+    def test_rev_f_boots_clean(self):
+        m = HWMachine(mem_rev="F", cpu_rom=ROM104)
+        self.assertTrue(boot(m)); self.assertEqual(m.log.events, {})
 
     def test_rev_c_boots_clean(self):
         m = HWMachine(mem_rev="C", cpu_rom=ROM104)

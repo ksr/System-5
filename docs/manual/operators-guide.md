@@ -314,7 +314,9 @@ Every line is explained in `software/s5emu/CODESPACE.md`.
 
 Mike Riley's `cls` sends the codes that clear an ANSI terminal, which HBIOS's screen showed as `[H[2J`. The card has
 a `cls` written for System-5 instead (`software/elfos-v5/cls/`): it writes spaces over the screen, leaving `Ready` and
-the `:` prompt on the bottom lines *(checked)*. `ver /bin/cls` says `System-5 6845 screen`.
+the `:` prompt on the bottom lines *(checked)*. `ver /bin/cls` says `System-5 6845 screen` (build 1, the one on the
+machine's card). Build 2 (2026-11-20, on the emulator's card image) says `System-5 screen`: it is one program for
+the 6845 card's 16 lines and VIDEO-G's 25.
 
 ## 5. The Elf/OS v5 card
 

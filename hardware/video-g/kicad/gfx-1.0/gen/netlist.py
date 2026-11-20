@@ -21,6 +21,7 @@ modified) without direct mode, with the plane register replaced by the Y registe
     (control bit 5)
   * J4: the 40-pin ribbon from TEXT (common/ribbon.py). Every decode is on TEXT; GFX uses only D0-D7, A0-A5, -MRD,
     -MRW, TPB, -RESET from the bus.
+  * LED1: power, from +5V through R7 (330), as on TEXT (Ken, 2026-11-17)
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "common"))
@@ -75,6 +76,7 @@ PARTS = {
     "J4":   ("FROM TEXT", "Connector_Generic:Conn_02x20_Odd_Even", "Connector_IDC:IDC-Header_2x20_P2.54mm_Vertical",
              "40-pin ribbon from the TEXT board"),
     "F1":   ("0.5A PTC", "Device:Polyfuse", "Fuse:Fuse_Bourns_MF-RHT050", "mouse +5 V"),
+    "LED1": ("PWR", "Device:LED", "LED_THT:LED_D5.0mm", "power"),
     "RN1":  ("10k x8", "Device:R_Network08", "Resistor_THT:R_Array_SIP9", "GD0-GD7 pull-ups (bussed, pin 1 common)"),
     "R1":   ("10k", "Device:R", FP_R, "ATmega reset pull-up"),
     "R2":   ("4.7k", "Device:R", FP_R, "RESETH pull-up"),
@@ -82,6 +84,7 @@ PARTS = {
     "R4":   ("4.7k", "Device:R", FP_R, "mouse clock pull-up"),
     "R5":   ("4.7k", "Device:R", FP_R, "mouse data pull-up"),
     "R6":   ("4.7k", "Device:R", FP_R, "PD7 strap: low = mouse mode (4.7k: a solid low against the AVR's 20-50k pull-up)"),
+    "R7":   ("330", "Device:R", FP_R, "PWR LED"),
     "C21":  ("100n", "Device:C", FP_C, "FTDI DTR auto-reset"),
     "C22":  ("47u 16V", "Device:C_Polarized", FP_CP, "bulk"),
     "C23":  ("22p", "Device:C", FP_C, "Y1 load"),
@@ -109,6 +112,7 @@ c("+5V", "IC11.7", "IC11.20"); c("GND", "IC11.8", "IC11.22")
 for cap in DECOUPLE:
     c("+5V", cap + ".1"); c("GND", cap + ".2")
 c("+5V", "C22.1"); c("GND", "C22.2")
+c("PWRLED", "R7.2", "LED1.2"); c("+5V", "R7.1"); c("GND", "LED1.1")       # power LED, as TEXT's: LED 1 = K, 2 = A
 
 # ---- the bus (J1): only what GFX uses --------------------------------------------------------------------------------
 BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 12: "TPB", 13: "-MRD",
@@ -208,6 +212,7 @@ BUY = {
     "IC2": "74HCT157 (CMOS inputs: no load on the 1802's address lines)",
     "IC11": "ATmega328P-PU with the Arduino Uno bootloader burned (ISP) before fitting",
     "RN1": "10k x8 BUSSED, pin 1 common, 9-pin SIP (e.g. Bourns 4609X-101-103LF)",
+    "J1": "1 x 30 right-angle pin header, 2.54 mm, single row (cut from a 1 x 40): its plastic body lies between the pads and the card edge, the pins out past the edge",
     "J2": "Same Sky (CUI Devices) MD-60SM, date code after 2022-03-03",
     "J3": "1 x 6 pin header, 2.54 mm (an FTDI cable programs the ATmega)",
     "J4": "2 x 20 shrouded box header, 2.54 mm (the ribbon comes with the TEXT board's)",

@@ -8,8 +8,8 @@ at the end. When a rule changes, change its source and this page together.
 
 - **Rules for new boards** (section 1) are for future work only. They do not apply to any board already built or
   ordered (MEM3-E and BUSDRV-B, ordered 2026-10-20, are built and in use). When it is not clear whether a board counts as future work,
-  ask Ken before applying them. The 6845 Rev B stays the 2005 card; the rules start with the next video revision
-  (the one with PS/2).
+  ask Ken before applying them. The 6845 Rev B stays the 2005 card; the rules are applied on Rev B-Clean
+  (2026-11-20) and on VIDEO-G.
 - **Always ask Ken before changing a board that might be built, ordered or in production**, for any change at all.
 - The other sections describe how the boards were built: the 2005 rules from Ken's board notes, and the 2026 rules
   for the KiCad boards.
@@ -81,6 +81,7 @@ The 2005 boards went to Sierra Proto Express (NoTouch) and PCB Fab Express ([`FA
 | 30 pins, the System-4 bus kept | [`README.md`](../README.md) |
 | 1 +5V, 2–9 D0–D7, 10 Q, 11 TPA, 12 TPB, 13 -MRD, 14 -MRW, 15–22 A0–A7, 23 -INT, 24 N2, 25 -EF, 26 -VMA, 27 -RESET, 28 N1, 29 N0, 30 GND; pin 1 at the left on the component side | BoardNotes |
 | Bus Rev B (Dec 2005) dropped ±12 V and added N1/N2 | `README.md` |
+| **36-pin slots (Ken, 2026-11-18), counted from GND:** position 1 GND, the slot's end pin (the rightmost seen from the power connector), then the 30-pin bus up to +5V at 30 (a 30-pin card's own pin *n*, +5V 1 … GND 30, is position 31 − *n*), then 31 -EF1, 32 -EF2, 33 -EF3, 34 -DMAIN, 35 SC0, 36 -PAUSE; a 30-pin card plugs in flush with the GND end. The socket is an unnumbered strip: the numbers are the drawings'. Until then the 2009 order, counted from the other end (1–3 -EF1 to -EF3, the 30-pin bus in the middle, 4–33, then -PAUSE, -DMAIN, SC0); a 36-pin card for the new order does not fit the 2009 backplane. The definition: `hardware/bus/kicad/rev-d/gen/netlist.py` (`POS`), read by `tools/s5bus.py` | [`docs/manual/bus.md`](../docs/manual/bus.md), "The 36-pin extension" |
 | The bus itself is Vero board, never a PCB | `FABRICATED.md`, [`BACKLOG.md`](../BACKLOG.md) |
 | New boards copy the outline and connector position (J1, footprint C30) from Memory Rev D, so they fit the System-5 card cage | memory Rev D and bus-driver Rev B READMEs |
 
@@ -95,6 +96,7 @@ The 2005 boards went to Sierra Proto Express (NoTouch) and PCB Fab Express ([`FA
 | Silk (Memory D/E): every IC `<ref> <part>` plus its function, passives reference and value, strokes at least 0.15 mm, jumper rows and columns labelled | memory Rev D README |
 | Parts: Memory D/E muxes 74HCT151, not 74LS151; keep the CD4050B (not a 74HC4050); 6845 IC8 a 74LS163 or 74HCT163 | memory Rev E and 6845 Rev B READMEs |
 | JLCPCB orders: 1.6 mm, HASL, white silk | `FABRICATED.md`, memory Rev D README |
+| **Every footprint draws its part** (an F.Fab body, a courtyard round it, a 3D model where KiCad has one), so that the label placer, the renders and `pcb-check` see it. The card's bus connector (C30 / C36) is a single-row right-angle pin header: its plastic body lies between the pads and the card edge, 1.5 to 4.0 mm from the pads. **Nothing is printed between the bus pads and the card edge**; the pins' names go on the board side | found the night of 2026-11-18: the footprints drew pads and no body, and all six new cards had `J1 BUS` (memory Rev F its thirty pin names too) under the header; `hardware/video-g/kicad/README.md`, `tools/kicad/silk270.py` (`bus_label`), `tools/kicad/fp_update.py`. Since 2026-11-19 `pcb-check` has a line for it, **BODIES**: a warning for each part with pads and nothing drawn on the fab layer |
 
 ## 6. Folders and formats
 

@@ -27,6 +27,12 @@ class RevDAt2MHz(unittest.TestCase):
     def test_t3_the_6845_e_high_time_fails_at_2_mhz(self):
         self.assertAlmostEqual(find(self.rows, "6845 B", "E high time"), -50, delta=1)
 
+    def test_memory_rev_f_28c256_write(self):
+        """memory Rev F's EEPROM option (JP1 3-5 and 4-6: IC5's !WE on WR): its write at 2 MHz, from the netlist"""
+        self.assertGreater(find(self.rows, "memory F", "IC5 28C256 write: WE pulse width"), 700)      # 815 ns low, 100 needed
+        self.assertGreater(find(self.rows, "memory F", "IC5 28C256 write: data set up"), 2000)
+        self.assertGreater(find(self.rows, "memory F", "IC5 28C256 write: address and CE settled"), 1000)
+
 
 class Timing(unittest.TestCase):
     @classmethod

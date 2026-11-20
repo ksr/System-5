@@ -17,17 +17,23 @@ Blocks:
             high (U4B, as Rev A built) -- unless LOADED (U8A) is set: LOAD mode sets it, and SW1 or power-on clears it,
             so a program loaded at 0000 runs from RAM after LOAD -> RESET -> RUN (ELF-style), while SW1 boots HBIOS.
             WIN_L = A12.A13.A14.A15 (U6A); -VMA = ROM_SEL_H = BOOTMAP + WIN (U5B); the EPROM's !CE = ROM_SEL_L.
-  flags     JP2 routes -EF1, -EF2, -EF3, -EF straight across to EF1-EF4; JP3 puts -EF on EF3 for the old IO card
-            (with JP2's EF3 and EF4 jumpers off). RN2 holds unjumpered EF inputs high.
-  debug     J2: EXT_CLK, GND, CLOCK, SC0, SC1, GND. SC0 is also driven onto the bus (position 36), through U9D/U9E.
-  pull-ups  RN1 10k on -RESET, -INT, -PAUSE, -DMAIN, -EF, -EF1-3 (the 2009 backplane has none; the bus Rev D's add to them)
-  LEDs      PWR, Q, PAUSE (WAIT low), RESET (CLEAR low), ROM (the EPROM selected)
+  flags     JP2-JP5, one 2x4 block per 1802 flag input (EF1-EF4), each row a bus flag line (-EF1, -EF2, -EF3, -EF): a
+            jumper across a row puts that line on the block's input, so any input takes any line (Ken, 2026-11-17; was
+            JP2 straight across and JP3 -EF to EF3). RN2 holds an unjumpered input high (off). As set: EF1 -EF1, EF2
+            -EF2, EF3 -EF (the 2005 IO card's keyboard, which HBIOS reads on EF3); for the 36-pin cards, EF3 -EF3.
+  debug     J2, a keyed 2x3 header (Ken, 2026-11-18) for a 6-way ribbon to the bus driver BUSDRV-C's matching one:
+            1 EXT_CLK, 2 GND, 3 CLOCK, 4 SC0, 5 SC1, 6 GND (wire n = pin n). SC0 is also driven onto the bus (position 35),
+            through U9D/U9E.
+  pull-ups  RN1 10k on -RESET, -INT, -PAUSE, -DMAIN, -EF, -EF1-3 (the bus Rev D's add to them; they were for the 2009
+            backplane, which has none, and which this card no longer fits since the 2026-11-18 slot order)
+  LEDs      LED1 PWR, LED2 Q, LED3 PAUSE (WAIT low), LED4 RESET (CLEAR low), LED5 ROM (the EPROM selected)
 """
 # --- the 36-pin bus, by socket position (as the bus Rev D, ../../../bus/kicad/rev-d/gen/netlist.py) ---
 BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 10: "Q", 11: "TPA", 12: "TPB",
        13: "-MRD", 14: "-MRW", 15: "A0", 16: "A1", 17: "A2", 18: "A3", 19: "A4", 20: "A5", 21: "A6", 22: "A7", 23: "-INT",
        24: "N2", 25: "-EF", 26: "-VMA", 27: "-RESET", 28: "N1", 29: "N0", 30: "GND"}
-POS = ["-EF1", "-EF2", "-EF3"] + [BUS[i] for i in range(1, 31)] + ["-PAUSE", "-DMAIN", "SC0"]   # position 1..36
+POS = [BUS[i] for i in range(30, 0, -1)] + ["-EF1", "-EF2", "-EF3", "-DMAIN", "SC0", "-PAUSE"]   # position 1..36, counted from GND
+# (Ken, 2026-11-18: GND 1 ... +5V 30, then -EF1 31, -EF2 32, -EF3 33, -DMAIN 34, SC0 35, -PAUSE 36; bus pin n = position 31 - n)
 
 # --- project symbols (one unit each, DIP pin order): name: (footprint, {pin: (name, type)}) ---
 # types: KiCad pin electrical types. Pinouts from the data sheets (74HCT: TI; 2732: Intel/Fujitsu; DS1813: Maxim TO-92).
@@ -94,15 +100,19 @@ chip("X1", "OSC_DIP8", "4MHz", {1: "+5V", 4: "GND", 5: "OSC", 8: "+5V"})
 
 PARTS["J1"] = ("Connector_Generic:Conn_01x36", "System-5 bus (36)", "s5cpu:C36",
                {i + 1: n for i, n in enumerate(POS)})
-PARTS["J2"] = ("Connector_Generic:Conn_01x06", "DEBUG", "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+PARTS["J2"] = ("Connector_Generic:Conn_02x03_Odd_Even", "DEBUG", "Connector_IDC:IDC-Header_2x03_P2.54mm_Vertical",   # keyed 2x3
+                 # (Ken, 2026-11-18): a 6-way ribbon to BUSDRV-C's matching header, wire n = pin n
                {1: "EXT_CLK", 2: "GND", 3: "CLOCK", 4: "SC0", 5: "SC1", 6: "GND"})
 PARTS["JP1"] = ("Connector_Generic:Conn_01x03", "CLK INT/EXT", "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",
                 {1: "CLK_INT", 2: "CLOCK", 3: "CLK_EXT"})
-PARTS["JP2"] = ("Connector_Generic:Conn_02x04_Odd_Even", "EF", "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical",
-                {1: "-EF1", 2: "CPU_EF1", 3: "-EF2", 4: "CPU_EF2", 5: "-EF3", 6: "CPU_EF3", 7: "-EF", 8: "CPU_EF4"})
-PARTS["JP3"] = ("Connector_Generic:Conn_01x02", "-EF TO EF3", "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
-                {1: "-EF", 2: "CPU_EF3"})
-PARTS["SW1"] = ("Switch:SW_SPDT", "RESET/RUN", "s5cpu:SW_Toggle_SPDT_E-Switch_100_M6", {2: "GND", 1: "SW_RST", 3: None})  # 1 RESET, 3 RUN
+EFLINES = ("-EF1", "-EF2", "-EF3", "-EF")          # the bus flag lines: the rows of every EF block
+for k in range(4):        # JP2-JP5: one 2x4 block per 1802 flag input EF1-EF4, any input from any line (Ken, 2026-11-17)
+    PARTS["JP%d" % (k + 2)] = ("Connector_Generic:Conn_02x04_Odd_Even", "EF%d" % (k + 1),
+                               "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical",
+                               {p: (EFLINES[(p - 1) // 2] if p % 2 else "CPU_EF%d" % (k + 1)) for p in range(1, 9)})
+# SW1: a Marquardt 9070-1W, the RESET/RUN toggle of Ken's YACC1 (Ken, 2026-11-18: "change reset to same on yacc1"; until
+# then an E-Switch 100 series). 2 the common; 3 RESET (the lever at pin 1's end joins the common to pin 3); 1 RUN, open
+PARTS["SW1"] = ("Switch:SW_SPDT", "RESET/RUN", "s5cpu:SW_Toggle_SPDT_Marquardt_9070-1W", {2: "GND", 3: "SW_RST", 1: None})
 PARTS["D1"] = ("Device:D_Schottky", "BAT85", "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal", {1: "SW_RST", 2: "-RESET"})   # 1 K, 2 A
 PARTS["R1"] = ("Device:R", "10k", R, {1: "+5V", 2: "SW_RST"})
 PARTS["C12"] = ("Device:C", "1uF", "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm", {1: "SW_RST", 2: "GND"})  # power-on clear of LOADED
@@ -111,8 +121,9 @@ PARTS["RN1"] = ("Device:R_Network08", "10k", "Resistor_THT:R_Array_SIP9",
                 {1: "+5V", 2: "-RESET", 3: "-INT", 4: "-PAUSE", 5: "-DMAIN", 6: "-EF", 7: "-EF1", 8: "-EF2", 9: "-EF3"})
 PARTS["RN2"] = ("Device:R_Network04", "10k", "Resistor_THT:R_Array_SIP5",
                 {1: "+5V", 2: "CPU_EF1", 3: "CPU_EF2", 4: "CPU_EF3", 5: "CPU_EF4"})
-for ref, label, sink, k in (("D2", "PWR", "GND", 3), ("D3", "Q", "Q_L", 4), ("D4", "PAUSE", "WAIT", 5),
-                            ("D5", "RESET", "CLEAR", 6), ("D6", "ROM", "ROM_SEL_L", 7)):
+for ref, label, sink, k in (("LED1", "PWR", "GND", 3), ("LED2", "Q", "Q_L", 4), ("LED3", "PAUSE", "WAIT", 5),
+                            ("LED4", "RESET", "CLEAR", 6), ("LED5", "ROM", "ROM_SEL_L", 7)):   # LEDn, not Dn: J1's pin
+    # labels name the data lines D0-D7, and pcb-check took them for the LEDs' references (2026-11-17)
     PARTS[ref] = ("Device:LED", label, "LED_THT:LED_D3.0mm", {1: sink, 2: "LED_" + label})          # 1 = K, 2 = A
     PARTS["R%d" % k] = ("Device:R", "1k", R, {1: "+5V", 2: "LED_" + label})
 PARTS["C1"] = ("Device:C_Polarized", "10uF", "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm", {1: "+5V", 2: "GND"})

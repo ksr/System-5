@@ -18,7 +18,8 @@ OUT = os.path.join(HERE, "stage")
 GLOBS = ["BACKLOG.md", "docs/manual/*.md", "docs/manual/pdf/*.pdf", "hardware/*.md", "hardware/*/*.md",
          "hardware/*/kicad/README.md", "hardware/*/kicad/*/README.md", "hardware/*/kicad/*/DESIGN.md", "hardware/*/kicad/*/BOM.md", "hardware/*/kicad/*/schematic/*.pdf", "hardware/*/kicad/*/*.png",
          "hardware/*/kicad/*/reports/*.png", "hardware/*/eagle/*/photos/*", "hardware/*/kicad/*/photos/*", "hardware/board-notes/*.txt",
-         "software/**/*.md", "embedded/**/*.md", "tools/kicad/sch/README.md"]
+         "software/**/*.md", "embedded/**/*.md", "tools/kicad/sch/README.md",
+         "software/elfos-v5/*/*.png"]            # the pictures a program's notes show (vgdemo's, 2026-11-20)
 SKIP = re.compile(r"(^|/)(reference|website-2005|website-older|node_modules|eagle-backups|website-copy)(/|$)"
                   r"|(^|/)CLAUDE\.md$")
 PHOTO_PX = 1400            # photos and renders are resized to fit this box

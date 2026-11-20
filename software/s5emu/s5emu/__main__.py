@@ -45,19 +45,27 @@ def main(argv=None):
     ap.add_argument("--jumpers", default="RRRRRRR-EEEEEEE-", help="memory-card 4K blocks from 0000: R/E/- (default RRRRRRR-EEEEEEE-)")
     ap.add_argument("--sym", action="append", default=[], help="symbols from an rcasm/A18 listing (repeatable)")
     ap.add_argument("--pixie-port", type=int, default=4, help="1861 I/O port (INP = on, OUT = off; default 4)")
-    ap.add_argument("--buslink", action="store_true", help="open a pty speaking the BUSDRV-B protocol (for s5busdrv.py --port)")
+    ap.add_argument("--buslink", action="store_true", help="open a pty speaking the bus driver card's protocol (for s5busdrv.py --port): BUSDRV-C's with --hw --cpu-rev D (the modes, LOAD mode, the 36-pin lines), else BUSDRV-B's")
+    ap.add_argument("--buslink-rev", choices=("B", "C"), help="--buslink: which card, whatever the machine (C needs CPU Rev D)")
     ap.add_argument("--hw", action="store_true", help="hardware-faithful bus: memory card from its KiCad netlist, contention logged (see s5emu/hw.py)")
-    ap.add_argument("--mem-rev", default="D", help="--hw memory card: D (card of record), C, B-built (Ken's reworked board), B-drawn")
+    ap.add_argument("--mem-rev", default="D", help="--hw memory card: D (card of record), F (MEM3-F: Rev E with EEPROM sockets and its silkscreen fixed; 27C256s), "
+                    "F-28C256 (a 28C256 in IC5, read-only), F-28C256-W (the CPU can write it), C, B-built (Ken's reworked board), B-drawn")
     ap.add_argument("--cpu-rev", default="A-built", help="--hw CPU card: A-built (Ken's reworked board, the default), A (as drawn), D (CPU Rev D, the 36-pin card, not built) or none (behavioural -VMA)")
     ap.add_argument("--panel", default=None, help="fit the IO panel card (A): port 4 LEDs/TIL311s/toggles, INPUT on -EF1, RUN/LOAD; the 1861 comes off port 4 (with --hw: from its netlist, use with --cpu-rev D)")
-    ap.add_argument("--video-rev", default="B", help="--hw 6845 card: B (from its netlist, the default) or none (behavioural)")
+    ap.add_argument("--video-rev", default="B", help="--hw 6845 card from its netlist: B (the card in the machine, the default), B-Clean, "
+                    "B-Clean-Keyboard (the PS/2 keyboard on the card, key at 7802 and status at 7804: use it with the VIDEO-G HBIOS; no IO card then), or none (behavioural)")
     ap.add_argument("--ide-rev", default="A", help="--hw IDE card: A (from its netlist, the default) or none (behavioural)")
     ap.add_argument("--io-rev", default="A", help="--hw IO card (1861 + keyboard): A (from its netlist, the default) or none (behavioural)")
     ap.add_argument("--vma", default="remap", choices=["remap", "boot", "norom"], help="--hw CPU card SV5 VMA mode (default remap = Boot/REMAP)")
     ap.add_argument("--bus-stop", default="", help="--hw: stop the debugger on these bus events, comma list of fight,double,multi-write,undefined")
-    ap.add_argument("--video", default="6845", choices=["6845", "g", "G"], help="video card: 6845 (the 6845 card + IO card, the default) or g (VIDEO-G 1.0, s5emu/videog.py; ROM defaults to roms/hbios-video-g.rom)")
+    ap.add_argument("--video", default="6845", choices=["6845", "g", "G", "kbd"], help="video card: 6845 (the 6845 card + IO card, the default), g (VIDEO-G 1.0 in their place: s5emu/videog.py, "
+                    "and with --hw its TEXT and GFX boards from their netlists, s5emu/hwvideog.py; ROM defaults to roms/hbios-video-g.rom; --panel A may be fitted with it: VIDEO-G uses no port) "
+                    "or kbd (the 6845 card Rev B-Clean-Keyboard in their place: Rev B's video with the PS/2 keyboard on the card, key at 7802, status at 7804; "
+                    "with --hw from its netlist; the same ROM default, and --panel A may be fitted)")
     ap.add_argument("--monitor", default="ntsc", choices=["ntsc", "mda"], help="--video g: the MONITOR jumper, ntsc (512 x 200, default) or mda (IBM 5151, 512 x 256)")
-    ap.add_argument("--no-gfx", action="store_true", help="--video g: the TEXT board alone (no GFX board)")
+    ap.add_argument("--no-gfx", action="store_true", help="--video g: the TEXT board alone (no GFX board; with --hw, the ribbon unplugged)")
+    ap.add_argument("--videog-rev", default="1.0", help="--hw --video g: 1.0 (TEXT and GFX from their netlists, the default) or none (the behavioural model on the modelled bus)")
+    ap.add_argument("--kbd-flag", default="ef", choices=["ef", "ef1", "ef2", "ef3", "none"], help="--hw --video g (TEXT's JP3) or --video-rev B-Clean-Keyboard (its JP1): KBD FLAG, the bus line KEY-READY pulls low: ef (-EF, as set), ef1, ef2, ef3 or none (no shunt)")
     ap.add_argument("--ui", choices=["tui", "web", "none"], default="tui")
     ap.add_argument("--web-port", type=int, default=8802)
     ap.add_argument("--web-host", default="127.0.0.1", help="--ui web: address to listen on (0.0.0.0 = every interface)")
@@ -73,20 +81,45 @@ def main(argv=None):
         except ValueError as e: ap.error("--clock: %s" % e)
         a.speed = hz / CYCLE_CLOCKS if hz else 0
 
-    vg = a.video.lower() == "g"
-    rom = VG_ROM if (vg and a.rom == DEF_ROM) else a.rom
+    vg = a.video.lower() == "g"; vk = a.video.lower() == "kbd"
+    rom = VG_ROM if ((vg or vk) and a.rom == DEF_ROM) else a.rom
     kw = dict(cpu_rom=rom, rom_base=int(a.rom_base, 16), jumpers=parse_jumpers(a.jumpers), disk=a.disk, pixie_port=a.pixie_port)
-    if vg:
-        if a.hw: raise SystemExit("--video g has no --hw model yet")
-        from .videog import VideoGMachine
+    if vg:                                             # VIDEO-G in place of the 6845 card and the IO card: no 1861; it is
+        kw.pop("pixie_port")                           # memory-mapped (2026-11-17), so the IO panel keeps port 4 beside it
+        if a.panel and a.panel.lower() not in ("none", "a"): raise SystemExit("--panel: A (the only revision) or none")
+        panel = bool(a.panel) and a.panel.lower() == "a"
+        if a.hw:
+            from .hw import HWMachine
+            m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev,
+                          ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev, panel_rev="A" if panel else None,
+                          videog=a.videog_rev, monitor=a.monitor, gfx=not a.no_gfx,
+                          kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(),
+                          mhz=2.0 if a.cpu_rev.upper() == "D" else 1.76, **kw)
+            m.stop_on = {k for k in a.bus_stop.split(",") if k}
+            print(m.describe(), file=sys.stderr)
+        else:
+            from .videog import VideoGMachine
+            m = VideoGMachine(monitor=a.monitor, gfx=not a.no_gfx, panel=panel, **kw)
+    elif vk:                                           # the 6845 card with the keyboard on it: no IO card, no 1861
         kw.pop("pixie_port")
-        if a.panel and a.panel.lower() != "none": raise SystemExit("--panel and --video g both use port 4: one or the other")
-        m = VideoGMachine(monitor=a.monitor, gfx=not a.no_gfx, **kw)
+        if a.panel and a.panel.lower() not in ("none", "a"): raise SystemExit("--panel: A (the only revision) or none")
+        panel = bool(a.panel) and a.panel.lower() == "a"
+        if a.hw:
+            from .hw import HWMachine
+            m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev,
+                          video_rev="B-Clean-Keyboard", ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev,
+                          panel_rev="A" if panel else None, kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(), **kw)
+            m.stop_on = {k for k in a.bus_stop.split(",") if k}
+            print(m.describe(), file=sys.stderr)
+        else:
+            from .machine import Video6845KbdMachine
+            m = Video6845KbdMachine(panel=panel, **kw)
     elif a.hw:
         from .hw import HWMachine
         m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev, video_rev=None if a.video_rev.lower() == "none" else a.video_rev,
                       ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev,
-                      io_rev=None if a.io_rev.lower() == "none" else a.io_rev, panel_rev=None if not a.panel or a.panel.lower() == "none" else a.panel, **kw)
+                      io_rev=None if a.io_rev.lower() == "none" else a.io_rev, panel_rev=None if not a.panel or a.panel.lower() == "none" else a.panel,
+                      kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(), **kw)   # (the 6845 card Rev B-Clean-Keyboard's JP1)
         m.stop_on = {k for k in a.bus_stop.split(",") if k}
         print(m.describe(), file=sys.stderr)
     else:
@@ -96,12 +129,14 @@ def main(argv=None):
     for spec in a.load:
         f, _, at = spec.partition("@"); m.load_ram(f, int(at, 16) if at else None)
     sh = Shell(m)
-    for f in (a.sym or ([] if vg else ROM_SYMS.get(os.path.realpath(a.rom), []))):
+    for f in (a.sym or ([] if (vg or vk) else ROM_SYMS.get(os.path.realpath(a.rom), []))):
         if os.path.exists(f): sh.d.load_symbols(f)
     running = [False]
     if a.buslink:
         from .buslink import BusLink
-        sh.link = BusLink(m, lambda: running[0]); print("bus-driver link on", sh.link.path, file=sys.stderr)
+        try: sh.link = BusLink(m, lambda: running[0], rev=a.buslink_rev)
+        except ValueError as e: raise SystemExit("--buslink-rev C: %s" % e)
+        print("bus-driver link (BUSDRV-%s) on" % sh.link.rev, sh.link.path, file=sys.stderr)
     lines = list(a.command)
     if a.script: lines = open(a.script).read().splitlines() + lines
     for line in lines:

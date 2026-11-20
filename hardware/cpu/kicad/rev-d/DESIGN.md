@@ -1,15 +1,15 @@
-# CPU Rev D: design notes (draft)
+# CPU Rev D: design notes
 
 A new System-5 CPU card for the 36-pin bus: the CDP1802, its clock, reset and run control, and a 4K boot EPROM with the boot remap.
-Nothing else: no 1861 video, no ribbon to an IO card. Started 2026-10-30 (Ken). Nothing is drawn yet; this file collects the decisions
-and the proposals still to agree. The Rev A card (`../rev-a/`, `docs/manual/cpu-card.md`) is the reference.
+Nothing else: no 1861 video, no ribbon to an IO card. Started 2026-10-30 (Ken) and drawn the same day; this file collected the decisions
+and the proposals as they were made. **Status (2026-11-17): passes `pcb-check`, not ordered** (Board, below). The Rev A card (`../rev-a/`, `docs/manual/cpu-card.md`) is the reference.
 
 ## Decided (Ken, 2026-10-30)
 
 | Item | Decision |
 |---|---|
 | Scope | CPU, clock, reset/run, boot EPROM and its remap circuit. No 1861, no IO-card ribbon (SV3), no LCLK/SC/DMA OUT for it. |
-| Bus | The 36-pin interface of the bus Rev D: positions 1-3 -EF1..-EF3, 4-33 the 30-pin bus, 34-36 -PAUSE, -DMAIN (LOAD mode only), EXP = SC0; see `docs/manual/bus.md`, "The 36-pin extension". |
+| Bus | The 36-pin interface of the bus Rev D, in the order of 2026-11-18 (Ken), counted from GND: positions 1-30 the 30-pin bus (GND at 1, the slot's end pin, +5V at 30), 31-33 -EF1..-EF3, 34 -DMAIN (LOAD mode only), 35 SC0, 36 -PAUSE; until then, counted from the other end, 1-3 -EF1..-EF3, 4-33 the bus, 34-36 -PAUSE, -DMAIN, EXP = SC0. See `docs/manual/bus.md`, "The 36-pin extension". |
 | Internal clock | A 4 MHz canned oscillator, divided by 2 (74HCT74): **2 MHz at the 1802**. The old cards' 1.79 MHz was for the 1861. |
 | External clock | An **EXT CLK header pin** on the card, wired from a debug board (the bus driver's J2 spare) with a jumper wire; not on the bus (EXP stays free, Ken 2026-10-30). A jumper picks **INT / EXT**. The 1802 is static, so the debug board can run it slowly or step it edge by edge. |
 | Boot EPROM | A **4K 2732** at F000-FFFF, as on Rev A, so today's HBIOS 1.0.4 chip moves across. |
@@ -21,7 +21,7 @@ and the proposals still to agree. The Rev A card (`../rev-a/`, `docs/manual/cpu-
 1. **Clock select.** A 3-pin jumper CLK: INT (the ÷2 output) / EXT (the EXT CLK header pin through a 74HCT14 Schmitt buffer, with a 10k pull-down so an
    unconnected pin holds the clock low rather than floating). The 1802's CLOCK pin is driven by one or the other, never both; XTAL left open.
    A test pin for the 1802 clock. The EXT CLK pin goes at a board edge (header rule) with a GND pin beside it. The bus lines' meanings
-   are drafted in `docs/manual/bus.md`, "The 36-pin extension"; EXP (position 36) = SC0 (Ken, 2026-10-30), driven by the CPU card through a buffer (`bus.md`); -DMAIN is LOAD mode only.
+   are drafted in `docs/manual/bus.md`, "The 36-pin extension"; EXP = SC0 (Ken, 2026-10-30; position 35 since 2026-11-18), driven by the CPU card through a buffer (`bus.md`); -DMAIN is LOAD mode only.
 2. **High address latch.** Fix finding T1: a 74HCT373 (transparent while TPA is high, as Rev A was drawn) instead of the 374 fitted on
    Rev A, so the high byte is caught before TPA falls.
 3. **Boot remap.** Rev A as built (A-built): the boot flip-flop's D and PRE high, clocked by latched A15, cleared by -RESET; the EPROM
@@ -42,6 +42,9 @@ and the proposals still to agree. The Rev A card (`../rev-a/`, `docs/manual/cpu-
    2005 schematics' -EF4). The keyboard flag moves to -EF3 on the new video card, so HBIOS (which waits on EF3) needs no change.
    One jumper block per EF input picks its line; for the old 30-pin IO card, whose keyboard flag can only reach -EF, set EF3 = -EF.
    The IDE card uses no flag (the BIOS polls its status). All with pull-ups on the bus Rev D already.
+   **Drawn 2026-11-17** (Ken: "have EF selectable from all EF lines"): JP2-JP5, one 2x4 block per input (EF1-EF4), each
+   row a bus flag line (-EF1, -EF2, -EF3, -EF), a jumper across a row puts that line on the block's input. The board
+   first had only JP2 (straight across) and JP3 (-EF to EF3).
 6. **Reset and run** (Ken, 2026-10-30): a front-edge **RESET / RUN switch**, a two-position toggle labelled RESET and RUN at its ends:
    RESET holds -RESET low, RUN releases it and the 1802 runs (the RUN pulse after reset, as on Rev A). Keep the CM1232/DS1232 power-on
    reset. **A debug board drives it too**: -RESET on the bus is open collector, so the bus driver (it already drives -RESET) or a
@@ -75,11 +78,12 @@ writing it (for Ken to review):
   -RESET, LOAD on pulls -PAUSE; LOAD mode = RUN off + LOAD on), not PAUSE and LOAD; PAUSE is RUN on + LOAD on.
 - **Bus lines driven:** -VMA push-pull from U5B (only the CPU card drives it), SC0 through U9D/U9E, -RESET open drain (U10, D1).
   Unbuffered as on Rev A: D0-D7, A0-A7, TPA, TPB, -MRD, -MRW, Q, N0-N2.
-- **Pull-ups on the card** (RN1, 10k): -RESET, -INT, -PAUSE, -DMAIN, -EF, -EF1-3, so the card also works on the 2009 backplane,
-  which has none; RN2 holds EF1-EF4 high when a JP2 jumper is off.
+- **Pull-ups on the card** (RN1, 10k): -RESET, -INT, -PAUSE, -DMAIN, -EF, -EF1-3, so the card also worked on the 2009
+  backplane, which has none (since the slot order of 2026-11-18 it no longer fits that backplane: there its +5V pin
+  would meet D2); RN2 holds EF1-EF4 high when an EF block has no jumper.
 - **Parts:** U1 CDP1802ACE, U2 74HCT373, U3 2732, U4/U8 74HCT74, U5 74HCT00, U6 74HCT20, U7/U9 74HCT14, U10 DS1813-10,
   X1 4 MHz DIP-8 oscillator; J1 the 36-pin bus (footprint to settle with the board: a placeholder 1×36 header), J2 DEBUG
-  (EXT_CLK, GND, CLOCK, SC0, SC1, GND), JP1 CLK INT/EXT, JP2 EF (2×4), JP3 -EF TO EF3; LEDs PWR, Q, PAUSE, RESET, ROM.
+  (a keyed 2×3 since 2026-11-18: EXT_CLK, GND, CLOCK, SC0, SC1, GND), JP1 CLK INT/EXT, JP2-JP5 the EF blocks (2×4 each); LEDs PWR, Q, PAUSE, RESET, ROM.
   Spare: U6B (inputs tied high), U8B.
 - **Symbols:** KiCad's stock 74xx symbols are one unit per gate, which the generator cannot place, so the logic uses one-unit
   project symbols (`s5cpu.kicad_sym`, written by make_schematic.py from `netlist.CHIPS`, pinouts from the data sheets). The
@@ -88,15 +92,22 @@ writing it (for Ken to review):
 ## Board (2026-10-30): `gen/make_board.py`
 
 - **5.50 × 4.00 in** (139.7 × 101.6 mm; Ken, 2026-10-30: a 36-pin card is 0.25 in taller than the 30-pin cards so the
-  connector clears the card supports). J1 = `s5cpu:C36` (the 30-pin cards' C30 with positions 1-3 and 34-36 added) down
-  the left edge, centred; the 3.00 × 0.15 in support strips along the top and bottom edges are copper keep-outs.
-- **2 layers**, routed by Freerouting (1090 segments, 40 vias), GND pours both sides. `preorder_check --layers 2`: **PASS**
-  (ERC 0, DRC 0, parity 0, netlist 78/78 MATCH, bypass caps 0.1", schematic redrawn). Not ordered. That is the older
-  check, `tools/preorder_check.py`; before an order the board has to pass `pcb-check` (every system since 2026-11-06;
-  `hardware/BUILD-RULES.md`, section 2).
-- Front edge (right): SW1 RESET/RUN (RESET with the lever up), LEDs PWR, Q, PAUSE, RESET, ROM, J2 DEBUG with each pin
-  named; JP1 CLK (INT/EXT), JP2 EF1-4, JP3 -EF>EF3 along the bottom edge outside the support strip; every chip's reference
-  and type below it; S5CPU-D, "System-5 CPU Rev D 2026", cottageworker.com.
+  connector clears the card supports). J1 = `s5cpu:C36` (the 30-pin cards' C30 with three positions added at each end) down
+  the left edge, centred (since 2026-11-18 its positions 1-30, from the GND end, carry the 30-pin bus, so a 30-pin card in the same
+  slot sits 7.6 mm towards the GND end; the footprint is turned end for end so that its pad 1 is GND); the 3.00 × 0.15 in support strips along the top and bottom edges are copper keep-outs.
+- **2 layers**, GND pours both sides. **Built by `gen/build.sh`** since 2026-11-17 (schematic, ERC, netlist, board,
+  Freerouting, DRC, order files, `tools/preorder_check.py --layers 2`): Freerouting's input in a fixed order
+  (`gen/route.py`, `tools/kicad/dsn_order.py`, as VIDEO-G's), so the board routes the same way every time; +5V 0.5 mm
+  wide (the project's Power class; pcb-check wants power on planes or on tracks of 0.5 mm or more, and GND has its
+  pours: GND 0.5 mm too left no way past U3's address pins). 1020 segments, 37 vias (routing seed 1, with the slot order of 2026-11-18: below); DRC 0, parity 0, netlist 78/78
+  MATCH. **`pcb-check` (2026-11-17, `--tests`): no failures, 0 warnings** (before an order on every system since
+  2026-11-06; `hardware/BUILD-RULES.md`, section 2). Its footprint check took the 1802 from a table entry that
+  pcb-check had not yet committed that evening; the older check, `tools/preorder_check.py`, passes too.
+- Front edge (right): SW1 RESET/RUN (RESET with the lever up; a Marquardt 9070-1W since 2026-11-18, below), LEDs labelled PWR, Q, PAUSE, RESET, ROM, and **J2 DEBUG, a keyed 2×3 header**
+  (Ken, 2026-11-18) for a 6-way ribbon to the bus driver BUSDRV-C's matching header (wire n = pin n), its rows
+  named "EXT CLK  GND", "CLOCK  SC0", "SC1  GND"; JP1 CLK (INT/EXT) and the EF blocks JP2-JP5 ("JP2 EF1" ... "JP5 EF4", the bus lines named by the rows) along
+  the bottom edge outside the support strip, below SW1; every chip's reference
+  and type below it; "System-5 CPU Rev D 2026", cottageworker.com (until 2026-11-18 "S5CPU-D" over them).
 - **Bus labels:** every J1 pin named on the silkscreen beside its pad (-EF1 … SC0, as on the bus slots).
 - **Emulator (2026-10-30):** `python3 -m s5emu --hw --cpu-rev D` runs the card from its netlist (s5emu: the 74HCT parts
   use the 2005 models, the symbols carry the same pin names; a new 4-input NAND model; the bus read by net name from the
@@ -107,6 +118,73 @@ writing it (for Ken to review):
   clean (T1 gone with the 74HCT373; -VMA +608 ns, EPROM data +1825 ns). The limits are elsewhere: **the 6845 card's E high
   time fails above ~1.9 MHz** with its 1 MHz-grade HD46505RP (T3, -50 ns at 2 MHz), and T6 (IDE INP into RAM) is down to
   +15 ns. Either fit a faster CRTC grade on the video card or run at 1.79 MHz with a 3.579545 MHz can in X1's socket.
-- **Decided (Ken, 2026-10-30): keep 2 MHz**; the video card Rev C gets a faster CRTC grade (its DESIGN.md).
-- **Still to do before an order:**
-  ; check the 36-pin card in the card guides (4.00 in); Ken's look at the pictures.
+- **Decided (Ken, 2026-10-30): keep 2 MHz**; the video card that runs with it gets a faster CRTC grade (VIDEO-G: an HD68B45,
+  `hardware/video-g/DESIGN.md`).
+- **Silkscreen for pcb-check (2026-11-17):** "J1 BUS" along the bus edge; the LEDs are LED1-LED5 in the netlist, not D2-D6
+  (J1's pin labels name the data lines D0-D7, and pcb-check took them for the LEDs' references), and **labelled by
+  their function alone** (Ken, 2026-11-18: PWR, Q, PAUSE, RESET, ROM; `pcb-check.ini` `exempt_labels` lets their
+  references go, and pcb-check names them in a NOTE); D1 by its own reference
+  field; the 0.1 uF footprint has a courtyard and a body (as VIDEO-G's), so pcb-check finds each value.
+  `pcb-check.ini` beside the board: the bus on the left edge (pcb-check finds bus connectors only by DIN 41612 names),
+  the 36 positions from `tools/s5bus.py --positions 36`, the emulator's CPU Rev D tests.
+- **Silkscreen at 270 (2026-11-18):** Ken's rule that every text reads upright with the card standing in the bus,
+  connector down (he asked for it on this card that day, through the pcb-check session): the labels moved from
+  `make_board.py` into `gen/silk.py` (which `make_board.py` calls, and which rewrites the routed board's silkscreen with
+  its copper untouched), on `tools/kicad/silk270.py`, the placer VIDEO-G uses: every label at KiCad 270, at the first spot
+  clear of every pad, part, other text, the edge and the two card-support strips, under its part with the card standing
+  first. J1's pins named in two staggered columns; the switch's RESET and RUN at its ends; JP1's INT and EXT at its
+  ends; the EF blocks' rows (-EF1 ... -EF) staggered under JP2; the DEBUG header's pins in a legend under it ("J2 DEBUG
+  / 2 GND 4 SC0 6 GND / 1 EXT CLK 3 CLOCK 5 SC1"); D1's own field at 270 with "BAT85" after it, and its "K". The name
+  line alone at 0 along the bottom edge as drawn, just above the strip ("System-5 CPU  Rev D  2026", cottageworker.com
+  beside it; Ken that evening: one naming for every card, no code like S5CPU-D). 91 texts at 270 and 2 at 0 (was 95 at 0, 1 at 90); copper unchanged, every track, via,
+  pad and zone compared; `tools/preorder_check.py --layers 2` PASS, DRC 0 errors and 0 warnings.
+- **The slot order of 2026-11-18** (Ken: "looking at the bus from the power supply end I want the right most pin to be
+  gnd followed by the next original pin order all the way to +5v/vcc, then EF1, EF2, EF3, -DMAin, SC0"; -PAUSE kept, at
+  the far end; and the slot counted from GND, "start counting at gnd as pin 1"): J1's positions 1-30 the 30-pin bus
+  (GND at 1, +5V at 30), 31-33 -EF1..-EF3, 34 -DMAIN, 35 SC0, 36 -PAUSE, from `gen/netlist.py`'s `POS`, as the bus Rev
+  D's; the C36 footprint is turned end for end, so that its pad 1 is the GND end. The circuit is unchanged; J1's
+  signals moved, so the board was routed again: seed 1 (of seeds 0-11, 1 and 2 route every net with the renumbered
+  connector; 1020 segments, 37 vias; DRC 0 errors and 0 warnings, 0 unconnected, parity 0, the netlist proof 78 of 78;
+  `tools/preorder_check.py --layers 2` PASS; `pcb-check --tests` at elf `31c54a8` (pcb-check `60fd275`, 2026-11-18): **no failures, 0 warnings**, the 36 bus
+  pins on J1 as defined, the emulator's CPU Rev D tests and the HBIOS boot test passing). J1's pin names follow `POS`.
+  The card no longer fits the 2009 backplane. **"-PAUSE" had no label:** at position 1 its name, 0.8 mm tall, came 0.01 mm
+  into the card-support strip, and `silk270`'s placer left it out without a word (`make_board.py` did not ask it what it
+  had missed). Now `pin_names` tries one column further out and 0.5 or 1.0 mm towards the connector's middle before it
+  gives up ("-PAUSE" sits 0.5 mm below its pin, in a third column), and `make_board.py` stops the build if any label is
+  left out.
+- **Three moves at the front (Ken, 2026-11-18: "on cpu card move the jp1 between osc and jp2, move 4 ef jumpers down
+  about 1.5 inches, change reset to same on yacc1"):**
+  - **JP1 CLK INT/EXT** from the bottom edge to the top edge, between the oscillator X1 and the DEBUG header J2 (read
+    "jp2" as J2: JP1 picks between the oscillator's clock and the EXT CLK that comes in on J2), INT at the end nearer
+    the top edge, EXT at the other.
+  - **The four EF blocks JP2-JP5** 1.5 in (38.1 mm) nearer the bus along the bottom edge ("down" with the card standing),
+    and 2 mm further from that edge, so that JP2's last row and its name stay out of the card-support strip, which
+    ends at 3.00 in from the bus edge.
+  - **SW1 RESET/RUN a Marquardt 9070-1W**, the RESET/RUN toggle of Ken's YACC1 (its sequencer-logic card), as the bus
+    Rev D's power switch that day: the footprint `s5cpu.pretty/SW_Toggle_SPDT_Marquardt_9070-1W` (YACC1-D's, its
+    origin on the common), three terminals on 2.54 mm and two bracket legs, the body flush with the front edge, bushing
+    and lever past it. Common (pin 2) to GND, pin 3 SW_RST: RESET with the lever up as drawn, towards the top edge, as
+    before (a toggle closes the contact away from its lever: to check against a real part); pin 1, RUN, open. In place
+    of the E-Switch 100 series. Its contacts only carry the reset line's milliamp.
+  Routed again on seed 0 (the sorted order): 1029 segments, 35 vias; DRC 0 errors and 0 warnings, 0 unconnected, parity
+  0, the netlist proof 78 of 78; `tools/preorder_check.py --layers 2` PASS; the emulator's CPU Rev D tests pass.
+  `pcb-check --tests` at elf `26337ba` (2026-11-18, by the pcb-check session): **no failures, 0 warnings**. `cpu-rev-d-1to1.pdf` is the board at full size on a Letter sheet, to lay the switch and
+  the other parts on (`tools/kicad/print_1to1.py`; `gen/build.sh` remakes it).
+- **The DEBUG header and the bus driver's:** J2's pin 1 is 6.7 mm in from the front edge and 10 mm from the top edge;
+  BUSDRV-C's J4 pin 1 is 7.7 mm and 8 mm (Ken, 2026-11-18: "debug connector approx same place on driver card?"): 1 mm
+  and 2 mm apart, which a 6-way ribbon between neighbouring slots takes; left so.
+- **The bus header drawn as the part it is; "J1 BUS" out from under it (the night of 2026-11-18).** J1 is a single-row
+  right-angle pin header: its plastic body lies on the board between the pads and the card edge, 1.5 to 4.0 mm from the
+  pads, and its pins run on past the edge (the photos of the built MEM3-E and BUSDRV-B show it). The C36 footprint had
+  pads and a courtyard round them and no body, so the label placer and `pcb-check` took that strip for free board, and
+  `J1 BUS` was printed in it, at the connector's middle: under the header on a built card. Found on VIDEO-G (its
+  `kicad/README.md`). The footprint (`s5cpu.pretty/C36`) now carries the body (F.Fab), a courtyard round body and pads,
+  and KiCad's 3D model of the header, so the render shows the connector; `J1 BUS` stands on the board side of the pin
+  names, at the connector's middle beside U1 (`tools/kicad/silk270.py`, `bus_label`). Silkscreen only: `gen/silk.py`
+  brought J1's drawing up to the footprint (`tools/kicad/fp_update.py`) and placed the labels again; no other label
+  moved, every track, via, pad and zone is the same, and a new build gives Freerouting the same input. DRC 0 errors and
+  0 warnings; `tools/preorder_check.py --layers 2` PASS. `pcb-check --tests` at elf `59d911e` (2026-11-19, by the
+  pcb-check session): **no failures, 0 warnings**; its earlier passes had the label under the header, which it could not
+  see.
+- **Still to do before an order:** check the 36-pin card in the card guides (4.00 in); Ken's look at the pictures
+  (`check-*.png`, the render) and the fab's gerber viewer; order it with the bus Rev D, whose 36-pin slots it needs.

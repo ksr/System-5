@@ -1,0 +1,289 @@
+    1 0000:              ; vgdemo for Elf/OS v5 on System-5 with VIDEO-G: a small demo of the two ways a program puts something on VIDEO-G's
+    2 0000:              ; screen: writing characters to the text RAM (the TEXT board) and writing dots to the graphics RAM (the GFX board).
+    3 0000:              ; Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20 (Ken: "a small demo showing writing to
+    4 0000:              ; text and writing to graphics")
+    5 0000:              ;
+    6 0000:              ; What it does, in this order:
+    7 0000:              ;   1. TEXT. It stores spaces over rows 0-21 of the text RAM (the rows above the prompt's), then copies three lines
+    8 0000:              ;      of words into it. A character stored at 7000 + 64 x row + column is on the screen at once: there is nothing
+    9 0000:              ;      else to do.
+   10 0000:              ;   2. GRAPHICS ON. It writes 02 to the control register (7804): bit 1 is GFX-ON, and bit 0 (TEXT-OFF) stays 0, so
+   11 0000:              ;      the monitor shows the text and the graphics together. The graphics RAM holds whatever it powered up with,
+   12 0000:              ;      so the first thing seen is a screen of stray dots.
+   13 0000:              ;   3. GRAPHICS. For each of the 200 lines: it writes the line's number to the Y register (7806), and the 64 bytes
+   14 0000:              ;      at 7C00-7C3F are then that line's 512 dots, bit 7 of each byte the leftmost. It clears the line, and inside
+   15 0000:              ;      the box draws the box's top or bottom (bytes of FF), or its two edges (one dot each) and two dots of the
+   16 0000:              ;      diagonal. The diagonal's dots are ORed into the byte: read 7C00 + x/8, OR the mask, write it back.
+   17 0000:              ;   4. It waits for a key (status register 7804, bit 0 = KEY-READY; the key is read at 7802), turns the graphics
+   18 0000:              ;      off again (control = 00) and goes back to Elf/OS. The graphics RAM keeps the picture.
+   19 0000:              ; The words in the middle of the box are text, the box and the line across them are graphics: where they cross,
+   20 0000:              ; the two are ORed by the card (the control register's XOR bit would make them cancel instead).
+   21 0000:              ;
+   22 0000:              ; It asks the card what it is first (status bits 7-6 = 10 on VIDEO-G, bit 5 = GFX fitted) and does nothing on any
+   23 0000:              ; other video card: on the 6845 card these addresses are the 6845's own registers.
+   24 0000:              ;
+   25 0000:              ; Build: python3 software/elfos-v5/build.py  (tools/asm1802.py; it writes vgdemo, the Elf/OS program, and vgdemo.lst)
+   26 0000:              
+   27 7000:             textram:    equ     07000h          ; the text RAM: 64 characters a row, 25 rows
+   28 7802:             key:        equ     07802h          ; the key (reading it clears KEY-READY)
+   29 7804:             ctrl:       equ     07804h          ; control (write) and status (read)
+   30 7806:             yreg:       equ     07806h          ; the Y register (write): the line the window shows
+   31 7c00:             window:     equ     07c00h          ; the graphics window: the 64 bytes of line Y
+   32 0000:              
+   33 00c8:             lines:      equ     200             ; 512 x 200 on an NTSC monitor
+   34 0024:             top:        equ     36              ; the box: lines 36-163 ...
+   35 0080:             height:     equ     128
+   36 0010:             left:       equ     16              ; ... and bytes 16-47 of each line (dots 128-383)
+   37 002f:             right:      equ     47
+   38 0000:              
+   39 7084:             text1:      equ     textram+(64*2)+4    ; row 2, column 4
+   40 7317:             text2:      equ     textram+(64*12)+23  ; row 12, column 23: inside the box
+   41 7544:             text3:      equ     textram+(64*21)+4   ; row 21, column 4: under the box, above the prompt's rows
+   42 7580:             textend:    equ     textram+(64*22)     ; one past row 21
+   43 0000:              
+   44 ff09:             f_msg:      equ     0ff09h          ; BIOS: type the text at RF
+   45 0000:              
+   46 2000:                          org     2000h
+   47 2000: 30 25                    br      start
+   48 2002:              ; What `ver /bin/vgdemo` shows (laid out as in Mike Riley's programs, as cls has it)
+   49 2002: cb 14                    db      0c0h + 11, 20
+   50 2004: 07 ea                    dw      2026
+   51 2006: 0c 00 00                 db      12, 0, 0
+   52 2009: 00 01                    dw      1
+   53 200b: 53 79 73 74              db      'System-5 VIDEO-G demo', 0
+      200f: 65 6d 2d 35 
+      2013: 20 56 49 44 
+      2017: 45 4f 2d 47 
+      201b: 20 64 65 6d 
+      201f: 6f 00       
+   54 2021: c0 30 0c 03  dots:       db      0c0h, 030h, 00ch, 003h  ; two dots of the diagonal, for line mod 4 = 0, 1, 2, 3
+   55 2025:              
+   56 2025: f8 78        start:      ldi     high ctrl       ; R8 at the status register (7804)
+   57 2027: b8                       phi     r8
+   58 2028: f8 04                    ldi     low ctrl
+   59 202a: a8                       plo     r8
+   60 202b: 08                       ldn     r8              ; is this VIDEO-G (bits 7-6 = 10) with its GFX board (bit 5)?
+   61 202c: fa e0                    ani     0e0h
+   62 202e: fb a0                    xri     0a0h
+   63 2030: 32 3e                    bz      text
+   64 2032: f8 21                    ldi     high nocard     ; no: say so, and leave the card alone
+   65 2034: bf                       phi     rf
+   66 2035: f8 71                    ldi     low nocard
+   67 2037: af                       plo     rf
+   68 2038: d4                       sep     r4
+   69 2039: ff 09                    dw      f_msg
+   70 203b: f8 00                    ldi     0
+   71 203d: d5                       sep     r5
+   72 203e:              ;
+   73 203e:              ; 1. TEXT: spaces over rows 0-21, then three lines of words, all stored in the text RAM
+   74 203e:              ;
+   75 203e: f8 70        text:       ldi     high textram    ; RD at the first character of the screen
+   76 2040: bd                       phi     rd
+   77 2041: f8 00                    ldi     low textram
+   78 2043: ad                       plo     rd
+   79 2044: f8 20        tclear:     ldi     ' '
+   80 2046: 5d                       str     rd
+   81 2047: 1d                       inc     rd
+   82 2048: 8d                       glo     rd              ; up to the end of row 21 (7580)
+   83 2049: fb 80                    xri     low textend
+   84 204b: 3a 44                    bnz     tclear
+   85 204d: 9d                       ghi     rd
+   86 204e: fb 75                    xri     high textend
+   87 2050: 3a 44                    bnz     tclear
+   88 2052: f8 20                    ldi     high words      ; RF at the words, RD at the place in the text RAM
+   89 2054: bf                       phi     rf
+   90 2055: f8 ee                    ldi     low words
+   91 2057: af                       plo     rf
+   92 2058: f8 70                    ldi     high text1
+   93 205a: bd                       phi     rd
+   94 205b: f8 84                    ldi     low text1
+   95 205d: ad                       plo     rd
+   96 205e: d4                       sep     r4
+   97 205f: 20 e6                    dw      tcopy
+   98 2061: f8 73                    ldi     high text2
+   99 2063: bd                       phi     rd
+  100 2064: f8 17                    ldi     low text2
+  101 2066: ad                       plo     rd
+  102 2067: d4                       sep     r4
+  103 2068: 20 e6                    dw      tcopy
+  104 206a: f8 75                    ldi     high text3
+  105 206c: bd                       phi     rd
+  106 206d: f8 44                    ldi     low text3
+  107 206f: ad                       plo     rd
+  108 2070: d4                       sep     r4
+  109 2071: 20 e6                    dw      tcopy
+  110 2073:              ;
+  111 2073:              ; 2. GRAPHICS ON: control register bit 1 (text stays on)
+  112 2073:              ;
+  113 2073: f8 02                    ldi     02h
+  114 2075: 58                       str     r8
+  115 2076:              ;
+  116 2076:              ; 3. GRAPHICS: line by line. R7.0 = the line, R8 at the Y register, R9 at a byte of the window
+  117 2076:              ;
+  118 2076: f8 06                    ldi     low yreg
+  119 2078: a8                       plo     r8
+  120 2079: f8 00                    ldi     0
+  121 207b: a7                       plo     r7
+  122 207c: 87           gline:      glo     r7              ; the Y register = this line: the window is now this line's 64 bytes
+  123 207d: 58                       str     r8
+  124 207e: f8 7c                    ldi     high window
+  125 2080: b9                       phi     r9
+  126 2081: f8 00                    ldi     low window
+  127 2083: a9                       plo     r9
+  128 2084: f8 00        gclear:     ldi     0               ; clear the line
+  129 2086: 59                       str     r9
+  130 2087: 19                       inc     r9
+  131 2088: 89                       glo     r9
+  132 2089: fb 40                    xri     40h
+  133 208b: 3a 84                    bnz     gclear
+  134 208d: 87                       glo     r7              ; RA.0 = the line counted from the box's top
+  135 208e: ff 24                    smi     top
+  136 2090: 3b cc                    bnf     gnext           ; above the box
+  137 2092: aa                       plo     ra
+  138 2093: ff 80                    smi     height
+  139 2095: 33 cc                    bdf     gnext           ; below it
+  140 2097: 8a                       glo     ra
+  141 2098: 32 c0                    bz      gfull           ; the box's top line
+  142 209a: fb 7f                    xri     height-1
+  143 209c: 32 c0                    bz      gfull           ; and its bottom line
+  144 209e: f8 10                    ldi     left            ; a line inside: the left edge, the leftmost dot of byte 16
+  145 20a0: a9                       plo     r9
+  146 20a1: f8 80                    ldi     80h
+  147 20a3: 59                       str     r9
+  148 20a4: f8 2f                    ldi     right           ; the right edge, the rightmost dot of byte 47
+  149 20a6: a9                       plo     r9
+  150 20a7: f8 01                    ldi     01h
+  151 20a9: 59                       str     r9
+  152 20aa: 8a                       glo     ra              ; the diagonal, two dots a line: the byte is 16 + line / 4 ...
+  153 20ab: f6                       shr
+  154 20ac: f6                       shr
+  155 20ad: fc 10                    adi     left
+  156 20af: a9                       plo     r9
+  157 20b0: 8a                       glo     ra              ; ... and the dots are dots[line mod 4]
+  158 20b1: fa 03                    ani     03h
+  159 20b3: fc 21                    adi     low dots
+  160 20b5: af                       plo     rf
+  161 20b6: f8 20                    ldi     high dots
+  162 20b8: bf                       phi     rf
+  163 20b9: 0f                       ldn     rf
+  164 20ba: 52                       str     r2              ; OR them into the byte: read it, OR, write it back
+  165 20bb: 09                       ldn     r9
+  166 20bc: f1                       or
+  167 20bd: 59                       str     r9
+  168 20be: 30 cc                    br      gnext
+  169 20c0: f8 10        gfull:      ldi     left            ; the top or the bottom: bytes 16-47 all dots
+  170 20c2: a9                       plo     r9
+  171 20c3: f8 ff        gfill:      ldi     0ffh
+  172 20c5: 59                       str     r9
+  173 20c6: 19                       inc     r9
+  174 20c7: 89                       glo     r9
+  175 20c8: fb 30                    xri     right+1
+  176 20ca: 3a c3                    bnz     gfill
+  177 20cc: 17           gnext:      inc     r7
+  178 20cd: 87                       glo     r7
+  179 20ce: fb c8                    xri     lines
+  180 20d0: 3a 7c                    bnz     gline
+  181 20d2:              ;
+  182 20d2:              ; 4. Wait for a key, turn the graphics off, back to Elf/OS
+  183 20d2:              ;
+  184 20d2: f8 04                    ldi     low ctrl
+  185 20d4: a8                       plo     r8
+  186 20d5: 08           kwait:      ldn     r8              ; KEY-READY (status bit 0)?
+  187 20d6: f6                       shr
+  188 20d7: 3b d5                    bnf     kwait
+  189 20d9: f8 02                    ldi     low key         ; read the key: that clears KEY-READY
+  190 20db: a8                       plo     r8
+  191 20dc: 08                       ldn     r8
+  192 20dd: f8 04                    ldi     low ctrl
+  193 20df: a8                       plo     r8
+  194 20e0: f8 00                    ldi     00h             ; control = 00: text on, graphics off
+  195 20e2: 58                       str     r8
+  196 20e3: f8 00                    ldi     0               ; the program's return value: no error
+  197 20e5: d5                       sep     r5
+  198 20e6:              ;
+  199 20e6:              ; tcopy: the text at RF, up to its 00, into the text RAM at RD. RF is left after the 00, at the next text.
+  200 20e6:              ; (RD, not RE: a call through SCRT uses RE.0.)
+  201 20e6: 4f           tcopy:      lda     rf
+  202 20e7: 32 ed                    bz      tdone
+  203 20e9: 5d                       str     rd
+  204 20ea: 1d                       inc     rd
+  205 20eb: 30 e6                    br      tcopy
+  206 20ed: d5           tdone:      sep     r5
+  207 20ee:              
+  208 20ee: 54 45 58 54  words:      db      'TEXT: these words are characters in the text RAM (7000).', 0
+      20f2: 3a 20 74 68 
+      20f6: 65 73 65 20 
+      20fa: 77 6f 72 64 
+      20fe: 73 20 61 72 
+      2102: 65 20 63 68 
+      2106: 61 72 61 63 
+      210a: 74 65 72 73 
+      210e: 20 69 6e 20 
+      2112: 74 68 65 20 
+      2116: 74 65 78 74 
+      211a: 20 52 41 4d 
+      211e: 20 28 37 30 
+      2122: 30 30 29 2e 
+      2126: 00          
+  209 2127: 54 45 58 54              db      'TEXT OVER GRAPHICS', 0
+      212b: 20 4f 56 45 
+      212f: 52 20 47 52 
+      2133: 41 50 48 49 
+      2137: 43 53 00    
+  210 213a: 47 52 41 50              db      'GRAPHICS: the box and the line are dots. Any key ends.', 0
+      213e: 48 49 43 53 
+      2142: 3a 20 74 68 
+      2146: 65 20 62 6f 
+      214a: 78 20 61 6e 
+      214e: 64 20 74 68 
+      2152: 65 20 6c 69 
+      2156: 6e 65 20 61 
+      215a: 72 65 20 64 
+      215e: 6f 74 73 2e 
+      2162: 20 41 6e 79 
+      2166: 20 6b 65 79 
+      216a: 20 65 6e 64 
+      216e: 73 2e 00    
+  211 2171: 76 67 64 65  nocard:     db      'vgdemo needs the VIDEO-G card with its GFX board', 13, 10, 0
+      2175: 6d 6f 20 6e 
+      2179: 65 65 64 73 
+      217d: 20 74 68 65 
+      2181: 20 56 49 44 
+      2185: 45 4f 2d 47 
+      2189: 20 63 61 72 
+      218d: 64 20 77 69 
+      2191: 74 68 20 69 
+      2195: 74 73 20 47 
+      2199: 46 58 20 62 
+      219d: 6f 61 72 64 
+      21a1: 0d 0a 00    
+
+7804: CTRL
+2021: DOTS
+ff09: F_MSG
+2084: GCLEAR
+20c3: GFILL
+20c0: GFULL
+207c: GLINE
+20cc: GNEXT
+0080: HEIGHT
+7802: KEY
+20d5: KWAIT
+0010: LEFT
+00c8: LINES
+2171: NOCARD
+002f: RIGHT
+2025: START
+2044: TCLEAR
+20e6: TCOPY
+20ed: TDONE
+203e: TEXT
+7084: TEXT1
+7317: TEXT2
+7544: TEXT3
+7580: TEXTEND
+7000: TEXTRAM
+0024: TOP
+7c00: WINDOW
+20ee: WORDS
+7806: YREG

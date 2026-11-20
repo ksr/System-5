@@ -10,6 +10,7 @@ ROM104 = os.path.join(HERE, "..", "roms", "hbios-1.0.4.rom")
 ROM105 = os.path.join(HERE, "..", "roms", "hbios-1.0.5.rom")
 ROM106 = os.path.join(HERE, "..", "roms", "hbios-1.0.6.rom")
 ROM107 = os.path.join(HERE, "..", "roms", "hbios-1.0.7.rom")
+ROM108 = os.path.join(HERE, "..", "roms", "hbios-1.0.8.rom")
 # Elf/OS v5 is third-party and unlicensed: its image is kept in the private repository beside this one
 V5_GZ = os.path.join(ROOT, "..", "private-resources", "elf", "reference", "mike-riley", "elfos-v5", "system5",
                      "elfos-5.1.1-system5-16mb.img.gz")
@@ -120,6 +121,51 @@ class T(unittest.TestCase):
         finally:
             os.remove(img)
 
+    @unittest.skipUnless(os.path.exists(ROM108), "build firmware/hbios/v1.0.8 first")
+    def test_hbios_108_clock_on_the_io_panel(self):
+        """v1.0.8 (2026-11-18): f_gettod / f_settod through the IO panel's DS12885 on ports 6 and 7, as Mike's BIOS
+        answers them for the ELF2000 (RF at month, day, year since 1972, hour, minute, second); f_getdev's bit 4. A new
+        chip (oscillator off) or no clock at all: f_gettod returns DF = 1. The ROM is v1.0.7 but for the driver."""
+        import datetime
+        from s5emu.rtc import DS12885
+        with open(ROM107, "rb") as f: r107 = f.read()
+        with open(ROM108, "rb") as f: r108 = f.read()
+        diff = [0xF000 + i for i in range(4096) if r107[i] != r108[i]]
+        self.assertTrue(diff and all(0xFC92 <= a <= 0xFCFF or 0xF7CD <= a <= 0xF7FF or a in (0xF816, 0xF817, 0xF819, 0xF81A, 0xFEDC)
+                                     for a in diff))
+        call = lambda at, fn, rf: bytes([0x90, 0xB3, 0xF8, (at + 6) & 0xFF, 0xA3, 0xD3,   # R3 = at + 6, SEP R3 (@ starts P = 0)
+                                         0xE2,                                     # SEX R2: SCRT wants X = 2
+                                         0xF8, rf >> 8, 0xBF, 0xF8, rf & 0xFF, 0xAF,  # RF
+                                         0xD4, fn >> 8, fn & 0xFF,                 # CALL fn
+                                         0xF8, 0x02, 0xBA, 0xF8, (at >> 4 & 0xF0) | 0x00, 0xAA,  # RA = 02x0: the result
+                                         0x3B, (at + 0x1C) & 0xFF,                 # BNF ok
+                                         0xF8, 0x45, 0x30, (at + 0x1E) & 0xFF,     # 'E' (DF = 1)
+                                         0xF8, 0x4F,                               # ok: 'O'
+                                         0x5A, 0x1A, 0x8F, 0x5A, 0x1A, 0x9F, 0x5A, # STR RA; RF after it, low then high
+                                         0x30, (at + 0x25) & 0xFF])                # and stop: BR to itself
+        clock = [datetime.datetime(2026, 11, 18, 1, 30, 0)]
+        rtc = DS12885(now=lambda: clock[0])                                    # a new chip: the oscillator off
+
+        def run_call(fn, rf, data=b"", panel=True):
+            m = Machine(cpu_rom=ROM108, panel=panel); sh = Shell(m)
+            if panel: m.panel.rtc = rtc
+            sh.d.run(max_instructions=2_000_000)
+            for i, b in enumerate(call(0x0100, fn, rf)): m.write(0x0100 + i, b)
+            for i, b in enumerate(data): m.write(rf + i, b)
+            m.kbd.press("@0100\n"); sh.d.run(max_instructions=1_000_000)
+            return m, chr(m.peek(0x0210))
+        m, r = run_call(0xF815, 0x0300); self.assertEqual(r, "E")             # not set yet
+        m, r = run_call(0xF818, 0x0300, bytes([11, 18, 54, 1, 30, 0]))         # 2026-11-18 01:30:00 (54 = 2026 - 1972)
+        self.assertEqual(r, "O"); self.assertTrue(rtc.running())
+        self.assertEqual((rtc.ram[0x0A], rtc.ram[0x0B]), (0x20, 0x06))         # oscillator on; binary, 24-hour, counting
+        self.assertEqual(rtc.time(), datetime.datetime(2054, 11, 18, 1, 30, 0))
+        clock[0] += datetime.timedelta(seconds=61)
+        m, r = run_call(0xF815, 0x0300); self.assertEqual(r, "O")
+        self.assertEqual([m.peek(0x0300 + i) for i in range(6)], [11, 18, 54, 1, 31, 1])
+        self.assertEqual(m.peek(0x0211) | m.peek(0x0212) << 8, 0x0306)         # RF after the six bytes
+        m, r = run_call(0xFF81, 0x0000); self.assertEqual(m.peek(0x0211) | m.peek(0x0212) << 8, 0x0015)   # f_getdev
+        m, r = run_call(0xF815, 0x0300, panel=False); self.assertEqual(r, "E")  # no IO panel: no clock
+
     @unittest.skipUnless(os.path.exists(ROM107), "build firmware/hbios/v1.0.7 first")
     def test_hbios_107_key_codes_on_screen(self):
         """v1.0.7's @F1E0 (Ken, 2026-11-17), self-contained: it waits for the keyboard's flag (EF3), reads the key
@@ -159,6 +205,38 @@ class T(unittest.TestCase):
         screen = "\n".join(m.video.lines())
         self.assertIn("Elf/OS Ready", screen); self.assertIn("Total AUs", screen)
         os.remove(img)
+
+    @unittest.skipUnless(os.path.exists(V5_GZ) and os.path.exists(ROM108), "needs the Elf/OS v5 image and HBIOS v1.0.8")
+    def test_elfos_v5_reads_and_sets_the_io_panels_clock(self):
+        """Elf/OS v5 on HBIOS v1.0.8 with the IO panel's DS12885 (2026-11-18): sysinfo finds the clock and shows its time
+        (ELF/OS's year is years since 1972: the clock holds 54 for 2026); `date` sets it through f_settod and reads it
+        back, across the turn of the year"""
+        import datetime, gzip
+        from s5emu.rtc import DS12885
+        img = tempfile.mktemp(suffix=".img")
+        with gzip.open(V5_GZ) as f, open(img, "wb") as g: g.write(f.read())
+        try:
+            m = Machine(cpu_rom=ROM108, disk=img, panel=True); sh = Shell(m)
+            clock = [datetime.datetime(2054, 11, 18, 2, 30, 0)]
+            m.panel.rtc = DS12885(now=lambda: clock[0], start=clock[0])
+            def until(prompt, cap=10_000_000):
+                for _ in range(0, cap, 250_000):
+                    sh.d.run(max_instructions=250_000)
+                    if not m.kbd.queue and m.video.lines()[-1].rstrip() == prompt: return
+                self.fail("no %r prompt; the screen:\n%s" % (prompt, "\n".join(m.video.lines())))
+            def run(cmd):
+                m.kbd.press("cls\n"); until(":"); m.kbd.press(cmd + "\n"); until(":")
+                return [l.rstrip() for l in m.video.lines()]
+            until("test>"); m.kbd.press("B\n"); until(":")
+            self.assertIn("  RTC       : Yes (11/18/2026 02:30:00)", run("sysinfo"))
+            self.assertIn("11/18/2026 2:30:0", run("date"))
+            run("date 12/31/2026 23:59:50")
+            self.assertEqual((m.panel.rtc.time(), m.panel.rtc.ram[0x0A], m.panel.rtc.ram[0x0B]),
+                             (datetime.datetime(2054, 12, 31, 23, 59, 50), 0x20, 0x06))
+            clock[0] += datetime.timedelta(seconds=15)
+            screen = run("date"); self.assertTrue(any(l.startswith("1/1/2027 0:0:5") for l in screen), "\n".join(screen))
+        finally:
+            os.remove(img)
 
     @unittest.skipUnless(os.path.exists(V5_GZ), "the Elf/OS v5 image is in the private-resources repository, not here")
     def test_elfos_v5_boots_from_disk(self):
@@ -222,7 +300,8 @@ class T(unittest.TestCase):
         with open(os.path.join(v5, "cls", "cls"), "rb") as f: self.assertEqual(f.read(), prog)
         img = v5card.read_image(V5_GZ)
         self.assertEqual(v5card.contents(img, *v5card.lookup(img, "/bin/cls")[1:3]), prog)
-        self.assertNotIn(b"\x1b", prog)                        # no escape codes
+        self.assertNotIn(b"\x1b[", prog)                       # no ANSI codes (ESC [ ...; a lone 1Bh is no code:
+        #                                                         build 2 has one, the low byte of its first branch)
         self.assertIn(("/bin/cls", len(prog), [0x26]), v5card.ls(img, "/bin"))
         # put refuses what it cannot do in place: a file that is not there, and one that needs more lumps
         for path, data in (("/bin/nosuch", prog), ("/bin/cls", bytes(5000))):
@@ -254,6 +333,23 @@ class T(unittest.TestCase):
             m.kbd.press("b\n"); run(4_000_000)
             self.assertIn("Elf/OS Ready", lines())
             os.remove(img)
+
+    def test_io_panel_serial_port(self):
+        """the IO panel's 16C550 (2026-11-20) in the fast machine: it shares the clock's ports
+        6 and 7; a byte with bit 7 set written to port 6 picks the UART's register, one with bit 7 clear the clock's"""
+        m = Machine(cpu_rom=ROM104, panel=True); u = m.panel.uart
+        def wr(reg, v): m.out(6, 0x80 | reg); m.out(7, v)
+        def rd(reg): m.out(6, 0x80 | reg); return m.inp(7)
+        wr(3, 0x80); wr(0, 3); wr(1, 0); wr(3, 0x03); self.assertEqual(u.baud(), 38400)
+        for c in b"ELF": wr(0, c)
+        self.assertEqual(u.sent(), b"ELF"); self.assertEqual(rd(5), 0x60)
+        u.receive("os"); self.assertEqual((rd(5), rd(0), rd(0), rd(5)), (0x61, ord("o"), ord("s"), 0x60))
+        wr(4, 0x10); wr(0, 0x55); self.assertEqual((rd(0), u.sent()), (0x55, b""))     # loop mode: it comes back in
+        wr(4, 0x1F); self.assertEqual(rd(6), 0xF0); wr(4, 0x00); self.assertEqual(rd(6), 0x00)
+        wr(7, 0xC3); m.out(6, 0x40); m.out(7, 0x3C)                                    # the UART's scratch byte, the clock's RAM
+        self.assertEqual(m.inp(7), 0x3C); self.assertEqual(rd(7), 0xC3)
+        wr(1, 0x01); u.receive("x"); self.assertTrue(u.intr()); m.reset(); self.assertFalse(u.intr())   # -RESET: MR
+        self.assertEqual(rd(1), 0x00)
 
     def test_io_panel_toggle_in_and_run(self):
         """the IO panel card in the fast machine (--panel A): a program toggled in through LOAD mode runs and copies the

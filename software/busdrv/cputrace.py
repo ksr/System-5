@@ -9,6 +9,9 @@ Firmware clk-1 or later (CLK:n#, and -RESET in MONITOR mode).
 
   python3 cputrace.py [--cycles N] [--no-reset] [--save FILE] [--compare] [--jumpers ----------------]
 
+(That set-up is BUSDRV-B with CPU Rev A. BUSDRV-C steps CPU Rev D's clock itself, through the DEBUG cable: there
+`s5busdrv.py clk N --cycles` gives the same one line a machine cycle, with the state code, from bits() and cycles() here.)
+
 Resets the CPU (bus -RESET low while clocking, then released: the CPU card's IC5 one-shot starts it running), steps
 the clock and prints one line per machine cycle: the 16-bit address (high byte at TPA, low byte after it), the data at
 TPB, R (-MRD low) / W (-MRW low) / - , N, Q and whether -VMA was asserted. With --compare the emulator (s5emu --hw,
@@ -19,9 +22,16 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import s5busdrv as S
 
 
-def bits(ua, ub, va, vb):
-    return dict(d=(ua & 0x7F) | ((va & 1) << 7), a=(ub & 0x7F) | ((va & 2) << 6), tpa=va >> 2 & 1, tpb=va >> 3 & 1,
-                mrd=va >> 4 & 1, mrw=va >> 5 & 1, vma=va >> 6 & 1, q=vb & 1, rst=vb >> 1 & 1, n=vb >> 4 & 7)
+def bits(ua, ub, va, vb, wa=None, wb=None):
+    """the GPIO ports of a trace line as bus signals. BUSDRV-C's lines carry U3's two ports as well: the 36-pin
+    extension (wa) and the DEBUG cable's CLOCK, SC0, SC1 (wb); sc = the state code SC1 SC0 (0 fetch, 1 execute, 2 DMA,
+    3 interrupt), SC0 from the bus and SC1 from the cable"""
+    s = dict(d=(ua & 0x7F) | ((va & 1) << 7), a=(ub & 0x7F) | ((va & 2) << 6), tpa=va >> 2 & 1, tpb=va >> 3 & 1,
+             mrd=va >> 4 & 1, mrw=va >> 5 & 1, vma=va >> 6 & 1, q=vb & 1, rst=vb >> 1 & 1, n=vb >> 4 & 7)
+    if wa is not None and wb is not None:
+        s.update(ef1=wa & 1, ef2=wa >> 1 & 1, ef3=wa >> 2 & 1, pause=wa >> 3 & 1, dmain=wa >> 4 & 1,
+                 sc=(wb >> 2 & 1) << 1 | (wa >> 5 & 1))
+    return s
 
 
 def cycles(states):
@@ -37,6 +47,7 @@ def cycles(states):
             if s["tpa"]: cur["hi"] = s["a"]
             if not s["vma"]: cur["vma"] = 1
             if s["tpb"]: cur.update(d=s["d"], n=s["n"], q=s["q"], lo=s["a"])
+            if s["tpb"] and "sc" in s: cur["sc"] = s["sc"]
             if not s["mrd"] and not s["tpa"]: cur["rd"] = 1
             if not s["mrw"]:                    # the 1802 raises MWR while TPB is still high (timing finding T2), and the
                 cur["wr"] = 1                   # 6845 then drives the bus for the rest of TPB: a write's data is what
@@ -50,7 +61,8 @@ def cycles(states):
 
 def fmt(c):
     kind = "W" if c["wr"] else "R" if c["rd"] else "-"
-    return "%04X %s %02X N%d Q%d%s" % ((c["hi"] << 8) | (c["lo"] or 0), kind, c["d"], c["n"], c["q"], " VMA" if c["vma"] else "")
+    return "%04X %s %02X N%d Q%d%s%s" % ((c["hi"] << 8) | (c["lo"] or 0), kind, c["d"], c["n"], c["q"], " VMA" if c["vma"] else "",
+                                       " S%d" % c["sc"] if "sc" in c else "")
 
 
 def run_card(bd, edges, reset=True):

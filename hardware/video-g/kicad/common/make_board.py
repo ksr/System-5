@@ -4,7 +4,9 @@
 
   1. the System-5 card: the bus edge at x = 10.025 with the 30-pin connector where every System-5 card has it
      (J1 at 15.735, 58.12, -90: bus-driver Rev B), 96.19 mm along the backplane, gen/place.py's LENGTH from the bus
-     edge to the front edge; the card-guide keep-outs (3.00" x 0.15" at both sides, from the bus edge)
+     edge to the front edge; the card-guide keep-outs (3.00" x 0.15" at both sides, from the bus edge). A card with the
+     36-pin connector (place.J1, place.YTOP: TEXT) keeps the edge at the bus's GND end and every part's place, and
+     grows at the +5V end, where the slot's six extra positions are
   2. KiCad stock footprints (and kicad/lib/video-g-local) for every part in gen/netlist.py at gen/place.py's PLACE;
      nets and symbol links from reports/netlist.net (the exported schematic netlist), so DRC's parity check works
   3. 4 layers: F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid +5V plane (Ken's MEM3-E stack-up)
@@ -28,8 +30,11 @@ PROJ = N.PROJ
 MM = pcbnew.FromMM; V = lambda x, y: pcbnew.VECTOR2I(MM(x), MM(y)); TO = pcbnew.ToMM
 FPLIB = "/Applications/KiCad/KiCad.app/Contents/SharedSupport/footprints"
 NET = os.path.join(board_dir, "reports", "netlist.net")
-X0, Y0, W = 10.025, 10.025, 96.19
-X1, Y1 = X0 + P.LENGTH, Y0 + W
+X0, W30 = 10.025, 96.19
+Y1 = 10.025 + W30                          # the edge at the bus's GND end: where every System-5 card has it
+Y0 = getattr(P, "YTOP", 10.025)            # the edge at the +5V end: further out on a card with the 36-pin connector
+W = Y1 - Y0                                # (place.YTOP: TEXT since 2026-11-18, for the keyboard's choice of four EF lines)
+X1 = X0 + P.LENGTH
 GUIDE = (76.2, 3.81)                       # card-guide keep-out: 3.00" from the bus edge, 0.15" in from each side
 
 out = os.path.join(board_dir, PROJ + ".kicad_pcb")
@@ -56,7 +61,7 @@ for yy in ((Y0, Y0 + GUIDE[1]), (Y1 - GUIDE[1], Y1)):
     b.Add(z)
 
 # ---- 2. footprints, nets, links ---------------------------------------------------------------------------------------
-PLACE = dict(P.PLACE); PLACE["J1"] = (15.735, 58.12, -90)
+PLACE = dict(P.PLACE); PLACE["J1"] = getattr(P, "J1", (15.735, 58.12, -90))   # the 30-pin C30, unless place.py has a J1
 missing = [r for r in N.PARTS if r not in PLACE]
 if missing: sys.exit("place.py: no position for %s" % ", ".join(missing))
 for ref, (value, lib_id, fpid, note) in N.PARTS.items():
@@ -100,7 +105,7 @@ for lname, net in (("In1.Cu", "GND"), ("In2.Cu", "+5V")):
 
 # ---- 4. silkscreen (common/silk.py) ----------------------------------------------------------------------------------
 import silk
-silk.add(b, N, P)
+SILK = silk.add(b, N, P)
 def court(fp): return silk.court(fp)
 
 # ---- 5. rules, save, checks ---------------------------------------------------------------------------------------------
@@ -132,4 +137,9 @@ for i in range(len(fps)):
 print("board %s: %.2f x %.2f mm, %d footprints" % (PROJ, P.LENGTH, W, len(fps)))
 print("courtyard overlaps:", bad or "none")
 print("outside the card:", off or "none")
+# a label that found no room is an error, not a note (2026-11-18: TEXT's "JP1 MONITOR" was left out without a word when
+# "J1 BUS" took its place); the board is saved first, so it can be looked at
+if not SILK.report():
+    print("make_board: silkscreen labels left out (above): give them room in gen/place.py")
+    sys.stdout.flush(); os._exit(1)
 sys.stdout.flush(); os._exit(0)
