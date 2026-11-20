@@ -1,6 +1,6 @@
 EAGLE AutoRouter Statistics:
 
-Job           : /Users/ken/Documents/elf/ksrcad/mem3/REV C mill/mem3-c.job
+Job           : ~/Documents/elf/ksrcad/mem3/REV C mill/mem3-c.job
 
 Start at      : 22:03:10 (8/6/14)
 End at        : 22:06:04 (8/6/14)

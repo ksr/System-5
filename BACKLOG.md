@@ -177,4 +177,5 @@ Found 2026-11-14 while the records were brought up to date (MEM3-E and BUSDRV-B 
   - [ ] **The website could link to the public repository** for the files it does not copy (`website/hooks.py` turns
     such links into plain text, because ksr/elf is private).
   - [ ] **Tell Mike Riley** (a courtesy): HBIOS, with his BIOS in it, is public under his notice.
-  - The `/Users/...` paths KiCad and Eagle wrote in 30 files (netlists, an Eagle `.pro`) stay: usernames only.
+  - The `/Users/...` paths KiCad and Eagle wrote in their files (37 on 2026-11-20: netlists, an Eagle `.pro`) are
+    taken out by `export.py` since 2026-11-20 (Ken: no usernames in the public copy); one left is a finding.

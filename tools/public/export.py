@@ -17,7 +17,10 @@ is ever published). The program never pushes: Ken pushes, after looking at what 
    moved to private-resources on 2026-11-15; secrets (private keys, tokens, passwords); email addresses; phone
    numbers; a GPS position in a photo; reserved-rights and do-not-distribute notices; a file over 50 MB. Text inside
    zips and inside PDFs' compressed streams is scanned too; of an image, only its metadata (its pixels would match by
-   chance). Paths under /Users/ are counted, not stopped (KiCad and Eagle write where their files were: harmless).
+   chance). A home-folder path left in a file (/Users/<name>/...) is a finding too.
+   Before the scan, KiCad's and Eagle's paths to where their files were are taken out of every text file: a path into
+   this repository becomes relative to it (/Users/<name>/Developer/elf/hardware/... -> hardware/...), any other one
+   starts at ~/ (Ken, 2026-11-20: no usernames in the public copy).
 4. With --out, the folder is made to hold exactly the tree (git init on first use); with --commit, it is committed.
 """
 import argparse, os, re, shutil, subprocess, sys, tarfile, tempfile, zipfile, zlib
@@ -49,7 +52,10 @@ EMAIL = re.compile(rb"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za
 PHONE = re.compile(rb"(?<![\w.$#-])(?:\(\d{3}\) ?|\d{3}[-. ])\d{3}[-.]\d{4}(?![\w.-])")
 RIGHTS = re.compile(rb"(?i)all right[s] reserved|do not distribut[e]|not for (?:re)?distributio[n]|confidentia[l]|proprietar[y]")
 IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".heic", ".webp"}
-USERS = re.compile(rb"/Users/[A-Za-z0-9._-]+")
+USERS = re.compile(rb"/Users/(?!\.\.\.)[A-Za-z0-9._-]+")          # a home folder; "/Users/..." is the generic one
+HOME_REPO = re.compile(rb"/Users/(?!\.\.\.)[A-Za-z0-9._-]+/Developer/elf/")
+HOME = re.compile(rb"/Users/(?!\.\.\.)[A-Za-z0-9._-]+/")
+BINARY = {".pdf", ".zip"} | IMAGES
 DATA = {".gbr", ".gbl", ".gtl", ".gbs", ".gts", ".gbo", ".gto", ".gko", ".gbp", ".gtp", ".gm1", ".g1", ".g2", ".drl",
         ".xln", ".kicad_pcb", ".kicad_sch", ".kicad_pro", ".kicad_prl", ".kicad_sym", ".kicad_mod", ".net", ".hex",
         ".lst", ".rpt", ".pos", ".svg", ".dsn", ".ses", ".sym", ".ps", ".eps", ".rom", ".bin", ".img", ".lbr", ".brd",
@@ -84,6 +90,21 @@ def tree(ref, stage):
     return found
 
 
+def strip_homes(stage):
+    """home-folder paths out of every text file: into this repository relative to it, anything else from ~/"""
+    n, where = 0, 0
+    for rel in files(stage):
+        path = os.path.join(stage, rel)
+        if os.path.islink(path) or os.path.splitext(rel)[1].lower() in BINARY: continue
+        b = open(path, "rb").read()
+        if b"/Users/" not in b or b"\0" in b[:8192]: continue
+        b, k1 = HOME_REPO.subn(b"", b)
+        b, k2 = HOME.subn(b"~/", b)
+        if k1 + k2:
+            open(path, "wb").write(b); n += k1 + k2; where += 1
+    return n, where
+
+
 def files(top):
     for d, dirs, fs in os.walk(top):
         dirs[:] = [x for x in dirs if x != ".git"]
@@ -109,7 +130,7 @@ def scan_bytes(rel, b, found, users):
     if ext not in DATA and b"\0" not in b[:8192]:
         for m in PHONE.finditer(b): found.append(("phone", rel, m.group(0)))
     for m in RIGHTS.finditer(b): found.append(("rights", rel, m.group(0)))
-    users[rel] = users.get(rel, 0) + len(USERS.findall(b))
+    for m in USERS.finditer(b): found.append(("home-folder path", rel, m.group(0)))
 
 
 def image(rel, path, found, users):
@@ -181,13 +202,14 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         stage = os.path.join(tmp, "System-5")
         found = tree(a.ref, stage)
+        stripped, stripped_files = strip_homes(stage)
         n = sum(1 for _ in files(stage))
         size = sum(os.path.getsize(os.path.join(stage, f)) for f in files(stage))
         more, allowed, users = scan(stage)
         found += more
         print("elf %s -> %d files, %.1f MB" % (sha, n, size / 1e6))
         print("allowed (checked by hand, ALLOW): %d" % len(allowed))
-        print("paths under /Users/ (harmless): %d in %d files" % (sum(users.values()), len(users)))
+        print("home-folder paths taken out: %d in %d files" % (stripped, stripped_files))
         if found:
             print("FINDINGS: %d" % len(found))
             for rule, rel, text in found[:200]:
