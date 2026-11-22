@@ -2,7 +2,7 @@
 
 A new System-5 CPU card for the 36-pin bus: the CDP1802, its clock, reset and run control, and a 4K boot EPROM with the boot remap.
 Nothing else: no 1861 video, no ribbon to an IO card. Started 2026-10-30 (Ken) and drawn the same day; this file collected the decisions
-and the proposals as they were made. **Status (2026-11-17): passes `pcb-check`, not ordered** (Board, below). The Rev A card (`../rev-a/`, `docs/manual/cpu-card.md`) is the reference.
+and the proposals as they were made. **Status (2026-11-21): a sixth LED, RAM, for the LOADED flag (the last section); passes `pcb-check` so; not ordered** (Board, below). The Rev A card (`../rev-a/`, `docs/manual/cpu-card.md`) is the reference.
 
 ## Decided (Ken, 2026-10-30)
 
@@ -83,8 +83,8 @@ writing it (for Ken to review):
   would meet D2); RN2 holds EF1-EF4 high when an EF block has no jumper.
 - **Parts:** U1 CDP1802ACE, U2 74HCT373, U3 2732, U4/U8 74HCT74, U5 74HCT00, U6 74HCT20, U7/U9 74HCT14, U10 DS1813-10,
   X1 4 MHz DIP-8 oscillator; J1 the 36-pin bus (footprint to settle with the board: a placeholder 1×36 header), J2 DEBUG
-  (a keyed 2×3 since 2026-11-18: EXT_CLK, GND, CLOCK, SC0, SC1, GND), JP1 CLK INT/EXT, JP2-JP5 the EF blocks (2×4 each); LEDs PWR, Q, PAUSE, RESET, ROM.
-  Spare: U6B (inputs tied high), U8B.
+  (a keyed 2×3 since 2026-11-18: EXT_CLK, GND, CLOCK, SC0, SC1, GND), JP1 CLK INT/EXT, JP2-JP5 the EF blocks (2×4 each); LEDs PWR, Q, PAUSE, RESET, ROM,
+  and RAM since 2026-11-21 (the last section). Spare: U6B (inputs tied high), U8B.
 - **Symbols:** KiCad's stock 74xx symbols are one unit per gate, which the generator cannot place, so the logic uses one-unit
   project symbols (`s5cpu.kicad_sym`, written by make_schematic.py from `netlist.CHIPS`, pinouts from the data sheets). The
   readable drawing is the redrawn schematic (`tools/kicad/sch/gen_schematic.py`), still to set up (`schematic/spec.py`).
@@ -188,3 +188,60 @@ writing it (for Ken to review):
   see.
 - **Still to do before an order:** check the 36-pin card in the card guides (4.00 in); Ken's look at the pictures
   (`check-*.png`, the render) and the fab's gerber viewer; order it with the bus Rev D, whose 36-pin slots it needs.
+
+## What a reset boots, and the RAM LED (Ken, 2026-11-21)
+
+Ken, 2026-11-21: "if from either io or debug ram is loaded with program at 0000 how will it run after a reset since
+that then forces rom to 0000, do we need a switch on cpu to specify run from boot rom or ram after reset". No switch is
+needed: the card decides it by itself, with the LOADED flag (U8A; "Netlist", above). Both loaders, the IO panel's
+LOAD toggle and the bus driver's `MODE` LOAD, use the 1802's LOAD mode, and LOAD mode sets the flag.
+
+| What is done | LOADED | The next RUN starts in |
+|---|---|---|
+| Power on, or this card's RESET/RUN switch (SW1) | cleared | the EPROM: HBIOS |
+| LOAD mode: -RESET and -PAUSE both low (IO panel: RUN off and LOAD on; bus driver: `MODE` LOAD) | set | RAM at 0000 |
+| A reset from the bus alone (IO panel: RUN off, then on; bus driver: `MODE` RESET, RUN) | as it was | whichever it was |
+| PAUSE alone (-PAUSE low) | as it was | |
+
+So LOAD, RESET, RUN runs what was loaded, a reset from the bus runs it again, and SW1 brings HBIOS back. The EPROM
+still answers at F000-FFFF while the flag is set, so a loaded program can call HBIOS or jump to it (`C0 F0 00` at 0000
+boots HBIOS without a hand on the card: the bus driver cannot clear the flag). Checked on the card's netlist
+(`software/s5emu/tests/test_hw.py`, `CPURevD`) and, with the 1802's pins, in the bus driver's simulator
+(`software/busdrv`, the `load` plan).
+
+Three things the flag does that a user has to know:
+
+- **It is set by LOAD mode itself, not by a byte being loaded.** Useful: pass through LOAD and a program already in RAM
+  runs after the next reset. A trap: leave PAUSE (RUN on, LOAD on) by taking RUN off before LOAD, and both lines are low
+  for a moment: LOAD mode, the flag set, and the next RUN starts at 0000 in RAM, not in HBIOS. SW1 puts it right.
+- **SW1 clears it only if the bus is out of LOAD mode when SW1 goes back to RUN** (LOAD mode's preset is still held
+  otherwise).
+- **Nothing showed it.** With the machine held in reset the ROM LED was a guide (lit: the EPROM will boot) but for one
+  case: the flag set and the last address before the reset in F000-FFFF, where the latch still holds F and the LED is
+  lit although RAM will run.
+
+Ken: "yes" to an LED for it. **LED6 RAM, with R8 (1k):** on the flip-flop's own Q output (U8 pin 5, the net `LOADED`,
+unused until then), which sources the LED through R8 to its anode, the cathode on GND: **lit while LOADED is set**,
+that is while a reset starts the 1802 in RAM. The five older LEDs sink into their signal; this one is on the spare
+output, so that NOT_LOADED, the output that gates the boot map, carries no LED current. At the front edge under ROM,
+6 mm on, above the RESET/RUN switch, R8 under R7; labelled by its function, as the others
+(`pcb-check.ini`: `exempt_labels` takes LED6 too): first `RAM`, and the same day `START` / `FROM` / `RAM` (below).
+
+The board was built again by `gen/build.sh` on seed 0, as before: 48 parts, 1024 segments, 32 vias; ERC 0, DRC 0
+errors and 0 warnings, 0 unconnected, parity 0, the netlist proof 80 of 80; the redrawn schematic's Control sheet has
+LED6 and R8, and the book was rebuilt; `tools/preorder_check.py --layers 2` PASS. The emulator's `CPURevD` tests have
+`test_the_ram_led_shows_loaded` (the netlist's LOADED net through LOAD, RESET, RUN, a bus reset and SW1).
+**`pcb-check --tests` on the committed files (2026-11-21, the board of elf `8bcae5d`, run at `7d529b4` with pcb-check
+`4f59df7`): no failures, 0 warnings** (38 lines pass; its one note names the six LEDs labelled by function).
+
+**The label: START / FROM / RAM** (Ken, the same day, when asked whether it should say `RAM` or `LOADED`: "change RAM
+to Start From RAM, 3 lines each with one word under LED"). Three lines, a word each, under the LED with the card
+standing in the bus (off its left side as drawn), level with it, the first word next to the LED; in capitals and at
+0.8 mm, as the five other LED labels beside it (the capitals are the card's way with every function label; his words
+were "Start From RAM"). `gen/silk.py`: `LED6_LABEL`, placed at the height the other five got and only at spots level
+with the LED (the placer's nearest spot for three lines was beside the LED, 4 mm along the edge). The LED's value in
+the netlist and the schematic stays `RAM`. **Silkscreen only:** `gen/silk.py` on the routed board; every segment, via,
+zone, pad and part position the same as before, the copper, mask, outline and drill files changed only in their dates;
+94 of the 95 texts where they were. DRC 0 errors and 0 warnings; `tools/preorder_check.py --layers 2` PASS.
+**`pcb-check --tests` on the committed files (elf `735f80f`, pcb-check `f8c7489`): no failures, 0 warnings** (38 lines
+pass; LABELS: every text clear of the parts).

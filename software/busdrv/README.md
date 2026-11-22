@@ -37,10 +37,14 @@ python3 s5busdrv.py --auto-master peek 0x8000 16
 - **`--log`** shows the serial traffic.
 - **`watch`** prints the bus lines on every change, useful with the CPU running, where the card stays in monitor mode.
 - **`load`** takes Intel hex or binary, and verifies what it wrote.
+- **`walk`** (firmware of 2026-11-21, CPU card out) drives one bus line alone for a moment and shows which other lines
+  moved with it: `walk` alone lists every line at rest, `walk -MRD low` pulls -MRD low. It is the step of the **short
+  finder**, `python3 bringup.py shorts`, which walks every line and names the shorts (`BRINGUP.md`).
 
 - **`simcard.py`** is a quick behavioural card for the host tool's own tests. `fwsim.py` + `backplane.py` are the faithful one: the firmware's port writes, step by step, driving the cards' netlist models (used by `bringup.py --sim`).
 
-Tests run against the simulators (all passing on 2026-11-20: 9 for the host tool, 17 for the bring-up plans, 32 for BUSDRV-C):
+Tests run against the simulators (all passing on 2026-11-21: 9 for the host tool, 17 for the bring-up plans, 32 for
+BUSDRV-C, 26 for the short finder, `python3 test_shorts.py`):
 
 ```bash
 python3 test_s5busdrv.py

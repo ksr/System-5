@@ -10,6 +10,11 @@ Plans (the procedure, jumpers and what each step proves are in BRINGUP.md beside
            set-up and a test screen to check on the monitor
   all      the three cards together: the combined address map, no card answering in another's space, the CRTC
            and the RAM not double-mapped, the CF card undisturbed by memory traffic
+Either card (firmware of 2026-11-21 or later: "walk-1" in its banner), the CPU card out:
+  shorts   a short finder: every bus line the card reaches (28 on BUSDRV-B, 34 on BUSDRV-C) pulled low alone, and the
+           pulled-down ones driven high alone, every other line watched: two lines that move together are shorted.
+           For a bare backplane (a new bus Rev D after its sockets are soldered) and for one new card at a time.
+           It finds a short between two lines, to ground or to +5V; not an open joint, nor a short behind a card's buffers
 BUSDRV-C only (the 36-pin card):
   bus36    the bus Rev D with no CPU card: every pulled line at rest, each open-collector line (-RESET -INT -EF -EF1
            -EF2 -EF3 -PAUSE -DMAIN) low alone and back up, the pull-downs and pull-ups of the driven lines
@@ -27,6 +32,7 @@ Run against the simulated backplane (the netlist models; nothing to plug in):
   python3 bringup.py --sim memory --fault stuck:mem:3:0       (see what a stuck data line looks like)
   python3 bringup.py --sim load                               (BUSDRV-C: CPU Rev D in place, a program loaded and run)
   python3 bringup.py --sim load --fault nocable               (the DEBUG ribbon left off)
+  python3 bringup.py --sim shorts --busdrv C --fault short:N1:RESET     (a solder bridge between two slot pins)
 
 Each step prints PASS, FAIL, WARN (works, but look at it), INFO or LOOK (check by eye on the card or the monitor).
 The exit status is 1 if any step failed.
@@ -804,6 +810,151 @@ class Bringup:
         else: st.fail("after RESET then RUN the first fetch is %04X = %02X%s" % (a0, c["d"], "" if c["vma"] else " from the EPROM"),
                       "A reset from the bus should leave the CPU card's LOADED flag set.")
 
+    # ------------------------------------------------------------------ shorts: every bus line driven alone (WALK)
+    # The bus Rev D's resistors (hardware/bus/kicad/rev-d, RN1-RN4, 10k): pull-downs on these five; pull-ups on D0-D7,
+    # the eight open-collector lines and -MRD, -MRW, -VMA; none on A0-A7, Q and SC0. The 2009 backplane has none at
+    # all. In this test the expanders' own 100k pull-ups are on, so a line the backplane does not hold rests high.
+    PULLED_DOWN = ("TPA", "TPB", "N0", "N1", "N2")
+    NO_RESISTOR = tuple("A%d" % i for i in range(8)) + ("Q", "SC0")
+    # the slot by position, 1 (GND) to 30 (+5V) and on to 36 (docs/manual/bus.md, "The 36-pin extension")
+    SLOT = ("GND", "N0", "N1", "-RESET", "-VMA", "-EF", "N2", "-INT") + tuple("A%d" % i for i in range(7, -1, -1)) + \
+           ("-MRW", "-MRD", "TPB", "TPA", "Q") + tuple("D%d" % i for i in range(7, -1, -1)) + \
+           ("+5V", "-EF1", "-EF2", "-EF3", "-DMAIN", "SC0", "-PAUSE")
+
+    def where(self, x, y):
+        """where two lines (or a line and a supply) lie side by side: in the slots, on the bus driver's expanders"""
+        out = []; pos = {n: i + 1 for i, n in enumerate(self.SLOT)}
+        if x in pos and y in pos and abs(pos[x] - pos[y]) == 1:
+            out.append("neighbours in every slot (positions %d and %d from the GND end)" % tuple(sorted((pos[x], pos[y]))))
+        px, py = S.WALK_PINS.get(x), S.WALK_PINS.get(y)
+        if px is not None and py is not None and px >> 3 == py >> 3 and abs(px - py) == 1:
+            pin = lambda p: (21 if not p >> 3 & 1 else 1) + (p & 7)             # MCP23017: GPA0-7 = pins 21-28, GPB0-7 = 1-8
+            out.append("neighbours on the bus driver's U%d (pins %d and %d)" % ((px >> 4) + 1, pin(px), pin(py)))
+        return " and ".join(out) if out else "not neighbours in the slots or on the bus driver: look at the card in the bus"
+
+    def s_s_connect(self, st):
+        st.info("bus driver: %s" % " / ".join(self.bd.banner))
+        s = self.bd.status(); st.info(s)
+        if "bus=on" not in s:
+            st.fail("the bus has no power", "Power the backplane; the bus driver runs its expanders from bus +5V."); return
+        if not self.bd.walkable:
+            st.fail("this firmware has no WALK command (no walk-1 in its banner)", "Load the current sketch: embedded/bus-driver/s5-bus-driver."); return
+        if "mode=MASTER" in s: self.bd.master(False)
+        try: self.rest = [self.bd.walk() for _ in range(3)]
+        except S.CardError as e:
+            st.fail("the bus driver will not drive a line: %s" % str(e).split("Error:")[-1].strip(),
+                    "This test is for a backplane with the CPU card out.")
+
+    def s_s_rest(self, st):
+        lines = self.lines = self.bd.walk_lines(); r = self.rest
+        kind = self.kind = {n: "H" if all(x[n] for x in r) else "L" if not any(x[n] for x in r) else "U" for n in lines}
+        bus = getattr(self.a, "bus", "auto")
+        rev_d = bus == "d" or (bus == "auto" and (self.bd.board() == "C" or sum(kind[n] != "H" for n in self.PULLED_DOWN) >= 3))
+        self.expected = {n: "L" if rev_d and n in self.PULLED_DOWN else "H" for n in lines}
+        st.info("%d lines, each read three times with nothing driven and the expanders' 100k pull-ups on" % len(lines))
+        st.info("backplane: " + ("the bus Rev D (its 10k resistors hold TPA, TPB and N0-N2 low, the other pulled lines high)" if rev_d else
+                                 "no pull-downs seen: the 2009 backplane (no resistors: the 100k pull-ups hold every line high)"))
+        self.cpu_there = kind.get("Q") == "L"
+        if self.cpu_there:
+            also = [n for n in lines if n[0] == "A" and kind[n] == "L"]
+            st.fail("Q rests low%s" % (" and so do " + " ".join(also) if also else ""),
+                    "Only a CPU card drives Q, and the address lines have nothing but the 100k pull-ups on them: a CPU card is in the "
+                    "bus. Take it out and run this again. If it is out, Q itself is shorted to ground: it is position 21 in the slots, "
+                    "between TPA and D7, and pin 1 of the bus driver's U2.")
+            return
+        for n in lines:
+            if kind[n] == "U":
+                st.warn("%s has no clear level at rest (read %s)" % (n, " ".join(str(x[n]) for x in r)),
+                        "Between a pull-up and a pull-down: a short to a line pulled the other way (the last step names it), or a card's input loading a line that has no resistor.")
+            elif kind[n] == "L" and self.expected[n] == "H":
+                st.fail("%s rests low" % n, "Shorted to ground%s, or a card in the bus holds it low. It is not driven in the next steps." %
+                        (" (N0 is GND's neighbour in the slots)" if n == "N0" else ""))
+            elif kind[n] == "H" and self.expected[n] == "L":
+                st.fail("%s rests high" % n, "Its pull-down is missing (RN3 of the bus Rev D), or it is shorted to +5V or to a line that is pulled up: the next steps say which.")
+        if st.status == "PASS": st.info("every line rests where it should")
+
+    def _walk_step(self, st, level, todo, base):
+        """drive each line of `todo` alone to `level`; -> ({line: every line's reading}, {line: the lines of `base` that
+        went with it, seen twice}, [the lines that would not go])"""
+        seen, follow, held = {}, {}, []
+        for x in todo:
+            a = self.bd.walk(x, level)
+            if a[x] != level: held.append(x); continue
+            seen[x] = a; f = [y for y in base if y != x and a[y] == level]
+            if f: b = self.bd.walk(x, level); f = [y for y in f if b[y] == level]         # twice, before it counts
+            if f: follow[x] = f
+        return seen, follow, held
+
+    def s_s_low(self, st):
+        k, e = self.kind, self.expected
+        todo = [n for n in self.lines if not (k[n] == "L" and e[n] == "H")]          # a line held low has nothing more to tell
+        self.low, self.follow_low, held = self._walk_step(st, 0, todo, [n for n in self.lines if k[n] == "H"])
+        for x in held:
+            st.fail("%s will not go low" % x, "Something holds it high against the bus driver, which let go at once: a short to +5V, or a card driving it. " +
+                    ("%s and +5V are %s." % (x, self.where(x, "+5V")) if x in ("D0", "-EF1") else "(+5V's neighbours in the slots are D0 and -EF1.)"))
+        st.info("%d lines pulled low, one at a time%s" % (len(todo) - len(held), "" if self.follow_low else ": no other line went low with any of them"))
+        for x, ys in self.follow_low.items(): st.info("%s low: %s low too" % (x, " ".join(ys)))
+
+    def s_s_high(self, st):
+        k, e = self.kind, self.expected
+        todo = [n for n in self.lines if e[n] == "L" and k[n] != "H" and n not in S.OPEN_COLLECTOR]
+        if not todo:
+            self.high, self.follow_high = {}, {}
+            st.info("no line rests low on this backplane: none to drive high"); return
+        self.high, self.follow_high, held = self._walk_step(st, 1, todo, [n for n in self.lines if k[n] == "L"])
+        for x in held:
+            st.fail("%s will not go high" % x, "Shorted to ground%s, or a card holds it low; the bus driver let go at once." %
+                    (" (N0 is GND's neighbour in the slots)" if x == "N0" else ""))
+        st.info("%d pulled-down lines driven high, one at a time%s" % (len(todo) - len(held), "" if self.follow_high else ": no other line went high with any of them"))
+        for x, ys in self.follow_high.items(): st.info("%s high: %s high too" % (x, " ".join(ys)))
+
+    def s_s_found(self, st):
+        k, e = self.kind, self.expected; edges, oneway = set(), []
+        for x, ys in self.follow_low.items():                   # two lines that rest high: each must take the other low
+            for y in ys:
+                if x in self.follow_low.get(y, ()): edges.add(frozenset((x, y)))
+                else: oneway.append("%s low takes %s low, but not the other way round" % (x, y))
+        for x, ys in self.follow_high.items():
+            for y in ys:
+                if e[y] == "H": edges.add(frozenset((x, y)))    # y should rest high, rests low, and rises with x: joined to x's pull-down
+                elif x in self.follow_high.get(y, ()): edges.add(frozenset((x, y)))
+                else: oneway.append("%s high takes %s high, but not the other way round" % (x, y))
+        for x in self.high:                                     # a line with no clear level: does it follow a pulled-down line both ways?
+            for y in self.lines:
+                if k[y] == "U" and y != x and x in self.low and self.low[x][y] == 0 and self.high[x][y] == 1:
+                    if all(self.bd.walk(x, 0)[y] == 0 and self.bd.walk(x, 1)[y] == 1 for _ in range(4)): edges.add(frozenset((x, y)))
+        parent = {}
+        def find(n):
+            parent.setdefault(n, n)
+            while parent[n] != n: parent[n] = parent[parent[n]]; n = parent[n]
+            return n
+        for ed in edges:
+            a, b = tuple(ed); parent[find(a)] = find(b)
+        groups = {}
+        for n in parent: groups.setdefault(find(n), []).append(n)
+        self.shorts_found = [sorted(g, key=self.lines.index) for g in groups.values()]
+        for g in sorted(self.shorts_found, key=lambda g: self.lines.index(g[0])):
+            pairs = [(a, b) for i, a in enumerate(g) for b in g[i + 1:]]
+            near = [self.where(a, b) for a, b in pairs if "not neighbours" not in self.where(a, b)]
+            st.fail("%s are shorted together" % (" and ".join(g) if len(g) == 2 else ", ".join(g[:-1]) + " and " + g[-1]),
+                    "%s: %s." % (" / ".join(g), near[0] if near else self.where(*pairs[0])))
+        for o in oneway: st.warn(o, "Not a plain short: a card in the bus joins them through its logic. Run the test on the bare backplane, then with one card at a time.")
+        left = [n for n in self.lines if k[n] == "U" and not any(n in g for g in self.shorts_found)]
+        for n in left: st.warn("%s has no clear level at rest and follows no other line" % n, "A card's input on a line with no resistor, or a weak short: measure it.")
+        if st.status == "PASS": st.info("no two bus lines move together: no short between any of the %d lines" % len(self.lines))
+        st.info("not seen by this test: an open joint (bus36 finds a missing pull resistor), a short behind a card's buffers")
+
+    def plan_shorts(self):
+        s = self.step
+        self.cpu_there = False; self.low, self.high, self.follow_low, self.follow_high, self.shorts_found = {}, {}, {}, {}, []
+        s("S1", "bus driver, bus power, nothing else driving the bus", self.s_s_connect)
+        if self.steps[-1].status == "FAIL": return
+        s("S2", "every line at rest", self.s_s_rest)
+        if self.cpu_there: return
+        s("S3", "each line pulled low alone", self.s_s_low)
+        s("S4", "each pulled-down line driven high alone", self.s_s_high)
+        s("S5", "lines that move together", self.s_s_found)
+
     def plan36(self, name):
         s = self.step
         s("C1", "bus driver, bus power, BUSDRV-C", self.s_c_connect)
@@ -825,6 +976,7 @@ class Bringup:
             self.bd.mode("run")
 
     def plan(self, name):
+        if name == "shorts": return self.plan_shorts()
         if name in ("bus36", "load"): return self.plan36(name)
         s = self.step
         s("B1", "bus driver, bus power, bus master", self.s_connect)
@@ -864,9 +1016,9 @@ class Bringup:
 
 
 SIM_CARDS = {"memory": ("mem",), "cf": ("ide",), "video": ("video",), "all": ("mem", "video", "ide"),
-             "bus36": (), "load": ("mem",)}
-FAULTS = ("--fault: stuck:CARD:BIT:LEVEL, empty:REF, addr:BIT:LEVEL, card-jumpers:J, nodrive or legacy; with BUSDRV-C also "
-          "nocable, jp1int, stuck-line:NAME:LEVEL, nopull:NAME, hold-dmain or early-data")
+             "bus36": (), "load": ("mem",), "shorts": ()}
+FAULTS = ("--fault: stuck:CARD:BIT:LEVEL, empty:REF, addr:BIT:LEVEL, card-jumpers:J, short:LINE:LINE (or :GND, :+5V), between:0|1, "
+          "oneway:LINE:LINE, nodrive or legacy; with BUSDRV-C also nocable, jp1int, cpu-in, stuck-line:NAME:LEVEL, nopull:NAME, hold-dmain or early-data")
 
 
 def sim_driver(a):
@@ -876,11 +1028,15 @@ def sim_driver(a):
     from backplane import Backplane, Backplane36
     from fwsim import FwCard
     rev_c = a.plan in ("bus36", "load") or getattr(a, "busdrv", "B") == "C"
-    kw = dict(cards=SIM_CARDS[a.plan], jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev); fw = {}
+    cards = tuple(c for c in (getattr(a, "cards", None) or "").split(",") if c) or SIM_CARDS[a.plan]
+    kw = dict(cards=cards, jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev); fw = {}
     if rev_c: kw["cpu"] = a.plan == "load"
     for f in a.fault or []:
         k, *rest = f.split(":")
         if k == "stuck": kw.setdefault("stuck", {})[rest[0]] = (int(rest[1]), int(rest[2]))
+        elif k == "short": kw.setdefault("shorts", []).append(tuple(n if n in ("GND", "+5V") else n.lstrip("-").upper() for n in rest[:2]))
+        elif k == "between": kw["between"] = int(rest[0])            # a line between the input thresholds reads this every time
+        elif k == "oneway": kw.setdefault("diodes", []).append(tuple(n.lstrip("-").upper() for n in rest[:2]))   # the first low takes the second low
         elif k == "empty": kw.setdefault("empty", []).append(rest[0])
         elif k == "nodrive": kw["drive"] = False
         elif k == "addr": kw["addr"] = (int(rest[0]), int(rest[1]))
@@ -889,6 +1045,7 @@ def sim_driver(a):
         elif not rev_c: raise SystemExit(FAULTS)
         elif k == "nocable": kw["cable"] = False                       # the DEBUG ribbon left off
         elif k == "jp1int": kw["jp1"] = "INT"                          # the CPU card's clock jumper on its own oscillator
+        elif k == "cpu-in": kw["cpu"] = True; kw["cable"] = False      # a CPU card left in the bus, its DEBUG ribbon off
         elif k == "stuck-line": kw.setdefault("stuck_lines", {})[rest[0].lstrip("-")] = int(rest[1])   # e.g. stuck-line:DMAIN:0
         elif k == "nopull": kw.setdefault("nopull", []).append(rest[0].lstrip("-"))                    # e.g. nopull:PAUSE, nopull:D
         elif k in ("hold-dmain", "early-data"): fw["load_fault"] = k     # the firmware doing a LOAD step wrongly
@@ -907,13 +1064,18 @@ def hexaddr(s):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="System-5 card bring-up from the bus driver card", epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("plan", choices=("memory", "cf", "video", "all", "bus36", "load"))
+    ap.add_argument("plan", choices=("memory", "cf", "video", "all", "bus36", "load", "shorts"))
     ap.add_argument("--port"); ap.add_argument("--log", action="store_true", help="show the serial traffic")
     ap.add_argument("--sim", action="store_true", help="the simulated backplane (netlist models) instead of the card")
     ap.add_argument("--busdrv", choices=("B", "C"), default="B", help="--sim: the card that runs memory, cf, video and all "
                     "(C: BUSDRV-C in a bus Rev D with no CPU card); bus36 and load are always BUSDRV-C")
     ap.add_argument("--fault", action="append", help="simulator only: stuck:mem:3:0, empty:IC5, addr:4:0, card-jumpers:RRR-----EEEEEEE-, nodrive, "
-                    "legacy (old firmware); BUSDRV-C: nocable, jp1int, stuck-line:DMAIN:0, nopull:PAUSE, hold-dmain, early-data")
+                    "short:D0:D1 (or short:N0:GND, short:D0:+5V), between:0 or between:1 (how a line between the input thresholds reads; "
+                    "default: either, anew each time), oneway:A3:A4 (A3 low takes A4 low, not the other way round), legacy (old firmware); BUSDRV-C: nocable, jp1int, cpu-in, "
+                    "stuck-line:DMAIN:0, nopull:PAUSE, hold-dmain, early-data")
+    ap.add_argument("--cards", help="--sim: the cards in the simulated backplane, e.g. mem,video,ide (default: the plan's own; shorts: none)")
+    ap.add_argument("--bus", choices=("auto", "d", "2009"), default="auto", help="shorts: the backplane. d = the bus Rev D (pull "
+                    "resistors), 2009 = the 2009 board (none); auto tells them apart by the pull-downs on TPA, TPB and N0-N2")
     ap.add_argument("--jumpers", default=DEFAULT_JUMPERS, help="memory card blocks 0-F: R RAM, E EPROM, - open (default %(default)s)")
     ap.add_argument("--mem-rev", default="D", choices=("D", "C", "B-built"), help="memory card revision (default D)")
     ap.add_argument("--full", action="store_true", help="test every RAM byte (minutes on the real card)")

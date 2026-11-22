@@ -110,6 +110,75 @@ python3 bringup.py --sim memory --fault stuck:mem:3:0
 
 Tests: `python3 test_bringup.py` (17 tests, about three minutes), plus `python3 test_s5busdrv.py` for the host tool.
 
+## shorts: a short finder (either card, 2026-11-21)
+
+Every bus line the card reaches has an expander pin of its own that can read it, pull it low or drive it high: 28
+lines on BUSDRV-B, all 34 signals of the 36-pin bus on BUSDRV-C. So the bus driver can look for shorts between bus
+lines (Ken, 2026-11-21: it reaches every line, so it "can be used as a short detector"): it drives **one line at a
+time** and watches all the others. Two lines that move together are joined.
+
+Use it on a **bare backplane** first (a new bus Rev D after its eight sockets are soldered: 288 joints 0.1 inch
+apart), then with **one new card at a time**. **The CPU card must be out:** an 1802 drives its lines even in reset.
+It needs the firmware of 2026-11-21 or later (`walk-1` in its banner).
+
+```bash
+python3 bringup.py shorts
+```
+
+| Step | What it does | What a failure points at |
+|---|---|---|
+| S1 connect | Bus power; the firmware has `WALK`; the card may drive a line | No power; an older sketch; a CPU seen: TPA / TPB toggling, or on BUSDRV-C its clock running or a CPU card answering on the DEBUG cable |
+| S2 at rest | Nothing driven and the expanders' own 100k pull-ups on, read three times. On the bus Rev D TPA, TPB and N0–N2 rest low (its 10k pull-downs) and every other line high; on the 2009 backplane, which has no resistors, every line rests high | "rests low": shorted to ground, or held by a card. "rests high" on a pulled-down line: no pull-down, or joined to +5V or to a pulled-up line. "no clear level": a pull-up joined to a pull-down. **Q low ends the plan: a CPU card is in the bus** |
+| S3 low | Each line pulled low alone, for about a millisecond | "will not go low": held high against the pin (a short to +5V, a card driving it); the card lets go at once |
+| S4 high | Each pulled-down line driven high alone (the bus Rev D only: there are none on the 2009 backplane) | "will not go high": shorted to ground |
+| S5 together | Two lines that take each other low, or high, are shorted; three or more are named as one group. For each it says where the lines lie side by side: positions in the slots, pins of the bus driver's own expanders | A solder bridge between neighbouring slot pins, or on the bus driver itself. Lines that are neighbours nowhere: look at the card in the bus. "one way only": a card's logic, not a plain short |
+
+What it finds and what it cannot:
+
+- **It finds** a short between two bus lines, a short to ground and a short to +5V.
+- **It cannot see** an open joint (a line that does not reach a slot: `bus36` finds a missing pull resistor, and the
+  card can be moved from slot to slot), or a short behind a card's buffers.
+- **A pull-up joined to a pull-down** (N1 and -RESET are neighbours in the slots) sits at about 2.7 V, between the
+  expander's input thresholds, and reads high on one chip and low on another. All three cases are found: both lines read
+  high (each takes the other low), both read low (the held line rises when the pulled-down one is driven high), or
+  now one and now the other (the pair follows the pulled-down line both ways, tried four times over).
+- **Open-collector lines are never driven high**, as everywhere in the firmware. Nothing is lost: a short from one of
+  them to a pulled-down line shows when that pulled-down line is driven, low or high.
+- **A line shorted to +5V** can only be found by pulling it low. The card reads its pin straight after driving it and
+  lets go if it did not follow: the pin is held against the supply for two expander transactions, about 0.3 ms.
+- **With cards in the bus:** in the simulator, with the memory, 6845 and IDE cards from their netlists in place, no
+  single line driven low or high makes any of them drive the data lines or move another line, so the test runs clean
+  with them in. On the real 2009 backplane a card's TTL inputs load the lines that have no resistor (A0–A7, Q), where
+  only the 100k pull-ups hold them: a "no clear level" there is that, not a short. The bare backplane has no such doubt.
+
+`--bus d` or `--bus 2009` says which backplane it is; left out, the plan tells them apart by the pull-downs. One step
+at a time, by hand:
+
+```bash
+python3 s5busdrv.py walk
+```
+```bash
+python3 s5busdrv.py walk -MRD low
+```
+
+In the simulator (`--busdrv C`: BUSDRV-C in a bus Rev D; without it BUSDRV-B in the 2009 backplane; `--cards
+mem,video,ide` puts cards in the bus):
+
+```bash
+python3 bringup.py --sim shorts --busdrv C --fault short:N1:RESET --fault short:D0:D1
+```
+
+| Fault | What it simulates |
+|---|---|
+| `short:D0:D1` | two bus lines joined (names with or without the dash) |
+| `short:N0:GND`, `short:D0:+5V` | a line joined to a supply |
+| `between:0`, `between:1` | how the expander reads a line held between its thresholds: low every time, or high; without it, either, anew at each read |
+| `oneway:A3:A4` | A3 low takes A4 low and not the other way round: a card's logic between two lines, which the plan names as a warning, not as a short |
+| `cpu-in` | BUSDRV-C: a CPU card left in the bus with its DEBUG ribbon off, so the card cannot see it |
+
+Tests: `python3 test_shorts.py` (26 tests, a few seconds): the simulator's own arithmetic, the `WALK` command, and the plan
+on sound backplanes and with each kind of short.
+
 ## BUSDRV-C: the 36-pin bus, and the CPU card in place
 
 BUSDRV-C (`hardware/bus-driver/kicad/rev-c`, drawn, not built) runs the same firmware; it finds its third expander and says `BUSDRV-C` in its banner.

@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "hardware/cpu/kicad/rev-d/cpu-rev-d.kicad_sch")
-		(date "2026-11-18T21:43:14")
+		(date "2026-11-21T14:48:17")
 		(tool "Eeschema 10.0.6")
 		(sheet
 			(number "1")
@@ -12,7 +12,7 @@
 				(title "System-5 CPU card Rev D")
 				(company)
 				(rev "D")
-				(date "2026-10-30")
+				(date "2026-11-21")
 				(source "cpu-rev-d.kicad_sch")
 				(comment
 					(number "1")
@@ -1594,6 +1594,60 @@
 			)
 		)
 		(comp
+			(ref "LED6")
+			(value "RAM")
+			(footprint "LED_THT:LED_D3.0mm")
+			(fields
+				(field
+					(name "Footprint") "LED_THT:LED_D3.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "LED")
+				(description "Light emitting diode")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "LED diode")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "LED* LED_SMD:* LED_THT:*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "f388816d-26e9-5c99-a45f-7a474f9f3b1d")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "R1")
 			(value "10k")
 			(footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
@@ -1957,6 +2011,60 @@
 				(tstamps "/")
 			)
 			(tstamps "c15d5606-5eb8-5550-bf1b-5f8427dc6541")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R8")
+			(value "1k")
+			(footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+			(fields
+				(field
+					(name "Footprint") "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "1a9cbee5-cd65-5418-ae9e-898715233de6")
 			(units
 				(unit
 					(name "A")
@@ -6309,6 +6417,22 @@
 		)
 		(net
 			(code "54")
+			(name "/LED_RAM")
+			(class "Default")
+			(node
+				(ref "LED6")
+				(pin "2")
+				(pinfunction "A_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R8")
+				(pin "2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "55")
 			(name "/LED_RESET")
 			(class "Default")
 			(node
@@ -6324,7 +6448,7 @@
 			)
 		)
 		(net
-			(code "55")
+			(code "56")
 			(name "/LED_ROM")
 			(class "Default")
 			(node
@@ -6340,7 +6464,23 @@
 			)
 		)
 		(net
-			(code "56")
+			(code "57")
+			(name "/LOADED")
+			(class "Default")
+			(node
+				(ref "R8")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "5")
+				(pinfunction "Q_5")
+				(pintype "output")
+			)
+		)
+		(net
+			(code "58")
 			(name "/LOAD_L")
 			(class "Default")
 			(node
@@ -6357,7 +6497,7 @@
 			)
 		)
 		(net
-			(code "57")
+			(code "59")
 			(name "/N0")
 			(class "Default")
 			(node
@@ -6374,7 +6514,7 @@
 			)
 		)
 		(net
-			(code "58")
+			(code "60")
 			(name "/N1")
 			(class "Default")
 			(node
@@ -6391,7 +6531,7 @@
 			)
 		)
 		(net
-			(code "59")
+			(code "61")
 			(name "/N2")
 			(class "Default")
 			(node
@@ -6408,7 +6548,7 @@
 			)
 		)
 		(net
-			(code "60")
+			(code "62")
 			(name "/NOT_LOADED")
 			(class "Default")
 			(node
@@ -6425,7 +6565,7 @@
 			)
 		)
 		(net
-			(code "61")
+			(code "63")
 			(name "/OSC")
 			(class "Default")
 			(node
@@ -6442,7 +6582,7 @@
 			)
 		)
 		(net
-			(code "62")
+			(code "64")
 			(name "/PAUSE_H")
 			(class "Default")
 			(node
@@ -6465,7 +6605,7 @@
 			)
 		)
 		(net
-			(code "63")
+			(code "65")
 			(name "/POR_L")
 			(class "Default")
 			(node
@@ -6482,7 +6622,7 @@
 			)
 		)
 		(net
-			(code "64")
+			(code "66")
 			(name "/Q")
 			(class "Default")
 			(node
@@ -6505,7 +6645,7 @@
 			)
 		)
 		(net
-			(code "65")
+			(code "67")
 			(name "/Q_L")
 			(class "Default")
 			(node
@@ -6522,7 +6662,7 @@
 			)
 		)
 		(net
-			(code "66")
+			(code "68")
 			(name "/ROM_SEL_L")
 			(class "Default")
 			(node
@@ -6545,7 +6685,7 @@
 			)
 		)
 		(net
-			(code "67")
+			(code "69")
 			(name "/RST_H")
 			(class "Default")
 			(node
@@ -6568,7 +6708,7 @@
 			)
 		)
 		(net
-			(code "68")
+			(code "70")
 			(name "/SC0")
 			(class "Default")
 			(node
@@ -6591,7 +6731,7 @@
 			)
 		)
 		(net
-			(code "69")
+			(code "71")
 			(name "/SC0_L")
 			(class "Default")
 			(node
@@ -6608,7 +6748,7 @@
 			)
 		)
 		(net
-			(code "70")
+			(code "72")
 			(name "/SC0_RAW")
 			(class "Default")
 			(node
@@ -6625,7 +6765,7 @@
 			)
 		)
 		(net
-			(code "71")
+			(code "73")
 			(name "/SC1")
 			(class "Default")
 			(node
@@ -6642,7 +6782,7 @@
 			)
 		)
 		(net
-			(code "72")
+			(code "74")
 			(name "/SWRST_H")
 			(class "Default")
 			(node
@@ -6659,7 +6799,7 @@
 			)
 		)
 		(net
-			(code "73")
+			(code "75")
 			(name "/SW_RST")
 			(class "Default")
 			(node
@@ -6692,7 +6832,7 @@
 			)
 		)
 		(net
-			(code "74")
+			(code "76")
 			(name "/TPA")
 			(class "Default")
 			(node
@@ -6715,7 +6855,7 @@
 			)
 		)
 		(net
-			(code "75")
+			(code "77")
 			(name "/TPB")
 			(class "Default")
 			(node
@@ -6732,7 +6872,7 @@
 			)
 		)
 		(net
-			(code "76")
+			(code "78")
 			(name "/WAIT")
 			(class "Default")
 			(node
@@ -6755,7 +6895,7 @@
 			)
 		)
 		(net
-			(code "77")
+			(code "79")
 			(name "/WIN_L")
 			(class "Default")
 			(node
@@ -6772,7 +6912,7 @@
 			)
 		)
 		(net
-			(code "78")
+			(code "80")
 			(name "GND")
 			(class "Default")
 			(node
@@ -6855,6 +6995,12 @@
 			)
 			(node
 				(ref "LED1")
+				(pin "1")
+				(pinfunction "K_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "LED6")
 				(pin "1")
 				(pinfunction "K_1")
 				(pintype "passive")
@@ -6968,7 +7114,7 @@
 			)
 		)
 		(net
-			(code "79")
+			(code "81")
 			(name "unconnected-(SW1-A-Pad1)")
 			(class "Default")
 			(node
@@ -6979,7 +7125,7 @@
 			)
 		)
 		(net
-			(code "80")
+			(code "82")
 			(name "unconnected-(U1-~{XTAL}-Pad39)")
 			(class "Default")
 			(node
@@ -6990,7 +7136,7 @@
 			)
 		)
 		(net
-			(code "81")
+			(code "83")
 			(name "unconnected-(U4-Q-Pad9)")
 			(class "Default")
 			(node
@@ -7001,7 +7147,7 @@
 			)
 		)
 		(net
-			(code "82")
+			(code "84")
 			(name "unconnected-(U6-O-Pad8)")
 			(class "Default")
 			(node
@@ -7012,18 +7158,7 @@
 			)
 		)
 		(net
-			(code "83")
-			(name "unconnected-(U8-Q-Pad5)")
-			(class "Default")
-			(node
-				(ref "U8")
-				(pin "5")
-				(pinfunction "Q_5")
-				(pintype "output+no_connect")
-			)
-		)
-		(net
-			(code "84")
+			(code "85")
 			(name "unconnected-(U8-Q-Pad9)")
 			(class "Default")
 			(node
@@ -7034,7 +7169,7 @@
 			)
 		)
 		(net
-			(code "85")
+			(code "86")
 			(name "unconnected-(U8-~{Q}-Pad8)")
 			(class "Default")
 			(node

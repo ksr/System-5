@@ -220,6 +220,27 @@ class CPURevD(unittest.TestCase):
         c.mode(1, 0); self.assertFalse(c.loaded()); c.mode(1, 1)
         self.assertEqual(c.cycle(0x0000, 0, 1), (1, 0x000, None))
 
+    def test_the_ram_led_shows_loaded(self):
+        """LED6 RAM (Ken, 2026-11-21): on U8A's own Q output (pin 5, the net LOADED) through R8, its cathode on GND, so
+        it is lit while LOADED is set: LOAD mode lights it, resets from the bus leave it lit, the card's RESET/RUN
+        switch (and power-on) puts it out. NOT_LOADED, the output that gates the boot map, carries no LED current"""
+        m = HWMachine(cpu_rom=ROM104, cpu_rev="D"); c = m.ccard; nl = c.nl
+        net = lambda ref, pin: nl.net(ref, pin).split("/")[-1]
+        self.assertEqual((net("U8", 5), net("U8", 6)), ("LOADED", "NOT_LOADED"))
+        self.assertEqual({net("R8", 1), net("R8", 2)}, {"LOADED", "LED_RAM"})
+        self.assertEqual((net("LED6", 1), net("LED6", 2)), ("GND", "LED_RAM"))          # 1 = cathode, 2 = anode
+        self.assertEqual(sorted(r for (r, p), v in nl.pins.items() if v[0].split("/")[-1] == "NOT_LOADED"), ["U5", "U8"])
+        loaded = next(n for n in nl.nets if n.split("/")[-1] == "LOADED")
+        lit = lambda: c.c.val.get(loaded) == 1
+        self.assertFalse(lit()); self.assertEqual(c.cycle(0x0000, 0, 1, commit=False)[0], 1)     # power-on: dark, HBIOS
+        c.mode(1, 0); self.assertFalse(lit()); c.mode(1, 1)                              # PAUSE alone: still dark
+        c.mode(0, 1); c.mode(0, 0); self.assertTrue(lit())                               # LOAD mode: lit
+        c.mode(0, 1); c.mode(1, 1); self.assertTrue(lit())                               # RESET, then RUN: lit, and RAM runs
+        self.assertEqual(c.cycle(0x0000, 0, 1, commit=False)[0], 0)
+        c.mode(0, 1); c.mode(1, 1); self.assertTrue(lit())                               # a reset from the bus: still lit
+        m.reset(); self.assertFalse(lit())                                               # the card's own switch: dark, HBIOS
+        self.assertEqual(c.cycle(0x0000, 0, 1, commit=False)[0], 1)
+
     def test_ef_routing_for_the_2005_io_card(self):
         m = HWMachine(cpu_rom=ROM104, cpu_rev="D")
         self.assertEqual(m.ccard.ef_routes(), {1: "-EF1", 2: "-EF2", 3: "-EF4"})   # JP3: the bus -EF line on EF3

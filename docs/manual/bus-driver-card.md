@@ -64,3 +64,16 @@ python3 bringup.py memory
 ```
 
 The bring-up plans (memory, cf, video, all) and what each step proves are in `software/busdrv/BRINGUP.md`.
+
+**A short finder** (firmware of 2026-11-21, not yet on the card in use). Every bus line has an expander pin of its
+own, so the card can drive one line at a time and watch all the others: two lines that move together are shorted.
+With the CPU card out:
+
+```bash
+python3 bringup.py shorts
+```
+
+It reads every line at rest (with the expanders' own 100k pull-ups on, so a line the backplane does not hold rests
+high), pulls each low alone, and names any two that went together, with the slot positions or expander pins where
+they are neighbours. It finds a short between two lines, to ground or to +5V; it cannot see an open joint, or a short
+behind a card's buffers. It is meant for a bare backplane and for one new card at a time (`BRINGUP.md`, "shorts").

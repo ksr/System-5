@@ -14,9 +14,9 @@
  *   host -> card : CMD:OPERAND#            operands are DECIMAL unless noted; no line ending needed
  *   card -> host : optional "Data: ..." lines, "Complete" or "Error: ...", then the prompt ">>"
  *   A banner line is printed before the first prompt; the host looks for "s5-bus-driver" and "blocks-".
- *     BUSDRV-B: s5-bus-driver blocks-1 io-2 clk-1 2026-11-20 BUSDRV-B
- *     BUSDRV-C: s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 2026-11-20 BUSDRV-C
- *     with the bus off the board is not known yet: "... clk-1 2026-11-20 (bus off: board not known yet)"; the note
+ *     BUSDRV-B: s5-bus-driver blocks-1 io-2 clk-1 walk-1 2026-11-21 BUSDRV-B
+ *     BUSDRV-C: s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 walk-1 2026-11-21 BUSDRV-C
+ *     with the bus off the board is not known yet: "... clk-1 walk-1 2026-11-21 (bus off: board not known yet)"; the note
  *     printed when the bus comes up names the board, and so does STATUS on a BUSDRV-C.
  *   Signal names starting with '-' are active low: "-MRD:1#" asserts -MRD (drives it low).
  *
@@ -27,7 +27,7 @@
  *     BUSDRV-C also refuses while its own clock runs, and when the DEBUG cable's CLOCK follows CLK OUT (a CPU Rev D
  *     is cabled to it: the test costs that CPU eight clock edges).
  *   - Open-collector lines (-RESET, -INT, -EF; on BUSDRV-C also -EF1, -EF2, -EF3, -PAUSE, -DMAIN) are only ever
- *     pulled low or released (pin made an input).
+ *     pulled low or released (pin made an input). WALK keeps to that too.
  *   - While bus +5V is off (A0 / BUS_SENSE low) the expanders are held in reset by releasing nothing that could
  *     back-feed them: XRST (D4) low, I2C stopped and its pins inputs without pull-ups.
  *   - MCP23017 GPA7/GPB7 are output-only on current silicon: they are spare outputs, never bus signals.
@@ -68,6 +68,20 @@
  *                              BUSDRV-C (clk-2): each edge is one change of CLK OUT (D9), which the DEBUG cable takes to
  *                              CPU Rev D's EXT CLK (its JP1 on EXT). A steady clock is stopped first.
  *   16 edges are one machine cycle either way.
+ *   WALK:pin,level#            MONITOR, CPU card out (walk-1, 2026-11-21): ONE bus line driven alone, to find shorts
+ *                              between bus lines. Every bus pin is an input with its expander pull-up on (100k: a line
+ *                              the backplane does not hold then rests high); the pin is driven to level 0 or 1, the
+ *                              ports are read, and the pin is an input again with the pull-ups off: about a millisecond
+ *                              in all. pin = chip * 16 + port * 8 + bit of a bus line (U1 = chip 0, port A = 0; e.g. 20 =
+ *                              U2 GPA4 = -MRD; software/busdrv/s5busdrv.py has the table). level 2 drives nothing: the
+ *                              lines at rest. -> "Data: ua ub va vb" (the GPIO ports as read, hex; BUSDRV-C: "... wa wb").
+ *                              A pin that does not reach its level (held the other way: a short to a supply, a card
+ *                              driving it) is let go at once, two expander transactions after it was driven, and the
+ *                              ports are read after that, so its own bit shows it did not follow. Afterwards the pin
+ *                              is as it was (a line this card was holding low is low again). Level 1 is refused
+ *                              on an open-collector line. Refused in MASTER mode and whenever MASTER:1# would be: TPA /
+ *                              TPB toggling, or (BUSDRV-C) its clock running or a CPU card on the DEBUG cable.
+ *                              software/busdrv/bringup.py's plan "shorts" walks every line and names the shorts.
  *
  * BUSDRV-C only (ext-1, mode-1, load-1, clk-2, probe-1); all work in MONITOR mode, with the CPU card in place:
  *   -EF1 -EF2 -EF3 -PAUSE -DMAIN :0|1#   the extension's open-collector lines: 1 pulls low, 0 releases. SC0 is read only.
@@ -170,6 +184,10 @@ const uint8_t NSIGS = sizeof(SIGS) / sizeof(SIGS[0]);
 #define VB_RESET 0x02         // U2 port B
 #define WA_PAUSE 0x08         // U3 port A
 #define WA_SC0 0x20
+
+// WALK: the bus lines of each port [chip][port] (not the spares, not the DEBUG inputs), and which of them are open collector
+const uint8_t BUSPINS[3][2] = {{0x7F, 0x7F}, {0x7F, 0x7F}, {0x3F, 0x00}};
+const uint8_t OCPINS[3][2] = {{0x00, 0x00}, {0x00, 0x0E}, {0x1F, 0x00}};
 
 uint8_t olat[3][2];           // output latch shadows [chip][port]
 uint8_t iodir[3][2];          // direction shadows: 1 = input
@@ -315,8 +333,8 @@ void dataOut(uint8_t v) {
 uint8_t dataIn() { return (gpio(0, 0) & 0x7F) | ((gpio(1, 0) & 1) << 7); }
 uint8_t addrIn() { return (gpio(0, 1) & 0x7F) | ((gpio(1, 0) & 2) << 6); }
 
-// Take the bus: idle levels first (latches), then directions, so nothing glitches active.
-bool takeBus(String &why) {
+// May this card drive bus lines? Not with a CPU on the bus. (MASTER:1# and WALK ask.)
+bool busFree(String &why) {
   if (!busOn) { why = F("bus has no power"); return false; }
   // a running CPU toggles TPA/TPB: watch for 20 ms
   uint8_t first = gpio(1, 0) & 0x0C; unsigned long t = millis();
@@ -325,6 +343,12 @@ bool takeBus(String &why) {
     if (clkHz) { why = F("the clock is running: CLKSTOP:0# first"); return false; }
     if (clockOurs()) { why = F("a CPU card answers on the DEBUG cable - pull the CPU card"); return false; }
   }
+  return true;
+}
+
+// Take the bus: idle levels first (latches), then directions, so nothing glitches active.
+bool takeBus(String &why) {
+  if (!busFree(why)) return false;
   olat[1][0] = (olat[1][0] & 0x80) | 0x70;     // U2 A: D7 0, A7 0, TPA 0, TPB 0, -MRD 1, -MRW 1, -VMA 1
   olat[1][1] = (olat[1][1] & 0x80);            // U2 B: Q 0, -RESET/-INT/-EF latch 0 (they stay inputs = released), N 0
   olat[0][1] &= 0x80; putLat(0, 1); putLat(1, 0); putLat(1, 1);
@@ -426,6 +450,13 @@ bool dmaByte(uint8_t v, uint16_t *addr) {
   for (i = 0; i < 12; i++) { clkEdge(); if (gpio(2, 0) & WA_SC0) break; }      // one DMA cycle only: idle again
   if (i == 12) { why = F("a second DMA cycle followed (-DMAIN held low?)"); loadSynced = false; return false; }
   *addr = ((uint16_t)hi << 8) | lo; return true;
+}
+
+// ---------------------------------------------------------------- WALK: one bus line driven alone
+void walkPulls(bool on) {                      // the expanders' own pull-ups (100k) on every bus line, or off again
+  for (uint8_t c = 0; c < nchips; c++) {       // (U3's three DEBUG inputs keep theirs either way)
+    wr(c, GPPUA, on ? BUSPINS[c][0] : 0); wr(c, GPPUA + 1, (on ? BUSPINS[c][1] : 0) | (c == 2 ? 0x07 : 0));
+  }
 }
 
 // ---------------------------------------------------------------- reporting
@@ -548,7 +579,7 @@ void run(String c) {
   String op = c.substring(0, colon), arg = c.substring(colon + 1);
   long v = arg.toInt();
   bool needMaster = !(op == "HELP" || op == "STATUS" || op == "MASTER" || op == "SNAP" || op == "WATCH" || op == "SPARE" ||
-                      op == "XRST" || op == "RD-ADDRBUS" || op == "RD-DATABUS" || op == "DATABUS-RD-MODE");
+                      op == "XRST" || op == "RD-ADDRBUS" || op == "RD-DATABUS" || op == "DATABUS-RD-MODE" || op == "WALK");
   if (!busOn && op != "HELP" && op != "STATUS") { err(F("bus has no power")); return; }
   if (runC(op, arg, v)) return;
   const Sig *sg = sigFind(op);
@@ -559,7 +590,7 @@ void run(String c) {
 
   if (op == "HELP") {
     Serial.println(F("STATUS MASTER SNAP WATCH TPA TPB -MRD -MRW -VMA Q -RESET -INT -EF N WR-ADDRBUS RD-ADDRBUS"));
-    Serial.println(F("WR-DATABUS RD-DATABUS DATABUS-RD-MODE RDMEM WRMEM RDBLK WRBLK OUT INP INBLK OUTBLK SPARE XRST CLK"));
+    Serial.println(F("WR-DATABUS RD-DATABUS DATABUS-RD-MODE RDMEM WRMEM RDBLK WRBLK OUT INP INBLK OUTBLK SPARE XRST CLK WALK"));
     if (revC) Serial.println(F("BUSDRV-C: -EF1 -EF2 -EF3 -PAUSE -DMAIN MODE DMA LOADBLK CLKHZ CLKSTOP DBG PROBE PCOUNT PTIME PDELAY SPDIR SPIN"));
   } else if (op == "STATUS") {
     Serial.print(F("Data: bus=")); Serial.print(busOn ? F("on") : F("off"));
@@ -674,6 +705,35 @@ void run(String c) {
   } else if (op == "XRST") {
     pinMode(PIN_XRST, OUTPUT); digitalWrite(PIN_XRST, LOW); delay(1); pinMode(PIN_XRST, INPUT); delay(1);
     expandersInit();
+  } else if (op == "WALK") {
+    int comma = arg.indexOf(','); long lv = comma < 0 ? 2 : arg.substring(comma + 1).toInt();
+    uint8_t c = (v >> 4) & 0x0F, p = (v >> 3) & 1, b = v & 7;
+    if (v < 0 || v > 47 || c >= nchips || !((BUSPINS[c][p] >> b) & 1) || lv < 0 || lv > 2) {
+      err(F("WALK:pin,level  pin = chip*16 + port*8 + bit of a bus line; level 0, 1, or 2 (drive nothing)")); return;
+    }
+    if (lv == 1 && ((OCPINS[c][p] >> b) & 1)) { err(F("an open-collector line is only ever pulled low: WALK level 0 or 2")); return; }
+    if (master) { err(F("WALK is for MONITOR mode: MASTER:0# first")); return; }
+    walkPulls(true);                           // on before the look for a CPU: on a bare backplane with no resistors TPA
+    String why;                                //  and TPB would be floating inputs while they are watched
+    if (!busFree(why)) { walkPulls(false); errS(why); return; }
+    uint8_t now[6], dir0 = iodir[c][p], lat0 = olat[c][p]; bool held = lv < 2;
+    if (held) {
+      setBit(c, p, b, lv); putLat(c, p); iodir[c][p] &= ~(1 << b); putDir(c, p);     // the level first, then the direction
+      if (((gpio(c, p) >> b) & 1) != lv) {     // it does not follow: something holds it the other way. Let go at once
+        iodir[c][p] |= (1 << b); putDir(c, p); held = false;
+      } else delayMicroseconds(300);           // (a line with only a 100k pull-up on it, and a card's inputs, to settle)
+    }
+    for (uint8_t k = 0; k < nchips; k++) gpio2(k, now + 2 * k);
+    if (lv < 2) {                              // the pin as it was before. An input (as every bus pin is, but for an open-
+      if (dir0 & (1 << b)) { iodir[c][p] |= (1 << b); putDir(c, p); }   // collector line this card is holding low: that
+      olat[c][p] = lat0; putLat(c, p);         //  one stays low all through, and is not let go for a moment here)
+      if (iodir[c][p] != dir0) { iodir[c][p] = dir0; putDir(c, p); }
+    }
+    walkPulls(false);
+    char buf[24];
+    if (revC) snprintf(buf, sizeof buf, "%02X %02X %02X %02X %02X %02X", now[0], now[1], now[2], now[3], now[4], now[5]);
+    else snprintf(buf, sizeof buf, "%02X %02X %02X %02X", now[0], now[1], now[2], now[3]);
+    Serial.print(F("Data: ")); Serial.println(buf);
   } else { err(F("Bad opcode")); return; }
   Serial.println(F("Complete"));
 }
@@ -687,7 +747,7 @@ void setup() {
   busPower();
   Serial.print(F("s5-bus-driver blocks-1 io-2 "));
   Serial.print(revC ? F("clk-2 ext-1 mode-1 load-1 probe-1") : F("clk-1"));
-  Serial.print(F(" 2026-11-20 "));
+  Serial.print(F(" walk-1 2026-11-21 "));
   if (busOn) { Serial.print(F("BUSDRV-")); Serial.println(revC ? 'C' : 'B'); }
   else Serial.println(F("(bus off: board not known yet)"));
   Serial.println(F(PROMPT));

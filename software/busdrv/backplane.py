@@ -18,6 +18,21 @@ Faults, for testing that the bring-up steps find them:
   stuck={"mem": (bit, level)}   a data line of one card stuck at 0 or 1 whenever that card drives the bus
   drive=False                   the IDE card with nothing on its header (no CF adapter or no card in it)
   addr=(bit, level)             bus address line A<bit> stuck (the cards see it; so does a latched high byte)
+  shorts=[("D0", "D1")]         two bus lines joined (a solder bridge), or a line joined to a supply ("N0", "GND"),
+                                ("D0", "+5V"). Lines by their name without the dash: D0-D7 A0-A7 TPA TPB MRD MRW VMA Q
+                                RESET INT EF N0-N2, and on the 36-pin bus EF1 EF2 EF3 PAUSE DMAIN SC0. A short acts on
+                                the firmware's WALK command (set_lines, below) and, between two open-collector lines
+                                of the 36-pin bus, on everything else; the bus cycles of a bus master do not see it
+  diodes=[("TPB", "MRW")]       one line follows another one way only (WALK): while the first is low the second is
+                                pulled low too, and not the other way round; what a card's logic between two bus
+                                lines looks like from outside, where a solder bridge joins them both ways
+
+set_lines() is the WALK command's state (2026-11-21): the bus driver drives ONE line, every other pin an input with its
+expander pull-up on, to find shorts. There each line is worked out by itself, from all that is on it: the driver, a
+short, a supply, the backplane's resistor, the 100k pull-up, a card. Between the expander's input thresholds (1.0 V
+and 4.0 V: a pull-up shorted to a pull-down) a line reads either way, a new toss for each state (between=0 or 1: that
+level every time, as one real chip would read it). The cards see the
+result, so the run also shows whether one line driven alone wakes a card. set_pins() ends that state.
 
 Backplane36, at the end (2026-11-20), is the bus Rev D's 36-pin slot for BUSDRV-C: the same cards, the six extension
 lines, the bus's pull resistors, and CPU Rev D in place (CpuCardD: its gates from the netlist, the 1802 as
@@ -32,6 +47,12 @@ from s5emu.machine import Video6845, IDE, FLOAT                               # 
 from s5emu.logic import Circuit                                               # noqa: E402
 
 SIGNALS = ("TPA", "TPB", "MRD", "MRW", "VMA", "Q", "RESET", "INT", "EF")
+# every signal of the 30-pin bus, one line each (set_lines); the 36-pin extension's six
+LINES30 = tuple("D%d" % i for i in range(8)) + tuple("A%d" % i for i in range(8)) + SIGNALS + ("N0", "N1", "N2")
+LINES36 = LINES30 + ("EF1", "EF2", "EF3", "PAUSE", "DMAIN", "SC0")
+RAILS = {"GND": 0, "+5V": 1}
+G10K, G100K = 1e-4, 1e-5                      # a 10k resistor of the backplane, an expander's pull-up (100k), as conductances
+V_LOW, V_HIGH = 1.0, 4.0                      # an MCP23017 input at 5 V: low below 0.2 VDD, high above 0.8 VDD
 
 
 class BusCard:
@@ -55,9 +76,19 @@ class BusCard:
 
 
 class Backplane:
+    LINES = LINES30
+
     def __init__(self, cards=("mem", "video", "ide"), jumpers="RRRRRRR-EEEEEEE-", empty=(), stuck=None, drive=True,
-                 image=None, rom=None, rom_base=0x8000, addr=None, mem_rev="D"):
+                 image=None, rom=None, rom_base=0x8000, addr=None, mem_rev="D", shorts=(), between=None, diodes=()):
+        import random
         stuck = stuck or {}; self.cards = []; self.addr_fault = addr; self.events = []; self.context = ""
+        self.shorts = [tuple(s) for s in shorts]; self.diodes = [tuple(d) for d in diodes]
+        for s in self.shorts + self.diodes:
+            for n in s:
+                if n not in self.LINES and n not in RAILS: raise ValueError("short: no bus line %r here (%s, GND, +5V)" % (n, " ".join(self.LINES)))
+        self.walk = None                  # set_lines(): {line: level} while the bus driver walks one line; None otherwise
+        self.wdrv, self.wpull, self.wkeep, self._walk_d = {}, set(), {}, None
+        self.walk_fight = False; self.overload = 0; self.wrng = random.Random(1802); self.between = between
         self.mem = self.video = self.ide = None
         if "mem" in cards:
             m = NetlistMemoryCard(mem_rev, jumpers)
@@ -89,8 +120,85 @@ class Backplane:
     # ------------------------------------------------------------------ the bus
     def set_pins(self, pins, d_driver):
         """pins: {signal: 0|1|None, 'A': byte|None, 'N': 0-7}; d_driver: the byte the bus driver puts on D0-D7, or None"""
+        self._walk_end()
         if pins == self.pins and d_driver == self.d_driver: return     # a port write that changed no bus pin
         self.pins, self.d_driver = dict(pins), d_driver
+        self._resolve()
+
+    # ------------------------------------------------------------------ one line at a time (the firmware's WALK)
+    def _walk_end(self):
+        self.walk = None; self._walk_d = None; self.walk_fight = False
+
+    def _pulls(self, line):
+        """(up, down): what holds this line when nothing drives it, as conductances. The 2009 backplane: nothing"""
+        return 0.0, 0.0
+
+    def _walk_strong(self):
+        """[(line, who, level)]: what else drives a line hard. Here: an address line stuck (the addr fault)"""
+        return [("A%d" % self.addr_fault[0], "stuck", self.addr_fault[1])] if self.addr_fault else []
+
+    def set_lines(self, drv, pullups):
+        """the firmware's WALK: drv {line: 0|1}, the lines the bus driver's expanders drive (WALK drives one, or none);
+        pullups, the lines whose expander pull-up (100k) is on. Every line is worked out from all that is on it, the
+        cards see the result, and self.walk holds it: {line: 0|1}."""
+        self.wdrv, self.wpull = dict(drv), set(pullups)
+        card_d = None
+        for _ in range(4):                                  # a card that answers drives D0-D7, which a short may tie to a control line
+            lv = self._walk_levels(card_d)
+            pulled = [(a, "through a card from " + k, 0) for k, a in self.diodes if lv[k] == 0 and lv[a] == 1]
+            if pulled: lv = self._walk_levels(card_d, pulled)     # one way: the first line low takes the second low
+            self._walk_show(lv)
+            now = self.dbus if self.driven else None
+            if now == card_d: break
+            card_d = now
+        self.walk = lv
+        for k, v in lv.items(): self.wkeep[k] = v
+
+    def _walk_levels(self, card_d, more=()):
+        parent = {}
+        def find(x):
+            parent.setdefault(x, x)
+            while parent[x] != x: parent[x] = parent[parent[x]]; x = parent[x]
+            return x
+        for a, b in self.shorts: parent[find(a)] = find(b)
+        strong = {}                                         # group -> [(who, level)]
+        def src(line, who, v): strong.setdefault(find(line), []).append((who, v))
+        for r, v in RAILS.items():
+            if r in parent: src(r, r, v)
+        for line, v in self.wdrv.items(): src(line, "bus driver", v)
+        if card_d is not None:
+            for i in range(8): src("D%d" % i, "a card", card_d >> i & 1)
+        for line, who, v in list(self._walk_strong()) + list(more): src(line, who, v)
+        up, dn, members = {}, {}, {}
+        for line in self.LINES:
+            g = find(line); members.setdefault(g, []).append(line)
+            u, d = self._pulls(line)
+            up[g] = up.get(g, 0.0) + u + (G100K if line in self.wpull else 0.0); dn[g] = dn.get(g, 0.0) + d
+        lv = {}; self.walk_fight = False
+        for g, names in members.items():
+            s = strong.get(g)
+            if s:
+                vals = {v for _, v in s}
+                if len(vals) > 1:
+                    self.log("fight", "%s: %s" % (" + ".join(names), " + ".join("%s=%d" % x for x in s)))
+                    rail = [v for w, v in s if w in RAILS or w == "held"]
+                    v = rail[0] if rail else 0              # a supply (or a line held: stuck_lines) wins; between two
+                                                            #  outputs a low usually does
+                    if any(w == "bus driver" for w, _ in s): self.walk_fight = True
+                else: v = vals.pop()
+            elif not up[g] and not dn[g]: v = self.wkeep.get(names[0], 1)       # nothing holds it: it keeps its charge
+            else:
+                volts = 5.0 * up[g] / (up[g] + dn[g])
+                v = 1 if volts >= V_HIGH else 0 if volts <= V_LOW else (                    # between the thresholds
+                    self.wrng.getrandbits(1) if self.between is None else self.between)
+            for n in names: lv[n] = v
+        return lv
+
+    def _walk_show(self, lv):
+        """the cards see every line at its level; D0-D7 rest where the lines put them unless a card drives them"""
+        byte = lambda p, n: sum(lv["%s%d" % (p, i)] << i for i in range(n))
+        self.pins = {k: lv[k] for k in SIGNALS}; self.pins["A"] = byte("A", 8); self.pins["N"] = byte("N", 3)
+        self.d_driver = None; self._walk_d = byte("D", 8)
         self._resolve()
 
     def _drive_card(self, c, dbus):
@@ -158,9 +266,11 @@ class Backplane:
 
     def _extra_drivers(self, dbus): return []
 
-    def _floating(self): return 0xFF                        # D0-D7 with nobody driving them
+    def _floating(self):                                    # D0-D7 with nobody driving them
+        return 0xFF if self._walk_d is None else self._walk_d
 
-    def tick(self): pass                                    # one expander transaction of the bus driver has gone by
+    def tick(self):                                         # one expander transaction of the bus driver has gone by
+        if self.walk_fight: self.overload += 1              # ... with one of its pins held against a supply or an output
 
     def data_in(self):
         """what the bus driver reads on D0-D7 (lines nobody drives float high: no pull-ups assumed)"""
@@ -269,6 +379,8 @@ class Backplane36(Backplane):
                                There is no time here: n is that hold counted in the bus driver's expander transactions
                                (tick(): about 0.15 ms each on the real card, so 1000 for the real part; 0 = none)
     """
+    LINES = LINES36
+
     def __init__(self, cards=("mem",), cpu=True, cable=True, jp1="EXT", cpu_rom=None, dma_sample=15, nopull=(),
                  stuck_lines=None, reset_stretch=0, **kw):
         import random
@@ -292,8 +404,38 @@ class Backplane36(Backplane):
 
     # ------------------------------------------------------------------ what the bus driver does
     def set_pins(self, pins, d_driver):
+        self._walk_end()
         self.drv, self.d_driver = dict(pins), d_driver
         self._resolve36()
+
+    # ------------------------------------------------------------------ one line at a time (the firmware's WALK)
+    def _pulls(self, line):
+        """the bus Rev D's 10k on this line (RN1-RN4), and the CPU card's own RN1 (10k up) on the open-collector lines"""
+        group = "D" if line[0] == "D" and line[1:].isdigit() else "N" if line in ("N0", "N1", "N2") else line
+        up = dn = 0.0
+        if line not in self.nopull and group not in self.nopull:
+            if group == "D" or BUS_D_PULLS.get(group) == 1: up += G10K
+            elif BUS_D_PULLS.get(group) == 0: dn += G10K
+        if self.cpu and line in OPEN_COLLECTOR: up += G10K
+        return up, dn
+
+    def _walk_strong(self):
+        out = super()._walk_strong() + [(n, "held", v) for n, v in self.stuck_lines.items() if n in self.LINES]
+        if self.sw1: out.append(("RESET", "cpu SW1", 0))
+        if self._stretch: out.append(("RESET", "cpu U10 (DS1813)", 0))
+        if self.cpu:                                        # the 1802 drives its lines whatever its mode, and the card -VMA and SC0
+            o = self.cpu.pins.outputs(); v = self.cpu.val
+            out += [(n, "cpu", o[n]) for n in ("TPA", "TPB", "MRD", "MRW", "Q")]
+            out += [("A%d" % i, "cpu", o["A"] >> i & 1) for i in range(8)] + [("N%d" % i, "cpu", o["N"] >> i & 1) for i in range(3)]
+            out += [(n, "cpu", v.get(net)) for n, net in (("VMA", self.cpu.n_vma), ("SC0", self.cpu.n_sc0)) if v.get(net) in (0, 1)]
+        return out
+
+    def _walk_show(self, lv):
+        if self.cpu:
+            self.cpu.drive({n: (0 if lv[n] == 0 else None) for n in OPEN_COLLECTOR}, self.clk_out if self.cable else None, self.dbus)
+        super()._walk_show(lv)
+        for n in EXT_LINES + ("SC0",): self.pins[n] = lv[n]
+        if self.driven: self.dkeep = self.dbus
 
     def clock(self, level):
         """the Nano's D9 (CLK OUT): through R7 and the DEBUG cable to the CPU card's EXT CLK"""
@@ -330,6 +472,7 @@ class Backplane36(Backplane):
         return v
 
     def tick(self):
+        super().tick()
         if self._stretch:
             self._stretch -= 1
             if not self._stretch: self._resolve36()             # the DS1813 lets -RESET go
@@ -342,6 +485,8 @@ class Backplane36(Backplane):
         oc = {n: self._line(n, [("bus driver", d.get(n)), ("cpu SW1", 0 if (n == "RESET" and self.sw1) else None),
                                 ("cpu U10 (DS1813)", 0 if (n == "RESET" and self._stretch) else None)])
               for n in OPEN_COLLECTOR}
+        for a, b in self.shorts:                                # a short between two open-collector lines: low together
+            if a in oc and b in oc and 0 in (oc[a], oc[b]): oc[a] = oc[b] = 0
         o = None; vma = sc0 = None
         if self.cpu:
             v = self.cpu.drive({n: (0 if oc[n] == 0 else None) for n in OPEN_COLLECTOR},
@@ -361,7 +506,9 @@ class Backplane36(Backplane):
 
     def _extra_drivers(self, dbus): return self.cpu.data_drivers() if self.cpu else []
 
-    def _floating(self): return self.dkeep if "D" in self.nopull else 0xFF
+    def _floating(self):
+        if self._walk_d is not None: return self._walk_d
+        return self.dkeep if "D" in self.nopull else 0xFF
 
     # ------------------------------------------------------------------ what the bus driver reads
     def ext_in(self):

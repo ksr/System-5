@@ -26,7 +26,12 @@ Blocks:
             through U9D/U9E.
   pull-ups  RN1 10k on -RESET, -INT, -PAUSE, -DMAIN, -EF, -EF1-3 (the bus Rev D's add to them; they were for the 2009
             backplane, which has none, and which this card no longer fits since the 2026-11-18 slot order)
-  LEDs      LED1 PWR, LED2 Q, LED3 PAUSE (WAIT low), LED4 RESET (CLEAR low), LED5 ROM (the EPROM selected)
+  LEDs      LED1 PWR, LED2 Q, LED3 PAUSE (WAIT low), LED4 RESET (CLEAR low), LED5 ROM (the EPROM selected),
+            LED6 RAM, START / FROM / RAM on the silkscreen (Ken, 2026-11-21): lit while LOADED is set, that is while a reset starts the 1802 in RAM at 0000
+            and not in the boot EPROM. Nothing showed the flag before, and it can be set without meaning to (leave
+            PAUSE by taking RUN off before LOAD and both lines are low for a moment: LOAD mode). On the flip-flop's
+            own Q output (U8 pin 5, unused until then) through R8, cathode to GND: Q sources the LED, so that
+            NOT_LOADED, the output that gates the boot map, carries no LED current.
 """
 # --- the 36-pin bus, by socket position (as the bus Rev D, ../../../bus/kicad/rev-d/gen/netlist.py) ---
 BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 10: "Q", 11: "TPA", 12: "TPB",
@@ -91,7 +96,7 @@ chip("U6", "74HCT20", "74HCT20", {1: "LA12", 2: "LA13", 4: "LA14", 5: "LA15", 6:
      9: "+5V", 10: "+5V", 12: "+5V", 13: "+5V", 8: None, 7: "GND", 14: "+5V"})
 chip("U7", "74HCT14", "74HCT14", {1: "EXT_CLK", 2: "CLK_EXT", 3: "-RESET", 4: "RST_H", 5: "RST_H", 6: "CLEAR",
      9: "-PAUSE", 8: "PAUSE_H", 11: "PAUSE_H", 10: "WAIT", 13: "-DMAIN", 12: "DMAIN_H", 7: "GND", 14: "+5V"})
-chip("U8", "74HCT74", "74HCT74", {1: "POR_L", 2: "GND", 3: "GND", 4: "LOAD_L", 5: None, 6: "NOT_LOADED",   # A: LOADED
+chip("U8", "74HCT74", "74HCT74", {1: "POR_L", 2: "GND", 3: "GND", 4: "LOAD_L", 5: "LOADED", 6: "NOT_LOADED",   # A: LOADED
      13: "+5V", 12: "GND", 11: "GND", 10: "+5V", 9: None, 8: None, 7: "GND", 14: "+5V"})                   # B: spare
 chip("U9", "74HCT14", "74HCT14", {1: "DMAIN_H", 2: "DMA_IN", 3: "SW_RST", 4: "SWRST_H", 5: "SWRST_H", 6: "POR_L",
      9: "SC0_RAW", 8: "SC0_L", 11: "SC0_L", 10: "SC0", 13: "Q", 12: "Q_L", 7: "GND", 14: "+5V"})
@@ -126,6 +131,10 @@ for ref, label, sink, k in (("LED1", "PWR", "GND", 3), ("LED2", "Q", "Q_L", 4), 
     # labels name the data lines D0-D7, and pcb-check took them for the LEDs' references (2026-11-17)
     PARTS[ref] = ("Device:LED", label, "LED_THT:LED_D3.0mm", {1: sink, 2: "LED_" + label})          # 1 = K, 2 = A
     PARTS["R%d" % k] = ("Device:R", "1k", R, {1: "+5V", 2: "LED_" + label})
+# LED6 RAM (Ken, 2026-11-21: "yes" to a RAM LED): the LOADED flag shown. Source-driven, unlike the five above: U8A's Q
+# (LOADED) through R8 to the anode, the cathode on GND, so it is lit while LOADED is high
+PARTS["LED6"] = ("Device:LED", "RAM", "LED_THT:LED_D3.0mm", {1: "GND", 2: "LED_RAM"})                # 1 = K, 2 = A
+PARTS["R8"] = ("Device:R", "1k", R, {1: "LOADED", 2: "LED_RAM"})
 PARTS["C1"] = ("Device:C_Polarized", "10uF", "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm", {1: "+5V", 2: "GND"})
 for k, u in enumerate(("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "X1")):
     PARTS["C%d" % (k + 2)] = ("Device:C", "0.1uF", CAP, {1: "+5V", 2: "GND"})                        # one per chip

@@ -17,6 +17,10 @@ Usage (port auto-detected: the Nano's USB serial; --port to choose, --sim to run
   s5busdrv.py memtest START END           RAM test: address-in-address, walking ones, 55/AA (destroys contents)
   s5busdrv.py out PORT BYTE | inp PORT    1802 OUT / INP on N=PORT (1..7)
   s5busdrv.py spare MASK | xrst | cmd TEXT
+  s5busdrv.py walk [LINE low|high]        the short finder's one step (CPU card out): LINE driven alone for a moment, every
+                                          other bus pin an input with the expander's 100k pull-up on; the lines that
+                                          moved with it. No LINE: every line at rest. bringup.py's plan "shorts" walks
+                                          them all and names the shorts.
 Numbers accept 0x.. / $.. / plain decimal. "master on" is needed before memory and I/O commands; the tool turns it
 on for them when --auto-master is given.
 
@@ -41,6 +45,14 @@ CPU card in place, the DEBUG cable joining the two cards and the CPU card's JP1 
 import sys, os, time, glob, argparse
 
 BAUD = 115200
+# Every bus line's expander pin, for WALK: pin = chip * 16 + port * 8 + bit (U1 = chip 0, U2 = 1, U3 = 2; port A = 0).
+# U1: D0-D6 on GPA0-6, A0-A6 on GPB0-6. U2: D7 A7 TPA TPB -MRD -MRW -VMA on GPA0-6, Q -RESET -INT -EF N0 N1 N2 on GPB0-6.
+# U3 (BUSDRV-C): -EF1 -EF2 -EF3 -PAUSE -DMAIN SC0 on GPA0-5.
+WALK_PINS = dict([("D%d" % i, i) for i in range(7)] + [("D7", 16)] + [("A%d" % i, 8 + i) for i in range(7)] + [("A7", 17)] +
+                 [("TPA", 18), ("TPB", 19), ("-MRD", 20), ("-MRW", 21), ("-VMA", 22), ("Q", 24), ("-RESET", 25),
+                  ("-INT", 26), ("-EF", 27), ("N0", 28), ("N1", 29), ("N2", 30),
+                  ("-EF1", 32), ("-EF2", 33), ("-EF3", 34), ("-PAUSE", 35), ("-DMAIN", 36), ("SC0", 37)])
+OPEN_COLLECTOR = ("-RESET", "-INT", "-EF", "-EF1", "-EF2", "-EF3", "-PAUSE", "-DMAIN")
 
 
 def num(s):
@@ -70,6 +82,7 @@ class BusDriver:
             raise CardError("no System-5 bus driver banner (got %r)" % self.banner)
         self.blocks = any("blocks-" in l for l in self.banner)
         self.ioblocks = any("io-2" in l for l in self.banner)       # firmware 2026-10-11: INBLK/OUTBLK, fixed I/O cycles
+        self.walkable = any("walk-1" in l for l in self.banner)     # firmware 2026-11-21: WALK, one line driven alone
         self.lines = []                                             # every line of the last answer
         # the board: BUSDRV-C says so in its banner, or (the bus was off when the Nano started) in STATUS
         self.rev = "C" if any("BUSDRV-C" in l for l in self.banner) else "B" if any("BUSDRV-B" in l for l in self.banner) else None
@@ -126,6 +139,20 @@ class BusDriver:
 
     def snap(self):
         return self.cmd("SNAP")[0]
+
+    # ---- one line at a time: the short finder's step (WALK)
+    def walk_lines(self):
+        """the bus lines this card reaches, in expander order: 28 on BUSDRV-B, 34 on BUSDRV-C"""
+        top = 48 if self.board() == "C" else 32
+        return [n for n, p in WALK_PINS.items() if p < top]
+
+    def walk(self, line=None, level=0):
+        """`line` driven alone to `level` (0 or 1) for a moment, every other bus pin an input with its expander's pull-up
+        (100k) on; no line: nothing driven, every line at rest. CPU card out. -> {line: the level read}. A line that
+        does not reach its level is let go at once by the card, and reads as it rests."""
+        d = self.cmd("WALK", "%d,%d" % (WALK_PINS[line] if line else 0, 2 if line is None else level))[0]
+        ports = [int(h, 16) for h in d.split()]
+        return {n: ports[p >> 3] >> (p & 7) & 1 for n, p in WALK_PINS.items() if p >> 3 < len(ports)}
 
     # ---- memory
     def read(self, addr, n):
@@ -355,6 +382,16 @@ def main(argv=None):
         elif c == "memtest": sys.exit(0 if memtest(bd, num(x[0]), num(x[1])) else 1)
         elif c == "out": bd.out(num(x[0]), num(x[1]))
         elif c == "inp": print("%02X" % bd.inp(num(x[0])))
+        elif c == "walk":
+            rest = bd.walk()
+            if not x: print("at rest (pull-ups on):", " ".join("%s=%d" % kv for kv in rest.items()))
+            else:
+                name = next((n for n in WALK_PINS if n.lstrip("-") == x[0].upper().lstrip("-")), None)
+                if name is None or name not in rest: ap.error("walk: no bus line %s on this card (%s)" % (x[0], " ".join(rest)))
+                level = 1 if len(x) > 1 and x[1].lower() in ("high", "1", "hi") else 0
+                got = bd.walk(name, level); moved = [n for n in got if n != name and got[n] != rest[n]]
+                if got[name] != level: print("%s does not go %s: something holds it the other way (the card let go at once)" % (name, "high" if level else "low"))
+                else: print("%s %s: %s" % (name, "high" if level else "low", "no other line moves" if not moved else "moves with it: " + " ".join("%s=%d" % (n, got[n]) for n in moved)))
         elif c == "spare": bd.cmd("SPARE", num(x[0]))
         elif c == "xrst": bd.cmd("XRST")
         elif c == "mode": bd.mode(x[0]); print(bd.status())

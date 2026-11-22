@@ -10,6 +10,7 @@ It has the same wire protocol as Ken's YACC1 `bus-driver.ino`: `CMD:OPERAND#`, r
   - `INBLK`/`OUTBLK` run up to 64 / 32 of them in one command (a CF sector is 8 `INBLK`s).
 - **Fixed 2026-10-11:** before that, memory cycles had no TPB (the CRTC never answered) and `OUT`/`INP` had no -MRD or TPA (the IDE card read the drive onto the bus during every `OUT`). Found with `software/busdrv/fwsim.py`, which runs the same steps against the cards' netlists; keep it in step with any change to a bus cycle here.
 - **Open-collector lines** (-RESET, -INT, -EF) are only pulled low or released.
+- **A short finder** (2026-11-21, `walk-1`): `WALK:pin,level#` drives one bus line alone; the section at the end.
 - **While bus +5V is off:** the expanders are held in reset, and I²C is stopped with no pull-ups, so nothing back-feeds them.
 - **No Adafruit library:** it writes the MCP23017 registers directly (I²C at 400 kHz, about 1 ms per byte).
 
@@ -51,3 +52,34 @@ The same sketch now runs BUSDRV-C, the 36-pin card (`hardware/bus-driver/kicad/r
 - **Size (2026-11-20, `arduino-cli` 1.6.0, `arduino:avr` 1.8.6):** 21,226 bytes of flash (69% of 30,720) and 1,091 bytes of RAM (53% of 2,048), for `nano` and `nano:cpu=atmega328old`; 0 warnings from the sketch. Before BUSDRV-C: 15,222 and 802.
 - **Tried without hardware:** `software/busdrv/fwsim.py` is this sketch in Python, port write for port write, and `backplane.Backplane36` is the bus Rev D with a memory card and CPU Rev D from their netlists, the 1802 moved one clock edge at a time (`cpupins.py`, checked against the real 1802's stepped trace). `software/busdrv/test_busdrv_c.py` (32 tests): 300 bytes loaded once each with no fight on the data lines, then run; the cable off, JP1 wrong, -DMAIN stuck; a BUSDRV-B refusing the new commands.
 - **Before it goes on the BUSDRV-B in use:** it is a larger sketch on a card that works. Keep the 2026-10-31 build to go back to (`git show 11eab8e:embedded/bus-driver/s5-bus-driver/s5-bus-driver.ino`), and run `python3 bringup.py memory` after the upload.
+
+## WALK: one line driven alone, to find shorts (2026-11-21)
+
+Ken, 2026-11-21: "does debug card reach all bus lines, if so can be used as a short detector". It does: every signal
+of the bus has an expander pin of its own (28 on BUSDRV-B, 34 on BUSDRV-C), each of which can read its line, pull it
+low or drive it high. Bus-master mode drives all its lines at once, which shows nothing about a short, so the sketch
+has one more command, on both boards, banner word `walk-1`:
+
+- **`WALK:pin,level#`**, MONITOR mode, the CPU card out. Every bus pin is an input with the expander's own pull-up on
+  (100k: a line the backplane does not hold then rests high); the one pin is driven to `level` (0 or 1), the ports are
+  read, and the pin is put back as it was and the pull-ups turned off: about a millisecond. `pin` = chip × 16 + port × 8
+  + bit (U1 is chip 0, port A is 0; `software/busdrv/s5busdrv.py` has the table). Level 2 drives nothing: the lines at
+  rest. The answer is the GPIO ports as read, in hex: four on BUSDRV-B, six on BUSDRV-C.
+- **The card is left as it was found:** the walked pin's direction and latch are put back, and an open-collector
+  line the card was already holding low (`-RESET:1#`) stays low all through a walk, its own included.
+- **A pin that does not follow is let go at once.** The sketch reads the pin straight after driving it; if something
+  holds it the other way (a short to a supply, a card driving it) it makes the pin an input again, two expander
+  transactions after it drove it (about 0.3 ms), and reads the ports after that, so the pin's own bit shows it did
+  not follow. That is the one case where a pin is loaded beyond the MCP23017's 25 mA rating, and why it is kept short.
+- **Refused:** level 1 on an open-collector line (never driven high, here as everywhere); a pin that is not a bus line
+  (the spares, the DEBUG inputs); in MASTER mode; and whenever `MASTER:1#` would be: TPA / TPB toggling, or on
+  BUSDRV-C its clock running or a CPU card answering on the DEBUG cable. (The pull-ups go on before that look, so
+  that on a bare backplane with no resistors TPA and TPB are not floating inputs while they are watched.)
+- **The test built on it** is `python3 bringup.py shorts` (`software/busdrv/BRINGUP.md`): every line pulled low alone
+  and the pulled-down ones driven high alone, the shorts named with where the two lines are neighbours.
+- **Size (2026-11-21, `arduino-cli` 1.5.1, `arduino:avr` 1.8.8):** 22,560 bytes of flash (73% of 30,720) and 1,109
+  bytes of RAM (54% of 2,048); 0 warnings from the sketch. The banners: `... clk-1 walk-1 2026-11-21 BUSDRV-B` and
+  `... probe-1 walk-1 2026-11-21 BUSDRV-C`.
+- **Tried without hardware only**, as BUSDRV-C's commands: `fwsim.py` runs the same register writes against
+  `backplane.py`, which works every line out by itself for this command (resistors, the 100k pull-ups, shorts, the
+  cards' netlists); `software/busdrv/test_shorts.py`, 26 tests. **It has not been uploaded to the BUSDRV-B in use.**

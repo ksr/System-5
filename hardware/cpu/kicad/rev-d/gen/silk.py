@@ -2,7 +2,8 @@
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-18 (the silkscreen of make_board.py, 2026-10-30)
 """silk.py - CPU Rev D's silkscreen, by Ken's rules:
   * every reference outside its part, readable with the parts fitted, with its type or value beside it ("U3 2732 HBIOS",
-    "R1 10k"); the LEDs by their function alone (PWR, Q, PAUSE, RESET, ROM; pcb-check.ini exempts their references);
+    "R1 10k"); the LEDs by their function alone (PWR, Q, PAUSE, RESET, ROM, and LED6 START / FROM / RAM, a word a
+    line; pcb-check.ini exempts their references);
     the switch's positions, the jumpers' settings and the debug header's pins named
   * **every text reads upright with the card standing in the bus, connector down** (Ken, 2026-11-18, every board on
     every system; he asked for it on CPU Rev D that day): the bus is on the left as drawn, so every label is at KiCad
@@ -26,6 +27,11 @@ import silk270
 import netlist as N
 T = pcbnew.ToMM; MM = pcbnew.FromMM; V = lambda x, y: pcbnew.VECTOR2I(MM(x), MM(y))
 PROJ = "cpu-rev-d"
+# LED6's label (Ken, 2026-11-21: "change RAM to Start From RAM, 3 lines each with one word under LED"): what the lit LED
+# says, a word a line, in capitals and at the height of the five other LED labels beside it (his words; the capitals
+# are this file's, as every function label on the card has them). The part's value in the netlist and the schematic
+# stays RAM
+LED6_LABEL = "START\nFROM\nRAM"
 
 
 def add(b):
@@ -46,8 +52,13 @@ def add(b):
                 [(x, YB - 1.7) for x in [87.0 + 1.0 * k for k in range(30)]] +
                 [(x, Y0 + 4.95) for x in [20.0 + 1.0 * k for k in range(60)]])
     # 3. the front panel: the LEDs by function, the switch's two positions, the debug header's pins, the jumpers
+    heights = []
     for ref in ("LED1", "LED2", "LED3", "LED4", "LED5"):
-        s.label(ref, N.PARTS[ref][1])
+        got = s.label(ref, N.PARTS[ref][1]); heights.append(got[3] if got else 0.8)
+    # LED6: three lines under the LED with the card standing: off its left side as drawn, level with it (no step along
+    # the edge: the placer's nearest spot was beside the LED, 4 mm along), at the height the other five got. The first
+    # word is next to the LED (a 270 text's lines run on leftwards as drawn: downwards with the card standing)
+    s.label("LED6", LED6_LABEL, sizes=(min(heights),), spots=s.beside("LED6", order=("left",), dys=(0.0,)))
     s.ends("SW1", {"1": "RESET", "3": "RUN"}, h=1.2)     # lever up (towards pin 1) joins the common to pin 3, SW_RST
     s.label("SW1", "SW1")
     l, t_, r, bt = s.bbox("J2")                           # the keyed 2x3 DEBUG header: its pins in a legend below it

@@ -85,7 +85,7 @@ New cards for it, all drawn in KiCad, none ordered yet:
   adapter, reverse-polarity protection and a 5 V switching regulator, or screw terminals for an external 5 V supply,
   a jumper to pick the source and a power switch.
 - **[CPU Rev D](hardware/cpu/kicad/rev-d/DESIGN.md)** — just the 1802 and its 4K boot EPROM, at 2 MHz or from an
-  external clock; a load-then-run flag so a program toggled in runs from RAM.
+  external clock; a load-then-run flag, with an LED to show it, so a program toggled in runs from RAM.
 - **[IO panel](hardware/io-panel/kicad/rev-a/DESIGN.md)** — the ELF-style front panel: eight toggles, eight LEDs, six
   TIL311 hex displays (the data byte and the bus address), Q, INPUT, RUN and LOAD, a battery-backed real-time
   clock and a serial port (a 16C550 with a DE-9 socket). The emulator already runs a program toggled in through it.

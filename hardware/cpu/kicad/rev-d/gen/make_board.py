@@ -15,7 +15,8 @@
     time, and the project's Power class (cpu-rev-d.kicad_pro) routes +5V 0.5 mm wide (2026-11-17)
   * the silkscreen (gen/silk.py; every text at 270 since 2026-11-18, upright with the card standing in the bus); every
     reference and value on it (pcb-check, 2026-11-17): "J1 BUS" along the bus edge; the LEDs are
-    LED1-LED5, not D2-D6, labelled by their function alone (Ken, 2026-11-18: PWR, Q, PAUSE, RESET, ROM; pcb-check.ini
+    LED1-LED6, not D2-D7, labelled by their function alone (Ken, 2026-11-18: PWR, Q, PAUSE, RESET, ROM, and since
+    2026-11-21 LED6, START / FROM / RAM on three lines; pcb-check.ini
     exempts their references), and D1 carries its own reference field, because J1's pin labels name the data lines
     D0-D7 and pcb-check took those for the parts' references
 Writes ../cpu-rev-d.kicad_pcb."""
@@ -64,7 +65,8 @@ PLACE = {
     # JP2-JP5: the EF blocks, one per 1802 flag input, upright (rows = -EF1, -EF2, -EF3, -EF) in a row below SW1
     **{"JP%d" % (k + 2): (EFX + 8.0 * k, EFY, 0) for k in range(4)},
 }
-for k, ref in enumerate(("LED1", "LED2", "LED3", "LED4", "LED5")):        # LEDs down the front edge, below J2
+for k, ref in enumerate(("LED1", "LED2", "LED3", "LED4", "LED5", "LED6")):   # LEDs down the front edge, below J2 (LED6
+    # RAM, with R8, since 2026-11-21: under ROM, above the RESET/RUN switch)
     PLACE[ref] = (XR - 4.0, 46.0 + 6.0 * k, 90)
     PLACE["R%d" % (k + 3)] = (XR - 30.0, 46.0 + 6.0 * k, 0)
 for k, u in enumerate(("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "X1")):   # 0.1 uF above each chip's pin 1

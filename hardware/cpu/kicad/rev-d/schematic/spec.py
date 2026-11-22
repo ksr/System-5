@@ -4,7 +4,7 @@ PROJ = "cpu-rev-d-schematic"
 TITLE = "System-5 CPU card Rev D"
 SUBTITLE = "CDP1802 at 2 MHz, reset/run and LOAD control, 2732 boot EPROM at F000, debug header; the 36-pin bus"
 THEORY = "Design: hardware/cpu/kicad/rev-d/DESIGN.md; the bus: docs/manual/bus.md (the 36-pin extension)"
-DATE = "2026-10-30"
+DATE = "2026-11-21"
 REV = "D"
 BUSREF = "J1"
 POWER = ("+5V", "GND")
@@ -22,10 +22,11 @@ SHEETS = [
      "SC0 and SC1; U9D/U9E buffer SC0 onto the bus (position 36): low = an instruction fetch."),
     ("control", "Control", "RESET, RUN, PAUSE, LOAD: DS1813, RESET/RUN SWITCH, CLEAR/WAIT/DMA-IN BUFFERS, LOADED",
      ["U10", "SW1", "D1", "R1", "C12", ("U7", 2), ("U7", 3), ("U7", 4), ("U7", 5), ("U7", 6), ("U9", 1), ("U9", 2),
-      ("U9", 3), ("U8", 1), ("U5", 4), "RN1", "LED3", "R5", "LED4", "R6"], None,
+      ("U9", 3), ("U8", 1), ("U5", 4), "RN1", "LED3", "R5", "LED4", "R6", "LED6", "R8"], None,
      "CLEAR = -RESET, WAIT = -PAUSE, DMA_IN = -DMAIN, each through two Schmitt inverters: reset, run, pause (-PAUSE low)\n"
      "and load (both low) follow directly. U10 DS1813: power-on reset and switch debounce on the open-collector -RESET\n"
-     "(no watchdog). SW1 RESET grounds SW_RST: -RESET through D1, and LOADED (U8A) cleared. LOAD mode sets LOADED."),
+     "(no watchdog). SW1 RESET grounds SW_RST: -RESET through D1, and LOADED (U8A) cleared. LOAD mode sets LOADED;\n"
+     "LED6 RAM (on U8A's Q through R8) is lit while it is set: the next RUN starts in RAM at 0000, not in the EPROM."),
     ("boot", "Boot", "A8-A15 LATCH, 2732 BOOT EPROM AT F000, BOOT MAP AND -VMA",
      ["U2", "U3", ("U4", 2), ("U6", 1), ("U5", 1), ("U5", 2), ("U5", 3), "LED5", "R7"], None,
      "U2 latches A8-A15 while TPA is high. After a reset the boot map puts the EPROM at every address (-VMA high) until\n"

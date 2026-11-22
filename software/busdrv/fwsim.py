@@ -18,6 +18,10 @@ legacy=True runs the bus cycles as the sketch had them before 2026-10-11 (no TPB
 load_fault, for the tests of the simulator itself (a check that has never failed on a wrong sequence proves nothing):
   "hold-dmain"   -DMAIN is let go only after the DMA cycle is over, as an expander at the 1802's own clock would do
   "early-data"   the byte is put on D0-D7 with the request, while the idle cycle's memory read is still on them
+  "walk-hold"    WALK keeps driving a pin that does not follow (held against a supply) until it has read every port
+
+WALK (2026-11-21) is the one command that drives a single pin of the address, data or N lines: with the expanders'
+pull-ups on bus pins, _apply() hands the backplane every line by itself (Backplane.set_lines), not the grouped pins.
 
 What the simulator has no time for: a steady clock (CLKHZ) moves the simulated 1802 CLOCK_EDGES_A_COMMAND edges before
 each later command, not hz of them a second; PCOUNT counts the edges those make on the line a probe is hooked to;
@@ -26,9 +30,9 @@ PTIME and PDELAY answer only for PROBE1 on CLK OUT itself.
 FwCard wraps it in the serial wire protocol, so s5busdrv.BusDriver(transport=FwCard(...)) talks to it exactly as it
 talks to the real card.
 """
-DATE = "2026-11-20"
-BANNER = "s5-bus-driver blocks-1 io-2 clk-1 %s BUSDRV-B (SIMULATED)" % DATE
-BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 %s BUSDRV-C (SIMULATED)" % DATE
+DATE = "2026-11-21"
+BANNER = "s5-bus-driver blocks-1 io-2 clk-1 walk-1 %s BUSDRV-B (SIMULATED)" % DATE
+BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 walk-1 %s BUSDRV-C (SIMULATED)" % DATE
 LEGACY_BANNER = "s5-bus-driver blocks-1 2026-10-06 (SIMULATED, the old bus cycles)"
 BLOCK_MAX, WBLOCK_MAX = 64, 32
 CLOCK_EDGES_A_COMMAND = 640             # a steady clock: 40 machine cycles of the simulated 1802 before each command
@@ -45,6 +49,17 @@ PIN_OF = {"TPA": "TPA", "TPB": "TPB", "-MRD": "MRD", "-MRW": "MRW", "-VMA": "VMA
           "-INT": "INT", "-EF": "EF", "-EF1": "EF1", "-EF2": "EF2", "-EF3": "EF3", "-PAUSE": "PAUSE", "-DMAIN": "DMAIN"}
 VA_A7, VA_TPA, VA_MRD, VA_MRW, VB_RESET, WA_PAUSE, WA_SC0 = 0x02, 0x04, 0x10, 0x20, 0x02, 0x08, 0x20
 C_COMMANDS = ("MODE", "DMA", "LOADBLK", "CLKHZ", "CLKSTOP", "PROBE", "PCOUNT", "PTIME", "PDELAY", "DBG", "SPDIR", "SPIN")
+# WALK: the bus lines of each port [chip][port] and which of them are open collector, as in the sketch; and every bus
+# line's pin, by the backplane's name for it (backplane.LINES30 / LINES36): (chip, port, bit)
+BUSPINS = ((0x7F, 0x7F), (0x7F, 0x7F), (0x3F, 0x00))
+OCPINS = ((0x00, 0x00), (0x00, 0x0E), (0x1F, 0x00))
+LINEMAP = dict([("D%d" % i, (0, 0, i)) for i in range(7)] + [("D7", (1, 0, 0))] +
+               [("A%d" % i, (0, 1, i)) for i in range(7)] + [("A7", (1, 0, 1))] +
+               [("TPA", (1, 0, 2)), ("TPB", (1, 0, 3)), ("MRD", (1, 0, 4)), ("MRW", (1, 0, 5)), ("VMA", (1, 0, 6)),
+                ("Q", (1, 1, 0)), ("RESET", (1, 1, 1)), ("INT", (1, 1, 2)), ("EF", (1, 1, 3)),
+                ("N0", (1, 1, 4)), ("N1", (1, 1, 5)), ("N2", (1, 1, 6)),
+                ("EF1", (2, 0, 0)), ("EF2", (2, 0, 1)), ("EF3", (2, 0, 2)), ("PAUSE", (2, 0, 3)), ("DMAIN", (2, 0, 4)),
+                ("SC0", (2, 0, 5))])
 MODE_NAMES = ("RUN", "RESET", "PAUSE", "LOAD")
 NEEDS_C = "Error: needs BUSDRV-C (no U3 at 0x22)"
 NO_CLOCK = "CLK OUT does not reach the 1802: DEBUG cable, or the CPU card's JP1 not on EXT"
@@ -55,6 +70,7 @@ class Firmware:
         self.bp, self.bus_on, self.cpu_running, self.legacy = backplane, bus_on, cpu_running, legacy
         self.rev_c = rev == "C"; self.nchips = 3 if self.rev_c else 2; self.load_fault = load_fault
         self.olat = [[0, 0] for _ in range(3)]; self.iodir = [[0xFF, 0xFF] for _ in range(3)]; self.master = False
+        self.gppu = [[0, 0], [0, 0], [0, 0x07]]            # the pull-up registers: off, but for U3's three DEBUG inputs
         self.i2c_ops = 0; self._driving = False
         self.spdir = 0; self.load_synced = False; self.clk_hz = 0; self.clk = 0; self.why = ""
         if bus_on: self.expanders_init()
@@ -63,11 +79,17 @@ class Firmware:
     def _apply(self):
         """what the expanders put on the bus now; nothing is driven until the card is master or pulls a line"""
         self.i2c_ops += 1; self.bp.tick()
+        def out(c, p, b):
+            return None if (self.iodir[c][p] >> b) & 1 else (self.olat[c][p] >> b) & 1
+        if any(self.gppu[c][p] & BUSPINS[c][p] for c in range(self.nchips) for p in range(2)):
+            # WALK: pull-ups on bus pins. The backplane works each line out by itself (one may be driven alone)
+            mine = {n: cpb for n, cpb in LINEMAP.items() if cpb[0] < self.nchips}
+            drv = {n: out(*cpb) for n, cpb in mine.items() if out(*cpb) is not None}
+            self.bp.set_lines(drv, {n for n, (c, p, b) in mine.items() if (self.gppu[c][p] >> b) & 1})
+            self._driving = True; return
         idle = not self.master and all(self._is_input(c, p) for c in range(self.nchips) for p in range(2))
         if idle and not self._driving: return
         self._driving = not idle
-        def out(c, p, b):
-            return None if (self.iodir[c][p] >> b) & 1 else (self.olat[c][p] >> b) & 1
         pins = {}
         for name, (c, p, b, f) in SIGS.items():
             if c < self.nchips: pins[PIN_OF[name]] = out(c, p, b)
@@ -86,6 +108,7 @@ class Firmware:
 
     def put_lat(self, c, p): self._apply()
     def put_dir(self, c, p): self._apply()
+    def put_pu(self, c, p): self._apply()
 
     def gpio(self, c, p):
         """one GPIO port as the expander reads it: the bus as it stands, and the latch of an output-only spare"""
@@ -93,6 +116,10 @@ class Firmware:
         bp = self.bp; pins = bp.pins or {}
         g = lambda k, d: d if pins.get(k) is None else pins[k]
         spare = self.olat[c][p] & 0x80
+        w = getattr(bp, "walk", None)
+        if w is not None and (c, p) != (2, 1):              # WALK: each line as the backplane worked it out
+            v = spare | sum(w[n] << b for n, (cc, pp, b) in LINEMAP.items() if (cc, pp) == (c, p) and n in w)
+            return v | ((self.olat[2][0] if self.spdir & 1 else 0x40) & 0x40) if c == 2 else v
         if c == 0: return spare | ((bp.data_in() if p == 0 else g("A", 0xFF)) & 0x7F)
         if c == 1 and p == 0:
             return (spare | (bp.data_in() >> 7) | ((g("A", 0xFF) >> 7) << 1) | g("TPA", 0) << 2 | g("TPB", 0) << 3 |
@@ -116,8 +143,14 @@ class Firmware:
 
     def expanders_init(self):
         self.spdir = 0
-        for c in range(self.nchips): self.olat[c] = [0, 0]
+        for c in range(self.nchips): self.olat[c] = [0, 0]; self.gppu[c] = [0, 0x07 if c == 2 else 0]
         self.all_inputs()
+
+    def walk_pulls(self, on):
+        """the expanders' own pull-ups (100k) on every bus line, or off again (U3's DEBUG inputs keep theirs)"""
+        for c in range(self.nchips):
+            self.gppu[c][0] = BUSPINS[c][0] if on else 0; self.put_pu(c, 0)
+            self.gppu[c][1] = (BUSPINS[c][1] if on else 0) | (0x07 if c == 2 else 0); self.put_pu(c, 1)
 
     # ---------------------------------------------------------------- BUSDRV-C: the clock on D9
     def clk_edge(self):
@@ -177,12 +210,18 @@ class Firmware:
 
     def data_in(self): self.i2c_ops += 2; return self.bp.data_in()
 
-    def take_bus(self):
+    def bus_free(self):
+        """may this card drive bus lines? Not with a CPU on the bus. -> None, or why not (MASTER:1# and WALK ask)"""
         if not self.bus_on: return "bus has no power"
         if self.cpu_running: return "TPA/TPB toggling: a CPU is running - pull the CPU card"
         if self.rev_c:
             if self.clk_hz: return "the clock is running: CLKSTOP:0# first"
             if self.clock_ours(): return "a CPU card answers on the DEBUG cable - pull the CPU card"
+        return None
+
+    def take_bus(self):
+        why = self.bus_free()
+        if why: return why
         self.olat[1][0] = (self.olat[1][0] & 0x80) | 0x70
         self.olat[1][1] = self.olat[1][1] & 0x80
         self.olat[0][1] &= 0x80; self.put_lat(0, 1); self.put_lat(1, 0); self.put_lat(1, 1)
@@ -391,7 +430,7 @@ class Firmware:
         if not colon: return ["Error: format is CMD:OPERAND#"]
         try: v = int(arg.split(",")[0] or 0)
         except ValueError: v = 0
-        no_master = op in ("HELP", "STATUS", "MASTER", "SNAP", "WATCH", "SPARE", "XRST", "RD-ADDRBUS", "RD-DATABUS", "DATABUS-RD-MODE")
+        no_master = op in ("HELP", "STATUS", "MASTER", "SNAP", "WATCH", "SPARE", "XRST", "RD-ADDRBUS", "RD-DATABUS", "DATABUS-RD-MODE", "WALK")
         if not self.bus_on and op not in ("HELP", "STATUS"): return ["Error: bus has no power"]
         if self.clk_hz and op != "CLKSTOP": self.run_clock()     # (the steady clock has been running meanwhile)
         if op in C_COMMANDS: return self.run_c(op, arg, v)
@@ -481,6 +520,31 @@ class Firmware:
                 out.append("Data: %d" % v)
         elif op in ("XRST", "WATCH"):
             if op == "XRST": self.expanders_init()
+        elif op == "WALK":
+            parts = arg.split(",")
+            try: lv = int(parts[1]) if len(parts) > 1 else 2
+            except ValueError: lv = 0                       # (the sketch's toInt)
+            c, p, b = v >> 4 & 0x0F, v >> 3 & 1, v & 7
+            if not 0 <= v <= 47 or c >= self.nchips or not BUSPINS[c][p] >> b & 1 or not 0 <= lv <= 2:
+                return ["Error: WALK:pin,level  pin = chip*16 + port*8 + bit of a bus line; level 0, 1, or 2 (drive nothing)"]
+            if lv == 1 and OCPINS[c][p] >> b & 1: return ["Error: an open-collector line is only ever pulled low: WALK level 0 or 2"]
+            if self.master: return ["Error: WALK is for MONITOR mode: MASTER:0# first"]
+            self.walk_pulls(True)                           # on before the look for a CPU, as in the sketch
+            why = self.bus_free()
+            if why: self.walk_pulls(False); return ["Error: " + why]
+            held = lv < 2; dir0, lat0 = self.iodir[c][p], self.olat[c][p]
+            if held:
+                self.set_bit(c, p, b, lv); self.put_lat(c, p)
+                self.iodir[c][p] &= ~(1 << b) & 0xFF; self.put_dir(c, p)
+                if self.gpio(c, p) >> b & 1 != lv and self.load_fault != "walk-hold":   # it does not follow: let go at once
+                    self.iodir[c][p] |= 1 << b; self.put_dir(c, p); held = False
+            now = [self.gpio(cc, pp) for cc in range(self.nchips) for pp in range(2)]
+            if lv < 2:                                      # the pin as it was before: an input (a line this card holds
+                if dir0 >> b & 1: self.iodir[c][p] |= 1 << b; self.put_dir(c, p)    # low stays low all through)
+                self.olat[c][p] = lat0; self.put_lat(c, p)
+                if self.iodir[c][p] != dir0: self.iodir[c][p] = dir0; self.put_dir(c, p)
+            self.walk_pulls(False)
+            out.append("Data: " + " ".join("%02X" % x for x in now))
         else: return ["Error: Bad opcode"]
         return out + ["Complete"]
 

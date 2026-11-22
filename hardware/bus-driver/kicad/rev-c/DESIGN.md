@@ -174,7 +174,7 @@ tried against the cards' netlists in the simulator.
 - **Emulator:** `python3 -m s5emu --hw --cpu-rev D --buslink` answers as BUSDRV-C (the modes, LOAD mode with LOADED,
   the flag lines); it has no clock edges, so the clock and probe commands are stand-ins there.
 - **Tests:** `software/busdrv/test_busdrv_c.py` (32) and `software/s5emu/tests/test_buslink_c.py` (9), with the 26
-  older ones unchanged and passing.
+  older ones unchanged and passing; since 2026-11-21 `software/busdrv/test_shorts.py` (26) for the short finder, below.
 
 ### Choices made beyond the proposals
 
@@ -192,6 +192,26 @@ tried against the cards' netlists in the simulator.
 - SPARE5-9 are inputs until `SPDIR` makes them outputs; U3's pull-ups are on for the three DEBUG inputs only, so no
   cable reads 1 1 1.
 - A file for `loadrun` that does not start at 0000 gets zeros below it and a long branch at 0000.
+
+### The short finder (Ken, 2026-11-21)
+
+Ken: "does debug card reach all bus lines, if so can be used as a short detector". **It reaches all 34 signals**, each
+on a pin that can read its line, pull it low or drive it high (from `gen/netlist.py`: U1 D0-D6 and A0-A6; U2 D7, A7,
+TPA, TPB, -MRD, -MRW, -VMA, Q, -RESET, -INT, -EF, N0-N2; U3 -EF1, -EF2, -EF3, -PAUSE, -DMAIN, SC0; no bus line on an
+output-only pin, none on two pins), and the Nano measures +5V. **So the board as drawn is a short finder: nothing on
+it changes.** What was missing was a way to drive one line alone, since bus-master mode drives them all:
+
+- **Firmware:** `WALK:pin,level#` (banner word `walk-1`), on BUSDRV-B too: one line driven for about a millisecond with
+  every other pin an input and the expanders' 100k pull-ups on. A pin held the other way is let go after two expander
+  transactions. Open-collector lines are never driven high; SC0, read-only elsewhere, is pulled low here like any other
+  line, the CPU card being out. `embedded/bus-driver/README.md`, the last section.
+- **The plan:** `python3 bringup.py shorts` (`software/busdrv/BRINGUP.md`): at rest, each line low alone, each
+  pulled-down line high alone, then the lines that moved together, named with the slot positions and expander pins
+  where they are neighbours.
+- **For the bare bus Rev D and for one new card at a time**, the CPU card out. It finds a short between two lines, to
+  ground or to +5V; not an open joint, nor a short behind a card's buffers.
+- **Simulated only:** `backplane.py` works every line out by itself for this command, with a `short:` fault;
+  `test_shorts.py`, 26 tests. The sketch is 22,560 bytes (73%) with it.
 
 ### For the board's review (not changed: the board is as drawn)
 
