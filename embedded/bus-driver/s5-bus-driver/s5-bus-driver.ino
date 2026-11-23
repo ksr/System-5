@@ -14,9 +14,9 @@
  *   host -> card : CMD:OPERAND#            operands are DECIMAL unless noted; no line ending needed
  *   card -> host : optional "Data: ..." lines, "Complete" or "Error: ...", then the prompt ">>"
  *   A banner line is printed before the first prompt; the host looks for "s5-bus-driver" and "blocks-".
- *     BUSDRV-B: s5-bus-driver blocks-1 io-2 clk-1 walk-1 2026-11-21 BUSDRV-B
- *     BUSDRV-C: s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 walk-1 2026-11-21 BUSDRV-C
- *     with the bus off the board is not known yet: "... clk-1 walk-1 2026-11-21 (bus off: board not known yet)"; the note
+ *     BUSDRV-B: s5-bus-driver blocks-1 io-2 clk-1 walk-1 2026-11-22 BUSDRV-B
+ *     BUSDRV-C: s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-2 load-1 probe-1 walk-1 2026-11-22 BUSDRV-C
+ *     with the bus off the board is not known yet: "... clk-1 walk-1 2026-11-22 (bus off: board not known yet)"; the note
  *     printed when the bus comes up names the board, and so does STATUS on a BUSDRV-C.
  *   Signal names starting with '-' are active low: "-MRD:1#" asserts -MRD (drives it low).
  *
@@ -83,7 +83,7 @@
  *                              TPB toggling, or (BUSDRV-C) its clock running or a CPU card on the DEBUG cable.
  *                              software/busdrv/bringup.py's plan "shorts" walks every line and names the shorts.
  *
- * BUSDRV-C only (ext-1, mode-1, load-1, clk-2, probe-1); all work in MONITOR mode, with the CPU card in place:
+ * BUSDRV-C only (ext-1, mode-2, load-1, clk-2, probe-1); all work in MONITOR mode, with the CPU card in place:
  *   -EF1 -EF2 -EF3 -PAUSE -DMAIN :0|1#   the extension's open-collector lines: 1 pulls low, 0 releases. SC0 is read only.
  *   SPDIR:mask#                bits 0..4: SPARE5..9 are outputs (1) or inputs (0, as after XRST)
  *   SPIN:0#                    "Data: n": the levels on SPARE5..9 (bits 0..4)
@@ -96,6 +96,11 @@
  *                              goes through RESET first, so R(0) = 0000. With the clock stopped, RESET and LOAD give the
  *                              1802 32 clock edges while -RESET is low. PAUSE waits (up to 0.5 s) to see -RESET high
  *                              on the bus first: the CPU card's DS1813 holds it low 150 ms after it is let go.
+ *                              4 BOOT (mode-2, 2026-11-22): a boot reset, -RESET and -DMAIN low together with -PAUSE
+ *                              high: CPU Rev D clears its LOADED flag, so MODE:0# after it starts the machine in the
+ *                              EPROM, as the card's own RESET/RUN switch and the front panel's RESET button do. Refused
+ *                              while -PAUSE is low on the bus (it would be LOAD mode with a DMA request). STATUS shows
+ *                              cpu=RESET; every other MODE lets -DMAIN go before anything else.
  *   DMA:val#                   LOAD mode: one byte into M(R(0)) by a DMA IN cycle -> "Data: aaaa" (the address, hex)
  *   LOADBLK:count,hh..#        LOAD mode: count 1..32 bytes -> "Data: count aaaa" (aaaa = the first byte's address, hex)
  *   CLKHZ:hz#                  a steady clock on CLK OUT, 1..2000000 Hz -> "Data: hz" (the rate Timer 1 can make)
@@ -183,6 +188,7 @@ const uint8_t NSIGS = sizeof(SIGS) / sizeof(SIGS[0]);
 #define VA_MRW 0x20
 #define VB_RESET 0x02         // U2 port B
 #define WA_PAUSE 0x08         // U3 port A
+#define WA_DMAIN 0x10
 #define WA_SC0 0x20
 
 // WALK: the bus lines of each port [chip][port] (not the spares, not the DEBUG inputs), and which of them are open collector
@@ -398,17 +404,26 @@ bool setMode(uint8_t m) {
   // change lets one go before it pulls the other. Letting -RESET go is not the same as -RESET going high: the CPU
   // card's DS1813 holds it low for 150 ms more, and its RESET/RUN switch or the IO panel may hold it too. So PAUSE
   // waits to see -RESET high on the bus, and gives up (false) rather than make a LOAD of it.
+  // BOOT (4) is -RESET and -DMAIN low with -PAUSE high: CPU Rev D clears LOADED. -DMAIN is low with -RESET for
+  // nothing else, so every change lets it go first; and BOOT is refused while anything holds -PAUSE low, where the
+  // two lines would be LOAD mode with a DMA request.
   loadSynced = false;
+  sig("-DMAIN", 0);
+  why = F("-RESET stays low (the CPU card's switch, another card): -PAUSE now would be LOAD");
   if (m == 2) {
     sig("-RESET", 0);
     unsigned long t = millis();
     while (!(gpio(1, 1) & VB_RESET)) if (millis() - t > 500) return false;
     sig("-PAUSE", 1); return true;
   }
-  sig("-PAUSE", 0);                            // RUN, RESET and LOAD all start by letting -PAUSE go
+  sig("-PAUSE", 0);                            // RUN, RESET, LOAD and BOOT all start by letting -PAUSE go
+  if (m == 4 && !(gpio(2, 0) & WA_PAUSE)) {
+    why = F("-PAUSE is low (the LOAD switch, another card): a boot reset needs it high"); return false;
+  }
   sig("-RESET", m != 0);
   if (m && !clkHz) for (uint8_t i = 0; i < 32; i++) clkEdge();   // the clock is ours: give the 1802 its reset
   if (m == 3) sig("-PAUSE", 1);                // LOAD: through RESET, so R(0) = 0000
+  if (m == 4) sig("-DMAIN", 1);                // BOOT
   return true;
 }
 
@@ -432,6 +447,9 @@ bool dmaByte(uint8_t v, uint16_t *addr) {
   // an idle cycle first: SC0 high. If it stays low, DMA cycles are running with no request of ours
   for (i = 0; i < 40 && !(gpio(2, 0) & WA_SC0); i++) clkEdge();
   if (i == 40) { why = F("SC0 stays low: DMA cycles with no request (-DMAIN held low?)"); return false; }
+  // CPU Rev D (2026-11-22) passes -DMAIN to the 1802 only once it has seen the line high in LOAD mode: a line that
+  // something holds low makes no DMA cycles there, and none of ours either
+  if (!(gpio(2, 0) & WA_DMAIN)) { why = F("-DMAIN is low before the request: something else holds it"); return false; }
   sig("-DMAIN", 1);                            // the request
   for (i = 0; i < 40; i++) { clkEdge(); if (!(gpio(2, 0) & WA_SC0)) break; }   // until the 1802 takes it: SC0 low
   sig("-DMAIN", 0);                            // taken (or not): let go at once, so one DMA cycle follows and no more
@@ -491,9 +509,9 @@ bool runC(const String &op, const String &arg, long v) {
         op == "PTIME" || op == "PDELAY" || op == "DBG" || op == "SPDIR" || op == "SPIN")) return false;
   if (!revC) { err(F("needs BUSDRV-C (no U3 at 0x22)")); return true; }
   if (op == "MODE") {
-    if (v < 0 || v > 3) { err(F("MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD")); return true; }
+    if (v < 0 || v > 4) { err(F("MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD, 4 BOOT")); return true; }
     if (master) { err(F("MODE is for a CPU card in place: MASTER:0# first")); return true; }
-    if (!setMode(v)) { err(F("-RESET stays low (the CPU card's switch, another card): -PAUSE now would be LOAD")); return true; }
+    if (!setMode(v)) { err(why); return true; }
   } else if (op == "DMA" || op == "LOADBLK") {
     int c1 = arg.indexOf(','); long count = op == "DMA" ? 1 : v; uint16_t a = 0, first = 0;
     if (master) { err(F("LOAD mode is for a CPU card in place: MASTER:0# first")); return true; }
@@ -746,8 +764,8 @@ void setup() {
   pinMode(SDA, INPUT); pinMode(SCL, INPUT);
   busPower();
   Serial.print(F("s5-bus-driver blocks-1 io-2 "));
-  Serial.print(revC ? F("clk-2 ext-1 mode-1 load-1 probe-1") : F("clk-1"));
-  Serial.print(F(" walk-1 2026-11-21 "));
+  Serial.print(revC ? F("clk-2 ext-1 mode-2 load-1 probe-1") : F("clk-1"));
+  Serial.print(F(" walk-1 2026-11-22 "));
   if (busOn) { Serial.print(F("BUSDRV-")); Serial.println(revC ? 'C' : 'B'); }
   else Serial.println(F("(bus off: board not known yet)"));
   Serial.println(F(PROMPT));

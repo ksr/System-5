@@ -42,6 +42,6 @@ SHEETS = [
      ["IC10", "IC7", "IC12", "IC11", "IC13", "IC9", ("IC5", 4), "IC14", "R5", "R6", "U$4", "X1"], None,
      "IC10 / IC7 latch the character (bits 0-6) onto the 2732's A3-A9; VROWS are A0-A2: the font is 128 x 8 at 000-3FF\n"
      "(goodfont). IC11 shifts out the five dots. Bit 7 XOR CURSOR (IC13A) is reverse video; IC9 delays it and DE by two\n"
-     "characters; IC13B XORs it into the dots; IC5D blanks outside DE. IC14 (7416) mixes video and syncs: RCA and DB9."),
+     "characters; IC13B XORs it into the dots; IC5D blanks outside DE. IC14 (7416) mixes video and syncs: RCA and DE-9."),
     ("power", "Power", "POWER, DECOUPLING, LED", ["LED1", "R1", "R4"], None, "One 0.1 uF per IC; 10 uF bulk. LED1: power. R4 holds the latches' and counter's clears high."),
 ]

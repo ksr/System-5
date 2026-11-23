@@ -2,10 +2,18 @@
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-10-30 (from CPU Rev D's make_board.py)
 """Build the IO panel Rev A board (unrouted) with KiCad's Python (pcbnew), from gen/netlist.py and the schematic's netlist.
 
-  * a 36-pin card: 7.50 x 4.00 in (190.5 x 101.6 mm; CPU Rev D's 5.50 in until Ken lengthened it on 2026-11-18, so that
+  * a 36-pin card: 8.00 x 4.00 in (203.2 x 101.6 mm; CPU Rev D's 5.50 in until Ken lengthened it on 2026-11-18, so that
     each display's label fits under it, to 5.75 in; 1.75 in more on 2026-11-20 for the serial port:
-    "ok to lengthen board"), J1 (s5io:C36) down the left edge, centred, the 3.00 x 0.15 in card-support
+    "ok to lengthen board"; 0.50 in more on 2026-11-22 for the front panel's header: he chose "Lengthen to
+    8.00 in"), J1 (s5io:C36) down the left edge, centred, the 3.00 x 0.15 in card-support
     strips along the top and bottom edges as copper keep-outs
+  * the front panel's header J3 (2026-11-22), a keyed 2x25, upright in the 0.5 in strip at the front edge, beyond
+    the displays, which with every other part stayed where it was (XF, the edge until then); pin 1 at the top as
+    drawn, so the ribbon's lines leave in the order the displays and toggles stand; RN3, the data lines' pull-downs,
+    upright between the UART and the toggle column, its pins in the toggles' order
+  * the card's own RESET button SW12 (Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not
+    installed") in the bottom corner of the front strip, under J3; its 74HC03 (U23) upright between the toggle
+    column and the Q and PWR LEDs' resistors, which moved 3 mm towards the LEDs for it; R4 beside the PWR LED
   * the serial port (2026-11-20) in a strip between the logic and the panel, which moved out with the front edge: the
     DE-9 socket J2 at the top edge as drawn, facing off the board (the left side with the card standing in the bus,
     seen from the parts side), the MAX232 and the null-modem block JP6 behind it, the 16C550 below them with its
@@ -29,8 +37,10 @@ BASE = os.path.join(ROOT, "hardware/bus/kicad/rev-d/s5bus-d.kicad_pcb")       # 
 NET = os.path.join(DEST, "reports", "netlist.net"); PROJ = "io-panel-rev-a"
 
 DL = 44.45                                             # the serial port's strip (2026-11-20): 1.75 in more length
-X0, Y0, W, H = 10.0, 10.0, 146.05 + DL, 101.6
+FP = 12.7                                              # the front panel header's strip (2026-11-22): 0.50 in more
+X0, Y0, W, H = 10.0, 10.0, 146.05 + DL + FP, 101.6
 XR, YB = X0 + W, Y0 + H
+XF = XR - FP                                           # where the front edge was: the panel's parts are placed from it
 CY = Y0 + H / 2
 
 forms = kicad_route.top_forms(open(BASE).read())
@@ -47,10 +57,11 @@ r.SetLayer(pcbnew.Edge_Cuts); r.SetWidth(MM(0.1)); b.Add(r)
 # between the bit LEDs and the displays, for each display's label under it; the displays, Q, PWR and INPUT moved with the
 # front edge (XR)
 XT = X0 + 139.7 + DL                                   # (and the whole panel DL further out since 2026-11-20)
-LX, RX, TX = XR - 4.0, XR - 22.0, XT - 36.0           # the Q and PWR LEDs' column, their resistors, the toggle column
+LX, RX, TX = XF - 4.0, XF - 19.0, XT - 36.0           # the Q and PWR LEDs' column, their resistors (XF - 22 until
+#                                                        2026-11-23: U23 stands beside them now), the toggle column
 BLX = XT - 25.3                                        # the bit LEDs, between the toggles and the displays
 LEDY, LEDP = 41.5, 6.2                                 # the old LED rows: Q and PWR keep rows 8 and 9
-TILX, TILY, TILP, TILG = XR - 11.0, 17.3, 12.0, 2.6    # the TIL311s: column, first, pitch, the gap before the OUT digits
+TILX, TILY, TILP, TILG = XF - 11.0, 17.3, 12.0, 2.6    # the TIL311s: column, first, pitch, the gap before the OUT digits
 PLACE = {"J1": (X0 + 5.705, CY, 90)}
 for k in range(8):                                     # BIT 7 at the top, as on the YACC1 card
     ty = 20.0 + 9.0 * (7 - k)
@@ -58,7 +69,14 @@ for k in range(8):                                     # BIT 7 at the top, as on
     PLACE["LED%d" % (k + 1)] = (BLX - 1.27, ty, 0)     # its LED level with it (Ken, 2026-11-18): above it when standing;
                                                        # pads across the strip, so the displays' labels fit between LEDs
 PLACE.update({"SW10": (TX, 20.0 + 9.0 * 8, 90), "SW11": (TX, 20.0 + 9.0 * 9, 90),
-              "SW9": (XR - 12.7, 102.8, 0),            # INPUT in the bottom corner of the front edge
+              "SW9": (XF - 12.7, 102.8, 0),            # INPUT in the bottom corner of the panel
+              # the front panel's header, upright in the new strip (its body 9 mm of the 12.7), centred on the card's
+              # height: pin 1 (and the odd row) on the panel's side, at the top; RN3 with pin 1 (ground) at the bottom,
+              # so that SW7 ... SW0 stand in the toggles' order, BIT 7 at the top
+              "J3": (XF + 5.08, CY - 30.48, 0), "RN3": (142.0, 80.0, 90),
+              # the card's own RESET (2026-11-23): the button in the strip's bottom corner, under J3; its two gates
+              # (U23) upright between the toggles and R2 / R3, its capacitor under it; R4 upright beside the PWR LED
+              "SW12": (XF + 3.1, 102.0, 0), "U23": (168.4, 88.5, 0), "C26": (172.2, 107.6, 0), "R4": (198.0, 108.1, 90),
               "LED9": (LX, LEDY + LEDP * 8 - 1.27, 90), "R2": (RX, LEDY + LEDP * 8, 0),
               "LED10": (LX, LEDY + LEDP * 9 - 1.27, 90), "R3": (RX, LEDY + LEDP * 9, 0)})
 # the TIL311s turned -90 (Ken, 2026-11-17): with the card in the cage, bus edge down, each digit stands upright, its bottom
@@ -171,12 +189,17 @@ def path(pts, net, layer=pcbnew.B_Cu, w=0.5):
 (c10x, c10y) = pad_at("C10", "1")
 rail = sorted([pad_at(u, n) for u in ("U14", "U15", "U16", "U17", "U7", "U8") for n in ("1", "14")], key=lambda p: p[1])
 path([(c10x, c10y), (c10x, Y0 + 1.2), (rail[0][0], Y0 + 1.2)] + rail, "+5V")     # C9's + pad sits on it, between U17 and U7
+# the front panel's supply (2026-11-22): J3's +5V pins, 1 and 2 at the top and 49 and 50 at the bottom, from that rail:
+# straight across from it at the top; from its last pad at the bottom, out past the Q LED's pads first
+(p1x, p1y), (p2x, p2y), (p49x, p49y), (p50x, p50y) = (pad_at("J3", n) for n in ("1", "2", "49", "50"))
+path([(rail[0][0], p1y), (p1x, p1y), (p2x, p2y)], "+5V")
+path([rail[-1], (XF - 0.6, rail[-1][1]), (XF - 0.6, p49y), (p49x, p49y), (p50x, p50y)], "+5V")
 (jx, jy), (c7x, c7y) = pad_at("J1", str(N.POS.index("+5V") + 1)), pad_at("C7", "1")
 path([(jx, jy), (X0 + 10.5, jy), (X0 + 10.5, c7y), (c7x, c7y)], "+5V")     # clear of U5's pin 1 since the shift
 # the serial line between the DE-9, the null-modem block and the MAX232 (2026-11-20): drawn here, locked. In the block
 # each signal sits on two pins diagonally across the middle column, so the six links cross one another in a 5 x 8 mm
-# patch; Freerouting left the DE-9's pin 2 open on two seeds of three. Front: TX_OUT from U21 to JP6 pin 2, DB9_3 down
-# between the block's first two columns to pin 3, RX_IN from pin 1 round the block's end to pin 6. Back: DB9_2 to pin
+# patch; Freerouting left the DE-9's pin 2 open on two seeds of three. Front: TX_OUT from U21 to JP6 pin 2, DE9_3 down
+# between the block's first two columns to pin 3, RX_IN from pin 1 round the block's end to pin 6. Back: DE9_2 to pin
 # 4, RX_IN from U21 to pin 1, TX_OUT from pin 2 between the rows to pin 5
 def link(pts, a, layer):
     net = b.FindFootprintByReference(a[0]).FindPadByNumber(a[1]).GetNetname()
@@ -258,11 +281,12 @@ def silk(txt, x, y, h=1.0, angle=UP, just=None, add=True):
     if add:
         b.Add(t); blocks.append(boxof(t.GetBoundingBox(), 0.2))
     return t
-def place(variants, spots, need=True):
-    """the first variant (text, height) that fits at one of spots [(x, y)], variant by variant"""
+def place(variants, spots, need=True, just=None):
+    """the first variant (text, height) that fits at one of spots [(x, y)], variant by variant. just="left": the
+    lines of a block start level (the spot is then the block's start, not its middle)"""
     for txt, h in variants:
         for x, y in spots:
-            t = silk(txt, x, y, h, add=False)
+            t = silk(txt, x, y, h, just=just, add=False)
             if free(boxof(t.GetBoundingBox())):
                 b.Add(t); blocks.append(boxof(t.GetBoundingBox(), 0.2)); return x, y, txt, h
     if need:
@@ -304,8 +328,8 @@ def label(ref, text, two=None):
     return place(v, beside(ref))
 
 # 1. the name line: along the bottom edge as drawn, up the right-hand side with the card standing (the rule's exception)
-silk("System-5 IO panel  Rev A  2026", 113.0 + DL, YB - 4.2, 1.2, angle=0)     # (no "S5IO-A": Ken, 2026-11-18)
-silk("cottageworker.com", 113.0 + DL, YB - 2.0, 1.0, angle=0)
+silk("System-5 IO panel  Rev A  2026", 98.5 + DL, YB - 4.2, 1.2, angle=0)      # (no "S5IO-A": Ken, 2026-11-18; 14.5 mm
+silk("cottageworker.com", 98.5 + DL, YB - 2.0, 1.0, angle=0)                    # further left since 2026-11-23, for C26)
 # 2. the bus: J1's pins' names beside them at 270 in two staggered rows (one row would not fit the 2.54 mm pitch), and
 #    "J1 BUS" beside the names, the connector's middle first, at 1.0 mm where that fits (as tools/kicad/silk270.py's
 #    bus_label places it on the other cards). Until 2026-11-18 it stood in the margin between the pads and the bus edge:
@@ -365,7 +389,7 @@ for ref, title, cols in (("JP1", "JP1 IN PORT", "1234567"), ("JP2", "JP2 OUT POR
         x, y = pad(ref, str(2 * n + 1))
         near = [(x, y + 2.9), (x, y + 1.85)] if len(name) == 1 else [(x, y + 3.6)]   # under the block as drawn, else
         place([(name, 0.8)], near + [(x, y - 2.54 - d) for d in (2.4, 2.9, 3.6, 4.2)])  # over it (the strip below)
-JP_TITLES = [("JP1", "JP1 IN PORT"), ("JP2", "JP2 OUT PORT"), ("JP3", "JP3 INPUT EF"), ("JP4", "JP4 RTC"),
+JP_TITLES = [("JP1", "JP1 IN PORT"), ("JP2", "JP2 OUT PORT"), ("JP3", "JP3 INPUT EF"), ("JP4", "JP4 RTC"),   # (it is the UART's too: the serial note says so; "JP4 RTC + UART" has no room there)
              ("JP7", "JP7 UART INT")]   # placed last:
 # the caps beside the blocks have fewer places to go than the blocks' titles
 # 7. the front panel's other parts, then the chips, the passives, the crystal and the battery
@@ -376,6 +400,7 @@ for ref in ("R2", "R3"):                               # Q's and PWR's resistors
     l, t, rr, bt = bbox(ref); txt = "%s %s" % (ref, N.PARTS[ref][1])     # card standing), not off toward U8's
     place([(txt, 1.0), (txt, 0.8)], [(l - d, (t + bt) / 2) for d in (1.0, 1.2, 1.4, 1.6, 2.0)])
 place([("INPUT", 1.0), ("INPUT", 0.8)], beside("SW9"))     # the push-button, by its function alone
+place([("RESET", 1.0), ("RESET", 0.8)], beside("SW12"))    # the card's own boot reset (2026-11-23), by its function too
 label("C10", "C10 %s" % N.PARTS["C10"][1], "C10\n%s" % N.PARTS["C10"][1])
 # JP5, the RTC's RAM-clear jumper, in the 5 mm strip between the top edge and the BIT 7 toggle: its name under it (with
 # the card standing), left of the toggle where a line may be 7 letters long, and what a shunt does over it
@@ -388,7 +413,28 @@ _y6 = min(pad("JP6", "1")[1], pad("JP6", "2")[1])      # over the block as drawn
 place([("2", 0.8)], [((pad("JP6", "1")[0] + pad("JP6", "3")[0]) / 2, _y6 - d) for d in (2.3, 2.4, 2.5, 2.6, 2.8, 3.0)])
 place([("3", 0.8)], [((pad("JP6", "3")[0] + pad("JP6", "5")[0]) / 2, _y6 - d) for d in (2.3, 2.4, 2.5, 2.6, 2.8, 3.0)])
 label("JP6", "JP6 TX PIN", "JP6\nTX PIN")
+# the serial port's settings, spelled out (Ken, 2026-11-23: "can you add more detail to silkscreen for IO card settings
+# for serial port"): one block in the free patch under RN3, between the UART and the toggles, placed before the parts'
+# own labels so that they go round it. What each of the port's three jumper blocks does, what J2's pins are as JP6 is
+# set, how a program reaches a UART register, and the divisor for 9600 baud with the 1.8432 MHz can
+SERIAL_NOTE = ("SERIAL PORT (16C550)\n"
+               "J2 AS SET: 2 TX 3 RX 5 GND\n"
+               "JP6: TX ON PIN 2 OR PIN 3\n"
+               "JP4: PORTS 6 + 7 (AS RTC)\n"
+               "REG N: OUT 6 = 80+N, PORT 7\n"
+               "DIVISOR 12 = 9600 BAUD\n"
+               "JP7 FITTED: INT ON -INT")
+place([(SERIAL_NOTE, 0.8)], [(142.0 + dx, 82.6 + dy) for dy in (0.0, 0.3, 0.6, 0.9, 1.2, 1.5) for dx in (0.0, 0.3, -0.3, 0.6, -0.6)],
+      just="left")
 label("J2", "J2 %s" % N.PARTS["J2"][1], "J2\n%s" % N.PARTS["J2"][1])
+# the front panel's header (2026-11-22): its first and last pins numbered at their ends, and its name beside it. The
+# numbers go first and must find room (2026-11-23): placed after the name they were optional, and when the RESET
+# button took the name's corner the name went to the pin 1 end and the "1" was left out without a word (the pcb-check
+# session found it, comparing the two boards' texts)
+for n, dy in (("1", -1), ("50", 1)):
+    x, y = pad("J3", n); l, t, rr, bt = bbox("J3")
+    place([(n, 0.8)], [(x, (t if dy < 0 else bt) + dy * d) for d in (1.0, 1.2, 1.4, 1.6)])
+label("J3", "J3 %s" % N.PARTS["J3"][1], "J3\n%s" % N.PARTS["J3"][1])
 label("X1", "X1 %s" % N.PARTS["X1"][1], "X1\n%s" % N.PARTS["X1"][1])
 for ref in sorted([r for r in N.PARTS if r.startswith("U") and r not in ("U7", "U8", "U14", "U15", "U16", "U17")],
                   key=lambda r: int(r[1:])):

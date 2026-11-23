@@ -241,6 +241,42 @@ class CPURevD(unittest.TestCase):
         m.reset(); self.assertFalse(lit())                                               # the card's own switch: dark, HBIOS
         self.assertEqual(c.cycle(0x0000, 0, 1, commit=False)[0], 1)
 
+    def test_a_boot_reset_is_a_state_of_the_bus(self):
+        """(Ken, 2026-11-22: a front panel on one ribbon from the IO card, with no cable to the CPU card.) -RESET and
+        -DMAIN low with -PAUSE high clears LOADED, whoever makes it: another card, or the card's own RESET/RUN
+        switch through its open-drain gates (U11), which then hold both lines low on the bus"""
+        m = HWMachine(cpu_rom=ROM104, cpu_rev="D"); c = m.ccard
+        def load(): c.mode(0, 1); c.mode(0, 0); self.assertTrue(c.loaded()); c.mode(0, 1); c.mode(1, 1)
+        hbios = lambda: c.cycle(0x0000, 0, 1, commit=False)[0] == 1            # the EPROM answers at 0000
+        load(); self.assertFalse(hbios())
+        c.mode(0, 1, 0); self.assertFalse(c.loaded()); self.assertEqual(c.cpu_mode(), "reset")   # from the bus
+        c.mode(0, 1); self.assertFalse(c.loaded()); c.mode(1, 1); self.assertTrue(hbios())       # (-DMAIN let go first)
+        load(); c.mode(1, 1, 0); self.assertTrue(c.loaded()); c.mode(1, 1)      # -DMAIN alone: nothing
+        c.mode(0, 0, 0); self.assertTrue(c.loaded())                            # with -PAUSE low: LOAD mode and a DMA request
+        c.mode(0, 1); c.mode(1, 1); self.assertTrue(c.loaded()); self.assertEqual(c.pulls(), set())
+        c.sw1(True)                                                             # the card's own switch at RESET
+        self.assertEqual((c.pulls(), c.cpu_mode(), c.loaded()), ({"-RESET", "-DMAIN"}, "reset", False))
+        c.sw1(False); self.assertEqual((c.pulls(), c.cpu_mode()), (set(), "run")); self.assertTrue(hbios())
+        c.mode(1, 0); c.sw1(True)                                               # with -PAUSE low the switch makes LOAD mode
+        self.assertEqual((c.pulls(), c.cpu_mode(), c.loaded()), ({"-RESET"}, "load", True))      # and leaves -DMAIN alone
+        c.sw1(False); c.mode(1, 1)
+
+    def test_dma_reaches_the_1802_only_in_pause_and_once_dmain_was_high(self):
+        """DMA_ARMED (U8B): clear while -PAUSE is high, set once -DMAIN has been seen high with -PAUSE low. So -DMAIN
+        marks a boot reset without ever being a DMA request, and a -DMAIN still low as LOAD is switched on (a boot
+        reset held: whatever makes it takes about a microsecond to let the line go) is not taken for one, which
+        would write a byte at 0000 and move R(0) on"""
+        c = HWMachine(cpu_rom=ROM104, cpu_rev="D").ccard
+        c.mode(1, 1, 0); self.assertFalse(c.dma_request()); c.mode(1, 1)        # running: -DMAIN does not reach the 1802
+        c.mode(0, 1, 0); self.assertFalse(c.dma_request())                     # a boot reset: nor here
+        c.mode(0, 0, 0); self.assertFalse(c.dma_request())                     # LOAD switched on, -DMAIN still low: no request
+        c.mode(0, 0, 1); self.assertFalse(c.dma_request())                     # the line let go: armed
+        c.mode(0, 0, 0); self.assertTrue(c.dma_request())                      # now it is one
+        c.mode(0, 0, 1); self.assertFalse(c.dma_request())
+        c.mode(0, 1, 1); c.mode(0, 1, 0); self.assertFalse(c.dma_request())    # LOAD off: disarmed at once
+        c.mode(1, 0, 1); c.mode(1, 0, 0); self.assertTrue(c.dma_request())     # PAUSE arms too (the 1802 stands still there)
+        c.mode(1, 1)
+
     def test_ef_routing_for_the_2005_io_card(self):
         m = HWMachine(cpu_rom=ROM104, cpu_rev="D")
         self.assertEqual(m.ccard.ef_routes(), {1: "-EF1", 2: "-EF2", 3: "-EF4"})   # JP3: the bus -EF line on EF3
@@ -260,9 +296,94 @@ class IOPanel(unittest.TestCase):
         from s5emu.hw import NetlistIOPanel
         p = NetlistIOPanel(); p.set(run=False, load=True); self.assertTrue(p.load_mode())
         p.set(switches=0x7B, pressed=True); self.assertTrue(p.dmain())
-        self.assertEqual(p.dma_in(), 0x7B); self.assertFalse(p.dmain())
-        self.assertIsNone(p.dma_in())                                          # held: no second byte
-        p.set(pressed=False); p.set(switches=0x30, pressed=True); self.assertEqual(p.dma_in(), 0x30)
+        self.assertEqual(p.dma_in(), [0x7B]); self.assertFalse(p.dmain())      # one DMA IN cycle, one byte
+        self.assertEqual(p.dma_in(), [])                                       # held: no second byte
+        p.set(pressed=False); p.set(switches=0x30, pressed=True); self.assertEqual(p.dma_in(), [0x30])
+
+    def test_the_request_ends_as_the_dma_cycle_starts(self):
+        """The 1802 samples its DMA request at clock 7 of every cycle, the DMA cycle's own too, before -MWR rises (data
+        sheet, figures 4 and 12): a request that still stands there gets a second cycle. -DMAIN = NAND(REQ, SC0)
+        (U9B, 2026-11-22): SC0 falls as the DMA cycle starts and lets the line go, as the ELF does with SC1"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel(); p.set(run=False, load=True); p.set(switches=0xA5, pressed=True)
+        self.assertTrue(p.dmain()); self.assertEqual(p.pulls(), {"-RESET", "-PAUSE", "-DMAIN"})
+        p.s2_begin(); self.assertFalse(p.dmain())                              # clock 7 of the DMA cycle: no request
+        self.assertEqual(p.s2_end(), 0xA5)                                     # the toggles were on the bus through the write
+        self.assertFalse(p.dmain())                                            # IDLE again (SC0 high): REQ is clear
+
+    def test_the_request_as_first_drawn_made_two_cycles(self):
+        """IOPANEL_REVS 'A-req': -DMAIN = REQ alone, as the card was drawn until 2026-11-22. REQ lasts until -MWR
+        rises, so it still stands at clock 7 of the DMA cycle: a second cycle, the same byte at the next address.
+        (The emulator ran one cycle for a press until then, whatever the line did, and did not show it)"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel("A-req"); p.set(run=False, load=True); p.set(switches=0x7B, pressed=True)
+        self.assertEqual(p.dma_in(), [0x7B, 0x7B])
+        m = HWMachine(cpu_rom=ROM104, cpu_rev="D", panel_rev="A-req")
+        m.panel_set(run=False); m.panel_set(load=True); m.panel_set(switches=0x7B); m.panel_set(input=True)
+        self.assertEqual([k[0] for k in m.log.events], ["double"]); self.assertEqual(m.cpu.R[0], 2)
+        m.panel_set(input=False); self.assertEqual((m.read(0), m.read(1)), (0x7B, 0x7B))
+
+    def test_the_cards_own_reset_button(self):
+        """SW12 (Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not installed"): a boot
+        reset as the front panel's, -RESET and -DMAIN low together through U23's two gates, unless -PAUSE is low"""
+        from s5emu.hw import NetlistIOPanel
+        p = NetlistIOPanel(); self.assertEqual(p.pulls(), set())
+        p.set(reset=True); self.assertEqual(p.pulls(), {"-RESET", "-DMAIN"})
+        p.set(reset=False); self.assertEqual(p.pulls(), set())
+        p.set(load=True, reset=True); self.assertEqual(p.pulls(), {"-PAUSE"})      # LOAD on: the button does nothing
+        p.set(load=False, reset=False)
+        p.lines(1, 0, 1); p.set(reset=True); self.assertEqual(p.pulls(), set())    # nor while another card holds -PAUSE
+        p.set(reset=False); p.lines(1, 1, 1)
+
+    def test_the_switches_are_played_as_the_netlist_wires_them(self):
+        """each hand control's contact is read from the netlist (hw.switch_contact): the net it sets and the level its
+        other pin gives it. So a switch wired to the wrong place fails here as it would on the bench. (Until
+        2026-11-23 the model set the net and level it knew; the pcb-check session ran this class on damaged copies of
+        the netlist, and SW12 between ground and BTN_H, in place of +5V, passed every test.)"""
+        from s5emu import hw
+        name = lambda k: (k[0].split("/")[-1], k[1])
+        p = hw.NetlistIOPanel()
+        self.assertEqual([name(k) for k in (p.k_input, p.k_reset_sw, p.k_load, p.k_boot)],
+                         [("INPUT_RC", 0), ("-RESET", 0), ("-PAUSE", 0), ("BTN_H", 1)])
+        self.assertEqual([(name(a), name(b)) for a, b in p.k_bits],
+                         [(("SW%d" % k, 0), ("SW%d" % k, 1)) for k in range(8)])       # SPDT: ground at 0, +5V at 1
+
+        def damaged(*rework):
+            hw.IOPANEL_REVS["damaged"] = dict(hw.IOPANEL_REVS["A"], rework=list(rework))
+            try: return hw.NetlistIOPanel(rev="damaged")
+            finally: del hw.IOPANEL_REVS["damaged"]
+        q = damaged(("wire", "SW12", "1", "R4", "2"))                # RESET between ground and BTN_H: it holds BTN_H low
+        self.assertEqual(name(q.k_boot), ("BTN_H", 0)); q.set(reset=True); self.assertEqual(q.pulls(), set())
+        q = damaged(("lift", "SW12", "2"))                           # RESET's other pin off BTN_H: nothing reads it
+        q.set(reset=True); self.assertEqual(q.pulls(), set())
+        q = damaged(("wire", "SW3", "1", "SW3", "3"))                # a data toggle with ground at both ends
+        q.set(switches=0xFF); self.assertEqual(q.sw_byte(), 0xFB)
+        q = damaged(("wire", "SW9", "2", "SW1", "1"))                # INPUT to +5V: the flag line is never pulled
+        q.set(pressed=True); self.assertFalse(q.ef1())
+        q = damaged(("lift", "SW11", "1"))                           # LOAD's toggle off -PAUSE
+        q.set(load=True); self.assertEqual(q.pulls(), set())
+        q = damaged(("lift", "SW10", "1"))                           # RUN/RESET's toggle off -RESET
+        q.set(run=False); self.assertEqual(q.pulls(), set())
+        with self.assertRaises(ValueError): damaged(("wire", "SW12", "2", "R4", "2"))    # +5V to ground through the button
+
+    @unittest.skipUnless(os.path.exists(ROM104), "run tools/mkrom.py first")
+    def test_the_reset_button_brings_hbios_back_after_a_load(self):
+        """with no front panel: a program toggled in runs from RAM, the RUN toggle starts it again, and the card's
+        RESET button boots the EPROM; in LOAD mode the button does nothing"""
+        m = HWMachine(cpu_rom=ROM104, cpu_rev="D", panel_rev="A"); d = Shell(m).d
+        m.panel_set(run=False); m.panel_set(load=True)
+        for b in (0x7B, 0x30, 0x01): m.panel_set(switches=b); m.panel_set(input=True); m.panel_set(input=False)   # SEQ; BR 01
+        m.panel_set(load=False); m.panel_set(run=True); d.run(max_instructions=300)
+        self.assertTrue(m.ccard.loaded()); self.assertEqual(m.cpu.Q, 1)            # the loaded program runs
+        m.panel_set(run=False); self.assertEqual(m.cpu.Q, 0)
+        m.panel_set(run=True); d.run(max_instructions=300); self.assertEqual(m.cpu.Q, 1)       # RUN off and on: it runs again
+        m.panel_set(reset=True)                                                   # RESET: a boot reset on the bus
+        self.assertEqual((m.run_mode, m.bus_lines), ("reset", {"-RESET": 0, "-PAUSE": 1, "-DMAIN": 0}))
+        self.assertFalse(m.ccard.loaded())
+        m.panel_set(reset=False); self.assertEqual(m.run_mode, "run"); self.assertTrue(boot(m))    # HBIOS, from the EPROM
+        m.panel_set(run=False); m.panel_set(load=True); m.panel_set(reset=True)    # LOAD mode: no boot reset, no DMA request
+        self.assertEqual((m.run_mode, m.bus_lines["-DMAIN"], m.cpu.R[0]), ("load", 1, 0)); self.assertTrue(m.ccard.loaded())
+        self.assertEqual(m.log.events, {})
 
     @unittest.skipUnless(os.path.exists(ROM104), "run tools/mkrom.py first")
     def test_toggle_in_and_run_a_program_with_cpu_rev_d(self):

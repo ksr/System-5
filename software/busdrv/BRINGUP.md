@@ -214,7 +214,7 @@ LOAD mode by the clock (`hardware/bus-driver/kicad/rev-c/DESIGN.md`): the bus dr
 | L3 load | A 48-byte program by `LOADBLK`. The card reads the address of every write off the bus: the first must be 0000 and each next one more | "SC0 stays low": -DMAIN held low by something else. "no DMA cycle": -DMAIN does not reach the 1802. "CLK OUT does not reach": the cable. "a second DMA cycle": -DMAIN slow to rise |
 | L4 run | `MODE` RUN, then the clock stepped with `CLK`, the bus traced: the first fetch must be 0000 from RAM (not the EPROM: LOADED), the program reads all 48 of its bytes and the bus driver checks each against what it sent; Q rises at the end | A wrong byte: the data was not held through the write, or the RAM took a second write. First fetch from the EPROM: LOAD mode did not set the CPU card's LOADED flag (U8A) |
 | L5 pause | -PAUSE low: 64 clock edges move nothing on the bus; let go, the cycles go on | -PAUSE to the 1802's WAIT (the CPU card's U7) |
-| L6 bus reset | `MODE` RESET then RUN: the loaded program starts again | LOADED should survive a reset from the bus; only the CPU card's RESET/RUN switch and power-on clear it |
+| L6 bus reset | `MODE` RESET then RUN: the loaded program starts again | LOADED should survive a plain reset from the bus; a boot reset clears it (the CPU card's RESET/RUN switch, power-on, the front panel's RESET, `MODE:4#`) |
 
 After `load`, the host tool does the same with a real program:
 

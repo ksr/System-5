@@ -29,7 +29,7 @@ Written by `hardware/video-g/kicad/common/bom.py` from `gen/netlist.py` (2026-11
 | 1 | 16MHz | Crystal_HC49-U_Vertical | Y2 | 16 MHz, HC-49/U, 18-20 pF load |
 | 1 | System-5 bus (36) | C36 | J1 | 1 x 36 right-angle pin header, 2.54 mm, single row (cut from a 1 x 40): its plastic body lies between the pads and the card edge, the pins out past the edge |
 | 1 | RCA | RCA | J2 | RCA jack, right-angle PCB mount (YACC1 V1.0 card's footprint) |
-| 1 | DB9 F | F09HP | J3 | DE-9 female, right-angle PCB mount (F09HP footprint: 2.74 mm pitch, 2.54 mm between rows) |
+| 1 | DE-9 F | F09HP | J3 | DE-9 female, right-angle PCB mount (F09HP footprint: 2.74 mm pitch, 2.54 mm between rows) |
 | 1 | KEYBOARD | MiniDIN6_MD-60SM | J4 | Same Sky (CUI Devices) MD-60SM, date code after 2022-03-03 |
 | 1 | FTDI | PinHeader_1x06_P2.54mm_Vertical | J5 | 1 x 6 pin header, 2.54 mm (an FTDI cable programs the ATmega) |
 | 1 | TO GFX | IDC-Header_2x20_P2.54mm_Vertical | J6 | 2 x 20 shrouded box header, 2.54 mm; 40-way IDC ribbon (two 2 x 20 IDC sockets, about 10 cm) |

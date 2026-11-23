@@ -11,6 +11,12 @@ Ken's word ("ok if check is clean i will want to merge into main for this card a
 --tests` showed no failures and 0 warnings at `eebc2ed`. "Programming the card" below is the software's view of the
 whole card; "The serial port" further down is the circuit and the layout. Not ordered yet.
 
+**A header for a front panel since 2026-11-22, and a RESET button of its own since 2026-11-23 (Ken):** the card is
+8.00 x 4.00 in, with a 50-pin header (J3) at the front edge for the ribbon to `hardware/front-panel`; its DMA request
+was put right (as first drawn it would have loaded every byte twice); SW12 RESET boots the EPROM, and the serial
+port's settings are printed on the silkscreen. The last two sections before "Board" have it. Drawn on the
+branch `front-panel`, in `main` since 2026-11-23 (Ken: "merge everything"); not ordered.
+
 The new IO card: System-5's front panel. LEDs, switches and two TIL311 hex displays on an I/O port, a Q LED, an INPUT button
 on an EF line, and the machine's hand controls (PAUSE, LOAD) on the 36-pin bus. It replaces the 2005 IO card
 (`hardware/io-1861-keyboard/`: its keyboard moves to the video card (VIDEO-G's TEXT board), its 1861 is dropped). Started 2026-10-30 (Ken).
@@ -42,6 +48,7 @@ are the IDE card's (register select and data), 5 is free.
 | Q LED | lit while Q is set: `SEQ` (`7B`), `REQ` (`7A`) |
 | Address display (A15-A12 ... A3-A0) | nothing to program: the address of the last machine cycle, held while the clock is stopped |
 | RUN/RESET, LOAD | the hand controls: RUN off resets, LOAD on pauses, both = LOAD mode, where each INPUT press stores the toggles at M(R0) and adds 1 to R0 (one DMA IN) |
+| RESET button (2026-11-23) | a boot reset: the machine starts in the EPROM (HBIOS), whatever was loaded into RAM. The RUN/RESET toggle starts again what ran before. Nothing while LOAD is on |
 | Interrupts | the clock's IRQ and the UART's INTR can each pull the bus -INT low: JP4's last row and JP7, both open as set |
 
 ### The clock: select `00`-`7F`
@@ -152,6 +159,8 @@ emulator's gate-level model of CPU Rev D and this card. To send without echo, wa
    - to **-EF1** through an open-collector driver (74HCT05 / 74LS06 gate or a transistor), so programs read it with `B1`/`BN1`;
    - in LOAD mode (the LOAD switch on), **one -DMAIN request per press**: the request is set by the press and cleared by the DMA
      cycle (-MWR rising while -MRD is high), so a held button loads one byte, not many.
+     (That clear came too late for the 1802, which looks at the request again before -MWR rises: put right on
+     2026-11-22, "The DMA request lasted too long", below.)
 5. **Data in LOAD mode.** The '244 also drives D0-D7 while this card's own DMA request is pending **and** -MRD is high (the DMA IN
    cycle; in IDLE the memory drives M(R0)). Never for another card's request.
 6. **RUN and LOAD switches** (ELF-style). Toggles to open-collector drivers: RUN off pulls -RESET, LOAD on pulls -PAUSE. To load:
@@ -170,7 +179,7 @@ in the book. A gate-level walk-through checked OUT 4, INP 4, INPUT while running
 button), and that a debug board's DMA with the button held never makes this card drive. Board not started.
 
 - **Chips:** U1 74HCT138 (port 4), U2 74HCT374 (OUT latch), U3 74HCT244 (switches), U4 74HCT14, U5 74HCT10 (OUTCLK),
-  U6 74HCT00, U9 74HC05 (open collector: -EF1, -DMAIN, the Q LED), U10 74HCT74 (REQ, ACK), U11 74HCT74 (DRIVE), U7/U8
+  U6 74HCT00, U9 74HC05 (open collector: -EF1, -DMAIN, the Q LED; a 74HC03 since 2026-11-22), U10 74HCT74 (REQ, ACK), U11 74HCT74 (DRIVE), U7/U8
   TIL311. Spares: U5B/C, U6D, U9 ×3, U11B.
 - **OUT 4** latches on TPB's fall (OUTCLK = NAND(port 4, -MRD low, TPB) clocks the '374 as TPB ends).
 - **INP 4 and LOAD data:** the '244 drives while -MRD is high and (port 4 or DRIVE). DRIVE (found in the walk-through):
@@ -532,6 +541,194 @@ the read strobe, the interrupt and reset, and a program on CPU Rev D that echoes
 - The emulator does not pass the card's -INT on to the 1802 (nor the clock's): the interrupt is tested at the card.
 - Not through `s5emu.timing`, which does not know the panel: the strobes were set against the data sheet by hand
   ("The strobes against a 16550's limits", above).
+
+## The front panel's header, and the DMA request put right (Ken, 2026-11-22)
+
+### The header
+
+Ken, 2026-11-22: "I want to add ability to have a front panel if system is ever put in a case. This will mean bringing
+all IO switches, LEDs, and TIL311 signals out to a ribbon cable connector"; "dont forget q line"; "and cpu status leds
+for mode". Asked how the connector should go on this card, he chose "Lengthen to 8.00 in" with one 50-pin header at
+the front edge.
+
+So the card is **8.00 x 4.00 in (203.2 x 101.6 mm)**, still two layers. Every part stayed where it was; the new
+0.5 in strip beyond the displays holds **J3**, a keyed 2x25 header, upright, pin 1 at the top as drawn. A straight
+50-way ribbon joins it to the front panel's J1, pin n to pin n. `tools/s5panel.py` is the one pin map for both
+boards, and the front panel's `DESIGN.md` has the table.
+
+What the card adds for it:
+
+| Part | What it does |
+|---|---|
+| J3 | the ribbon: the address and output latches' outputs, the data lines, the Q LED's sink, INPUT, the bus -RESET, -PAUSE and -DMAIN, +5V on four pins and ground on eight |
+| RN3, 10k x8 | pulls the data lines SW0-SW7 down. The front panel's toggles switch a line to +5V through 1k or leave it open |
+| U9D | ROM_LED_L = NAND(-VMA, -VMA), open drain: sinks the front panel's ROM LED while the CPU card's EPROM answers |
+| J1 | now takes -VMA and SC0 from the bus as well |
+
+No chip was added. U9 changed type (below), and its fourth gate is the ROM LED's.
+
+**The card's own toggles and the front panel's.** The card's data toggles sit between +5V and ground. If they are
+fitted and a front panel is plugged in too, the card's win and nothing is harmed (the front panel's reach the line
+through 1k). A card built for a front panel leaves SW1-SW8 out. RUN, LOAD and INPUT work together on the two boards:
+either one pulls its line low, so both RUN toggles must be at RUN for the machine to run. With the displays fitted
+on both boards the twelve TIL311s take about 2.2 A of the backplane's 3 A: fit them on one.
+
+J3's +5V pins are joined to the displays' supply rail by tracks drawn in `gen/make_board.py`, locked, as that rail is.
+
+### The DMA request lasted too long
+
+Reading the 1802's data sheet for the front panel's RESET showed a fault in this card as it was drawn. It had passed
+every check, the emulator's too, and would have shown only on the built card.
+
+**The fault.** In LOAD mode a press of INPUT sets REQ, which pulled -DMAIN low. REQ was cleared by ACK, clocked when
+-MWR rises at the end of the DMA cycle's write. But the 1802 samples its DMA request at clock 7 of every cycle, the
+DMA cycle's own too, and -MWR rises just after that (data sheet, figure 4; figure 12 shows the request gone by then
+for a single cycle). So the request still stood when the 1802 looked again, and a second DMA cycle followed: **the
+toggles' byte written at two addresses for every press.**
+
+**Why the emulator did not show it.** Its model ran one DMA cycle for a press and never asked whether the request
+was still there at clock 7. It does now (`NetlistIOPanel.s2_begin()`, `s2_end()`), and the old circuit is kept as
+the revision `A-req` so that a test shows the two cycles (`IOPanel.test_the_request_as_first_drawn_made_two_cycles`).
+
+**The fix.** The COSMAC ELF drops its request with the state code as the DMA cycle starts, and so does this card
+now. SC0 is on the 36-pin bus; in LOAD mode it is high in every idle cycle and low in a DMA cycle.
+
+    -DMAIN = NAND(REQ, SC0)        U9B, open drain
+
+The line is low while REQ is set and the 1802 has not yet started the DMA cycle, and is let go as SC0 falls, more
+than a microsecond before clock 7 at 2 MHz. REQ itself is still cleared by ACK as before: DRIVE, which keeps the
+toggles on the bus through the write, needs it that long.
+
+U9 was a 74HC05 (six open-collector inverters, three used). It is now a **74HC03** (four open-drain NAND gates),
+all four used: INPUT's flag, the DMA request, the UART's interrupt, the ROM LED. RN1's spare resistor pulls SC0 up, so
+the gate's input is defined with no CPU card in the bus (the bus Rev D has no resistor on SC0).
+
+### The address display in LOAD mode
+
+The same reading turned up a small thing about the address display (2026-11-18). The data sheet says TPA is left out
+of the idle cycles of LOAD mode. The high byte's latch (U18) is clocked by TPA, so in LOAD mode the two left digits
+change only when a byte is loaded, and show that byte's page; the two right digits follow R(0) all the time. After
+the byte at 00FF goes in the display reads 0000 until the next byte. Not changed.
+
+## The card's own RESET button, and the serial port's settings on the silkscreen (Ken, 2026-11-23)
+
+### RESET
+
+Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not installed."
+
+The card had RUN/RESET, a toggle that holds the bus -RESET low. That is a plain reset: it starts again whatever ran
+before, the loaded program if there is one. What it could not do is bring HBIOS back after a load; for that one had
+to reach the CPU card's switch. **SW12 RESET** is a push-button for a boot reset, the same as the front panel's.
+
+| Part | What it does |
+|---|---|
+| SW12 | pressed, it puts +5V on BTN_H |
+| R4, 10k | holds BTN_H low otherwise |
+| U23A (74HC03, open drain) | pulls -RESET low while BTN_H is high and -PAUSE is high |
+| U23B | pulls -DMAIN low on the same condition |
+| C26 | U23's 0.1 uF |
+
+-RESET and -DMAIN low together, with -PAUSE high, is a boot reset (`docs/manual/bus.md`): the CPU card clears its
+LOADED flag, and when the button is let go the machine starts in the EPROM.
+
+**It does nothing while LOAD is on.** Both gates take the bus line -PAUSE as their second input. In LOAD mode a low
+-DMAIN is a DMA request, and the button must not make one.
+
+**No debounce.** A bouncing boot reset is still a boot reset, and the CPU card's reset chip holds -RESET low for
+150 ms after the last release, by which time -DMAIN is high again. The CPU card passes -DMAIN to the 1802 only in
+LOAD mode, so the bounce cannot write to memory.
+
+So there are now two things named RESET on the card, and they differ:
+
+| Control | Lines | What starts afterwards |
+|---|---|---|
+| RUN/RESET toggle, at RESET | -RESET | what ran before: the loaded program, or HBIOS |
+| RESET button | -RESET and -DMAIN | HBIOS, always |
+
+Ken, 2026-11-23, asked whether one of them should have another name (`BOOT` was suggested for the button): both keep
+RESET, here and on the front panel.
+
+The button is in the bottom corner of the front strip, under J3. U23 stands between the toggle column and the Q and
+PWR LEDs' resistors, which moved 3 mm towards the LEDs. U23's other two gates are spare.
+
+### The serial port's settings
+
+Ken, 2026-11-23: "can you add more detail to silkscreen for IO card settings for serial port."
+
+The port's three jumper blocks had their names and little more. A block of seven lines now stands in the free patch
+under RN3, between the UART and the toggles:
+
+    SERIAL PORT (16C550)
+    J2 AS SET: 2 TX 3 RX 5 GND
+    JP6: TX ON PIN 2 OR PIN 3
+    JP4: PORTS 6 + 7 (AS RTC)
+    REG N: OUT 6 = 80+N, PORT 7
+    DIVISOR 12 = 9600 BAUD
+    JP7 FITTED: INT ON -INT
+
+| Line | What it tells the person setting the card up |
+|---|---|
+| J2 AS SET | the DE-9's pins with JP6 as it is shipped: the card sends on pin 2, hears on pin 3, ground on 5 |
+| JP6 | the block that swaps the two; the `2` and `3` printed over it show which pair of shunts is which |
+| JP4 | the port pair, shared with the clock: address port 6, data port 7 as set |
+| REG N | how a program reaches UART register N: write 80+N to port 6, then read or write port 7 |
+| DIVISOR 12 | the divisor latch value for 9600 baud with the 1.8432 MHz can (3 is 38400) |
+| JP7 FITTED | a shunt puts the UART's interrupt on the bus -INT |
+
+JP4 keeps its short title, `JP4 RTC`: `JP4 RTC + UART` has no room beside the block.
+
+### What else moved on the silkscreen
+
+The new parts pushed four older texts about (`python3 tools/kicad/silkdiff.py` against the board before the button
+lists every one):
+
+| Text | What happened | Why |
+|---|---|---|
+| `INPUT` | moved 11.3 mm, from above its button to below it (card standing) | R4 stands where it was; it now sits under its button as `RESET` does under its own |
+| `J3 FRONT PANEL` | moved from the header's pin 50 end to its pin 1 end | the RESET button took its corner |
+| `50` | new, at the header's pin 50 end | there was no room for it while the name stood there |
+| `R2 1k`, `R3 1k` | 3 mm, with their resistors | room for U23 |
+| the name line and `cottageworker.com` | 14.5 mm along the bottom edge | room for C26 and the buttons |
+
+**The `1` at J3's pin 1 was lost for a morning.** The two pin numbers were placed after the header's name and were
+allowed to be left out; when the name moved to the pin 1 end, the `1` found no room and was dropped without a word.
+The first report of this build did not list it, nor the moves of `INPUT` and the name: the pcb-check session found
+all three by comparing the two boards. `gen/make_board.py` now places the two numbers first and stops if either has
+no room; the card was built again (the name 1.5 mm to the side, the `1` where it had been, the copper the same track
+for track), and `tools/kicad/silkdiff.py` now exists to list such changes after any build.
+
+### Built and checked
+
+`gen/route.py` seed 3 (seeds 0 and 2 leave two links open, 1 one): 91 parts, 3253 track segments, 164 vias. The older
+check passes (DRC 0 errors, netlist 140 of 140). A full build took 69 minutes, twice (Freerouting's optimization 66
+to 67 of them).
+
+The second build, for the `1`, gave the same copper: the same 3417 tracks and vias, and in the order files the same
+pads, tracks and pours on both copper layers, the same masks, outline and holes; the front silkscreen differs by the
+name's 75 strokes and the five of the `1`.
+
+`pcb-check --tests` at `bf641d1` (2026-11-23, pcb-check `1133958`; before the `1` was put back, at `a3c0213` with
+pcb-check `d5ef4ad`, the same result): **no failures, 1 warning.** The warning is the
+one the card had before: J2, the DE-9, is on the side edge and begins 65.6 mm from the front edge, 5.6 mm past the
+60 mm within which the check expects an outside connector (LAYOUT). **Ken accepted it on 2026-11-23**: the connector
+stays where he put it, the check's limit for this card is not raised, and the warning stands in every report.
+Its LABELS line passes: every reference and value on the silkscreen, and every text clear of the parts, the legend
+included. A note asks to confirm that -DMAIN, -RESET and ROM_LED_L, which this card only pulls low, are pulled up
+elsewhere: the first two by 10k resistors on the bus Rev D (RN2) and again on CPU Rev D (RN1), and -RESET by the CPU
+card's reset chip as well; the third by the front panel's ROM LED and its resistor.
+
+The pcb-check session ran the card again at `26e17ea` with the same result, compared the second build's order zip
+with the first's shape for shape (only the front silkscreen differs), and planted 17 wiring faults in copies of this
+card's netlist and 11 in the front panel's, each run through the card's own test line: all 28 were caught.
+
+### In the emulator
+
+`NetlistIOPanel.set(reset=)`, the debugger's `panel reset`; the fast machine has the button too. Since the same day
+the model plays every switch on the card as the netlist wires it (`hw.switch_contact`): a closed contact sets its net
+to the level the switch's other pin gives it. Before that the model set the net and level it knew, and a switch
+wired to the wrong rail passed every test; the pcb-check session showed it by running this card's tests on damaged
+copies of its netlist (SW12 between ground and BTN_H was not caught). It is caught now, by the card's two reset
+tests and by `IOPanel.test_the_switches_are_played_as_the_netlist_wires_them`.
 
 ## Board (2026-10-30): `gen/make_board.py`
 

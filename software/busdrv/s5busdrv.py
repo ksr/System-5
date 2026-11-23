@@ -201,7 +201,7 @@ class BusDriver:
                 for b in chunk: self.out(port, b)
 
     # ---- BUSDRV-C: the 36-pin extension, the 1802's mode, LOAD mode by the clock, the clock, the probes
-    MODES = ("RUN", "RESET", "PAUSE", "LOAD")
+    MODES = ("RUN", "RESET", "PAUSE", "LOAD", "BOOT")      # BOOT: firmware mode-2 (2026-11-22), a boot reset
 
     def board(self):
         """'B' or 'C' (None: the bus is off, so the card cannot tell yet)"""
@@ -213,8 +213,12 @@ class BusDriver:
         return dict(f.split("=", 1) for f in text.split() if "=" in f)
 
     def mode(self, name):
-        """the 1802's mode: run, reset, pause or load"""
-        self.cmd("MODE", self.MODES.index(name.upper()))
+        """the 1802's mode: run, reset, pause or load; or boot, a boot reset (-RESET and -DMAIN low with -PAUSE high:
+        CPU Rev D clears its LOADED flag, so mode('run') after it starts the machine in the EPROM)"""
+        n = self.MODES.index(name.upper())
+        if n == 4 and not any("mode-2" in l for l in self.banner):
+            raise CardError("MODE BOOT needs firmware mode-2 (2026-11-22) or later")
+        self.cmd("MODE", n)
 
     def cpu_mode(self):
         """the mode as -RESET and -PAUSE stand on the bus (another card may hold them too)"""

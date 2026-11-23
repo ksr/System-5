@@ -164,7 +164,7 @@ class Card(unittest.TestCase):
         self.assertEqual(v.vram[0], 0x48); self.assertEqual(v.vram[0x7FF], 0x7E)
 
     def test_rev_b_clean_is_rev_b_on_the_bus(self):
-        """Rev B-Clean's netlist (no DB9, the light-pen input on ground) against Rev B's, the card in the machine"""
+        """Rev B-Clean's netlist (no DE-9, the light-pen input on ground) against Rev B's, the card in the machine"""
         b, bc = NetlistVideoCard(Video6845(), "B"), NetlistVideoCard(Video6845(), "B-Clean")
         strip = lambda r: (sorted((kind, op, ca) for _, kind, op, ca in r[0]), r[1])
         for a in list(range(0x6FF0, 0x7010)) + list(range(0x77F0, 0x7810)) + list(range(0x7000, 0x8000, 0x37)) + list(range(0, 0x10000, 0x0111)):

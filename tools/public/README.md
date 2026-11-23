@@ -31,7 +31,9 @@ Then, after a look at what changed (`git -C ../System-5 show --stat`), Ken pushe
   do-not-distribute notice, a home-folder path (`/Users/<name>`), a file over 50 MB; inside zips and PDF streams too.
   Before the scan it takes the paths KiCad and Eagle write out of every text file: one into this repository becomes
   relative to it, any other starts at `~/` (2026-11-20). A finding checked by hand and kept is
-  listed in `ALLOW` with the reason (one so far: CadSoft's address inside their own Eagle library);
+  listed in `ALLOW` with the reason (two so far: CadSoft's address inside their own Eagle library, and six bytes of
+  a gerber zip's packed data that read like an address: the scan reads a zip's own bytes as well as the files in it,
+  so a chance run of packed bytes can look like text);
 - makes the output folder hold exactly that tree. It refuses a folder it did not create itself.
 
 ## What was decided (Ken, 2026-11-15)

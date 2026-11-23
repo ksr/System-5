@@ -25,15 +25,17 @@ OUT = os.path.join(ROOT, "docs", "manual", "pdf", "system5-schematics.pdf")
 # (folder under hardware/, card, what it is)
 CARDS = [
     ("bus/kicad/rev-d", "Bus backplane Rev D (S5BUS-D)", "the new backplane: 8 slots, power switch, fuse, reverse protection, pull-ups"),
-    ("cpu/kicad/rev-d", "CPU card Rev D (new, not built)", "the 36-pin CPU card: CDP1802 at 2 MHz, RESET/RUN, LOAD/PAUSE from the bus, EXT CLK, SC0, 2732 at F000"),
+    ("cpu/kicad/rev-d", "CPU card Rev D (new, not built)", "the 36-pin CPU card: CDP1802 at 2 MHz, RESET/RUN, LOAD/PAUSE and a boot reset from the bus, EXT CLK, SC0, 2732 at F000"),
     ("io-panel/kicad/rev-a", "IO panel card Rev A (new, not built)", "the front panel: port 4 LEDs, TIL311s and switches; INPUT on -EF1; ELF-style RUN and LOAD with DMA loading; "
-     "a DS12885 clock; a 16C550 serial port with a DE-9"),
+     "a DS12885 clock; a 16C550 serial port with a DE-9; the front panel's ribbon header"),
+    ("front-panel/kicad/rev-a", "Front panel Rev A (new, not built)", "the hand controls and displays on a board that mounts as the front of a case: six TIL311s, bit and "
+     "status LEDs, toggles, RUN, LOAD, INPUT and a RESET button that boots the EPROM; a 50-way ribbon to the IO panel card"),
     ("cpu/kicad/rev-a", "CPU card Rev A", "CDP1802, clock, reset and run control, boot EPROM, -VMA, EF routing (as drawn)"),
     ("memory/kicad/rev-e", "Memory card Rev E", "2 x 62256 RAM, 2 x 27256 EPROM, each placed by jumpers in 4K blocks; chip-enable LEDs"),
     ("memory/kicad/rev-f", "Memory card Rev F", "Rev E's circuit and copper with its silkscreen fixed: every label outside the chips"),
     ("io-1861-keyboard/kicad/rev-a", "IO card Rev A", "CDP1861 video, PS/2 keyboard through a PAK-VI and a PIC16F84, CDP1852 port"),
     ("video-6845/kicad/rev-b", "6845 video card Rev B", "HD6845 CRTC, IDT7134 dual-port video RAM, character generator (after BYTE, May 1979)"),
-    ("video-6845/kicad/rev-b-clean", "6845 video card Rev B-Clean (new, not built)", "Rev B's circuit and copper without the DB9 and with the 6845's light-pen input on ground: composite only, every part drawn, the silkscreen redone"),
+    ("video-6845/kicad/rev-b-clean", "6845 video card Rev B-Clean (new, not built)", "Rev B's circuit and copper without the DE-9 and with the 6845's light-pen input on ground: composite only, every part drawn, the silkscreen redone"),
     ("video-6845/kicad/rev-b-clean-keyboard", "6845 video card Rev B-Clean-Keyboard (new, not built)", "Rev B-Clean on the 36-pin bus with VIDEO-G TEXT's PS/2 keyboard section: the 6845 at 7800 / 7801, the key at 7802, status at 7804, KEY-READY on a bus flag line (JP1)."),
     ("video-g/kicad/text-1.0", "VIDEO-G 1.0 TEXT (designed, not built)", "6845 + IDT7134 64-column text, status register, PS/2 keyboard, all memory-mapped; the GFX board on a ribbon"),
     ("video-g/kicad/gfx-1.0", "VIDEO-G 1.0 GFX (designed, not built)", "512 x 200 / 512 x 256 graphics in two pages, Y and control registers, PS/2 mouse"),

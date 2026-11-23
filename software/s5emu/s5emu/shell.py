@@ -117,8 +117,19 @@ class Shell:
                 elif sub == "input" and len(a) > 1: m.panel_set(input=a[1].lower() in ("on", "1", "down"))   # held
                 elif sub == "input": m.panel_set(input=True); m.panel_set(input=False)                      # a tap
                 elif sub in ("run", "load"): m.panel_set(**{sub: a[1].lower() in ("on", "1")})
-                elif sub: return "panel [sw HEX | input [on|off] | run on|off | load on|off]"
+                elif sub == "reset" and len(a) > 1: m.panel_set(reset=a[1].lower() in ("on", "1", "down"))  # held
+                elif sub == "reset": m.panel_set(reset=True); m.panel_set(reset=False)     # a tap: the card's RESET button
+                elif sub: return "panel [sw HEX | input [on|off] | reset [on|off] | run on|off | load on|off]"
                 return m.panel_text()
+            if cmd == "front":                              # the front panel, on the IO panel card's ribbon (--hw --front A)
+                if not getattr(m, "front", None): return "no front panel (start with --hw --cpu-rev D --panel A --front A)"
+                sub = a[0].lower() if a else ""; on = len(a) > 1 and a[1].lower() in ("on", "1", "down")
+                if sub == "sw": m.front_set(switches=int(a[1], 16))
+                elif sub in ("input", "reset") and len(a) > 1: m.front_set(**{sub: on})                    # held
+                elif sub in ("input", "reset"): m.front_set(**{sub: True}); m.front_set(**{sub: False})    # a tap
+                elif sub in ("run", "load"): m.front_set(**{sub: on})
+                elif sub: return "front [sw HEX | input [on|off] | reset [on|off] | run on|off | load on|off]"
+                return m.front_text()
             if cmd == "png":
                 if not hasattr(m.video, "save_png"): return "png needs --video g"
                 mode = a[1] if len(a) > 1 else "screen"; sc = int(a[2]) if len(a) > 2 else 1

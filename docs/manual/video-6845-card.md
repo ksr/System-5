@@ -29,7 +29,7 @@ Its bus side is my own: one dual-port RAM in place of BYTE's multiplexed 21L02s,
 | IC14 | 7416 | open-collector drivers: video, sync |
 | R5, R6 | 33 Ω, 270 Ω | the composite mix |
 | U$4 | RCA jack | composite out |
-| X1 | DB9 | video, HSYNC, VSYNC separately, for a monitor that takes them |
+| X1 | DE-9 | video, HSYNC, VSYNC separately, for a monitor that takes them |
 | SV1 | 2 × 4 header | the card's 4K block |
 
 ## The bus side

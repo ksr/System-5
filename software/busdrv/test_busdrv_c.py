@@ -121,7 +121,7 @@ class Commands(unittest.TestCase):
     def test_banner_status_snap(self):
         bd, bp, fc = card()
         self.assertEqual(bd.rev, "C"); self.assertTrue(bd.ioblocks)
-        for word in ("clk-2", "ext-1", "mode-1", "load-1", "probe-1", "BUSDRV-C"): self.assertIn(word, bd.banner[0])
+        for word in ("clk-2", "ext-1", "mode-2", "load-1", "probe-1", "BUSDRV-C"): self.assertIn(word, bd.banner[0])
         self.assertEqual(bd.status(), "bus=on mode=MONITOR board=C cpu=RUN clk=0")
         f = bd.fields(bd.snap())
         self.assertEqual([f[k] for k in ("-EF1", "-EF2", "-EF3", "-PAUSE", "-DMAIN", "SC0")], ["1"] * 6)
@@ -151,7 +151,7 @@ class Commands(unittest.TestCase):
         bd.mode("load"); self.assertEqual(bd.cpu_mode(), "LOAD"); self.assertTrue(bp.cpu.loaded())
         i = pairs.index((0, 0)); self.assertEqual(pairs[i - 1], (0, None))             # through RESET, so R(0) = 0000
         bd.mode("run"); self.assertEqual(bd.cpu_mode(), "RUN"); self.assertTrue(bp.cpu.loaded())   # a bus reset keeps it
-        self.assertIn("MODE 0 RUN", err(self, bd, "MODE", 4))
+        self.assertIn("MODE 0 RUN", err(self, bd, "MODE", 5))
 
     def test_pause_waits_for_reset_to_be_high(self):
         """the CPU card's DS1813 holds -RESET low after the bus driver lets it go. -PAUSE pulled then makes LOAD mode
@@ -281,6 +281,36 @@ class Load(unittest.TestCase):
         bp.press_sw1(True); self.assertFalse(bp.cpu.loaded()); bp.press_sw1(False)     # the CPU card's RESET/RUN switch
         bd.clk(18 + 16 * 4); self.assertEqual(bp.pins["Q"], 1)                         # the EPROM at 0000: the boot map
 
+    def test_mode_boot_clears_loaded_as_the_cards_switch_does(self):
+        """MODE:4# (mode-2, 2026-11-22): a boot reset, -RESET and -DMAIN low with -PAUSE high. CPU Rev D clears LOADED,
+        and nothing takes the low -DMAIN for a DMA request (its DMA IN is armed only in pause)"""
+        rom = bytes([0x7B, 0x00]) + bytes([0xFF] * 4094)                               # the "HBIOS": SEQ; IDL
+        bd, bp, fc = card(cpu_rom=rom)
+        bd.mode("load"); bd.dma_load(bytes([0xC4, 0xC4, 0xC4, 0x00])); self.assertTrue(bp.cpu.loaded())
+        bd.mode("reset"); bd.mode("run"); bd.clk(18 + 16 * 6)
+        self.assertEqual(bp.pins["Q"], 0); self.assertTrue(bp.cpu.loaded())            # a plain reset: RAM runs again
+        w = sum(bp.writes.values())
+        bd.mode("boot"); self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"], bp.pins["PAUSE"]), (0, 0, 1))
+        self.assertFalse(bp.cpu.loaded()); self.assertEqual(bd.cpu_mode(), "RESET")
+        bd.mode("run"); self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"]), (1, 1))
+        bd.clk(18 + 16 * 4); self.assertEqual(bp.pins["Q"], 1)                         # the EPROM at 0000: the boot map
+        self.assertEqual(sum(bp.writes.values()), w)                                   # and not a byte written on the way
+
+    def test_boot_is_refused_while_pause_is_low(self):
+        bd, bp, fc = card(stuck_lines={"PAUSE": 0})                                    # the IO panel's LOAD switch on
+        self.assertIn("-PAUSE is low", err(self, bd, "MODE", 4))
+        self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"]), (1, 1))                 # neither line was touched
+
+    def test_the_cards_switch_makes_a_boot_reset_on_the_bus(self):
+        """CPU Rev D's RESET/RUN switch (and power-on) through its own open-drain gates, U11: -RESET and -DMAIN low
+        on the bus together; with -PAUSE low only -RESET, which makes LOAD mode of it"""
+        bd, bp, fc = card()
+        bp.press_sw1(True); self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"], bd.cpu_mode()), (0, 0, "RESET"))
+        bp.press_sw1(False); self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"], bd.cpu_mode()), (1, 1, "RUN"))
+        bd.mode("pause"); bp.press_sw1(True)
+        self.assertEqual((bp.pins["RESET"], bp.pins["DMAIN"], bd.cpu_mode()), (0, 1, "LOAD")); self.assertTrue(bp.cpu.loaded())
+        bp.press_sw1(False); bd.mode("run")
+
     def test_the_host_tool(self):
         """load_image: a file that starts above 0000 gets a jump at 0000; main() runs dmaload against the simulator"""
         img = S.load_image([(0x0100, bytes([0x7B, 0x00]))])
@@ -321,10 +351,11 @@ class Faults(unittest.TestCase):
         self.assertEqual(bp.writes, {})
 
     def test_dmain_stuck_low(self):
-        """-DMAIN held low by something else: the 1802 makes DMA cycles by itself (the simulator shows them); the card
-        sees SC0 low before it has asked, and puts no byte on the bus"""
-        bd, bp, fc = self.refuses("SC0 stays low: DMA cycles with no request", stuck_lines={"DMAIN": 0})
-        self.assertIn("dma", [c[0] for c in bp.cpu.pins.cycles])
+        """-DMAIN held low by something else. CPU Rev D passes the line to the 1802 only once it has been high in LOAD
+        mode (DMA_ARMED, 2026-11-22), so the 1802 makes no DMA cycle of it (until then it made them without end);
+        the card sees the line low before it has asked, and puts no byte on the bus"""
+        bd, bp, fc = self.refuses("-DMAIN is low before the request", stuck_lines={"DMAIN": 0})
+        self.assertNotIn("dma", [c[0] for c in bp.cpu.pins.cycles])
 
     def test_dmain_not_reaching_the_cpu(self):
         bd, bp, fc = self.refuses("no DMA cycle: -DMAIN does not reach the 1802", stuck_lines={"DMAIN": 1})

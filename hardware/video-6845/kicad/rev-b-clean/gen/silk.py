@@ -13,7 +13,7 @@ writes them all again, on tools/kicad/silk270.py, the placer the other new cards
 
   * every text at KiCad angle 270: upright, left to right, with the card standing in the bus, connector down (the cards
     are drawn with the bus on the left). The one exception is the name line, at angle 0 along the bottom edge as
-    drawn, where the DB9 was: it reads up the side of the standing card
+    drawn, where the DE-9 was: it reads up the side of the standing card
   * each label at the first spot clear of every pad, every part's body (the chip in its socket, the bus header's
     plastic: gen/footprints.py draws them) and outline, every other text, the board edge and the card-guide strips
     (3.00 x 0.15 in from the bus edge along the top and bottom edges), so that it can be read with the parts fitted
@@ -66,7 +66,7 @@ assert b.FindFootprintByReference("J1").FindPadByNumber("1").GetNetname() == "VC
 s.pin_names("J1", {str(n): name for n, name in s5bus.bus().items()})
 note("J1", s.bus_label("J1", "J1 BUS"))
 
-# 3. the name line, at angle 0 along the bottom edge as drawn (up the side of the standing card), ending where the DB9
+# 3. the name line, at angle 0 along the bottom edge as drawn (up the side of the standing card), ending where the DE-9
 #    was. At 1.2 mm (pcb-check's least for the name and rev) it is 40 mm long, and the edge beyond the card-guide
 #    strip is 35 mm up to the RCA jack, so it runs just above the strip, as far right as it fits, with
 #    cottageworker.com after it or under it

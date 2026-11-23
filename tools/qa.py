@@ -37,6 +37,7 @@ QUICK = [
     ("busdrv: bring-up", "software/busdrv", "python3 -m unittest test_bringup"),
     ("busdrv: short finder", "software/busdrv", "python3 -m unittest test_shorts"),
     ("s5emu: bus link, BUSDRV-C", S5, "python3 -m unittest tests.test_buslink_c"),
+    ("s5emu: front panel", S5, "python3 -m unittest tests.test_front_panel"),
     ("preorder pad drawing", ".", "python3 -m unittest tools.test_preorder_draw"),
     ("Elf/OS v5 programs as built", ".", "python3 software/elfos-v5/build.py --check"),
     ("VIDEO-G PS/2 firmware co-sim", ".", "sh embedded/video-g-ps2/sim/run.sh"),

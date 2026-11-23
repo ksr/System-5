@@ -6,7 +6,7 @@ outline only). Without them the label placer and pcb-check take the board under 
 free board (the pcb-check BODIES rule of 2026-11-19; hardware/BUILD-RULES.md, section 5). Run with KiCad's Python; it
 starts from Rev B's library each run. The pads are untouched: Rev B's copper fits them as it is.
 
-  * the DB9 (F09HP) is left out: Rev B-Clean has none
+  * the DE-9 (F09HP) is left out: Rev B-Clean has none
   * the seven footprints memory Rev F also has (0207_7, C025-050X050, C30, DIL14, DIL16, E2,5-7, LED5MM: the same Eagle
     library, pad for pad) are Rev F's files, bodies and courtyards already checked there: the bus connector C30 with the
     right-angle header's body between the pads and the card edge and KiCad's 3D model of it

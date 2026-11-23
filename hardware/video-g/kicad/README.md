@@ -6,7 +6,7 @@ ordered; not built.
 
 | Folder | Board | Size | ICs | Parts list |
 |---|---|---|---|---|
-| `text-1.0/` | VIDEO-G 1.0 TEXT: 6845 + IDT7134 text, status register, PS/2 keyboard, RCA + DB9, every decode (all memory-mapped, 7000-7FFF) | **188 x 106.6 mm** (47 mm longer than a standard card: Ken keeps it, 2026-11-17; and since 2026-11-18 10.4 mm more at the +5V end, for the 36-pin bus connector) | 24 | [`text-1.0/BOM.md`](text-1.0/BOM.md) |
+| `text-1.0/` | VIDEO-G 1.0 TEXT: 6845 + IDT7134 text, status register, PS/2 keyboard, RCA + DE-9, every decode (all memory-mapped, 7000-7FFF) | **188 x 106.6 mm** (47 mm longer than a standard card: Ken keeps it, 2026-11-17; and since 2026-11-18 10.4 mm more at the +5V end, for the 36-pin bus connector) | 24 | [`text-1.0/BOM.md`](text-1.0/BOM.md) |
 | `gfx-1.0/` | VIDEO-G 1.0 GFX: 62256 graphics (two pages), Y and control registers, PS/2 mouse, PWR LED | 141 x 96 mm (standard) | 19 | [`gfx-1.0/BOM.md`](gfx-1.0/BOM.md) |
 
 Both: 4 layers (F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid +5V plane: MEM3-E's stack-up), the
@@ -54,17 +54,17 @@ J1's drawing up to its library file (`tools/kicad/fp_update.py`) and places the 
 exported netlist = `netlist.py`), `make_board.py`, `route.py` (Freerouting in and out, the inner layers as planes),
 `route_leftovers.py` (the few connections Freerouting leaves; copied from MEM3-E's), `silk.py` (every label, also on
 a routed board: `<KiCad python> common/silk.py <board>` changes the silkscreen only), `bom.py`, `build.sh`.
-`lib/video-g-local`: IDT7134, Mini-DIN, RCA and DB9 from YACC1's Video V2.0 (copied), System-5's C30 bus connector
+`lib/video-g-local`: IDT7134, Mini-DIN, RCA and DE-9 from YACC1's Video V2.0 (copied), System-5's C30 bus connector
 (GFX), the 36-pin C36 (TEXT; the other 36-pin cards' footprint) and 0.1" bypass-cap footprints (the C30 labels'
 stroke raised to 0.15 mm for the fab; 2026-11-17: a courtyard on both and an F.Fab body, 4.0 x 2.5 mm, on the cap, so
 that `pcb-check` knows where they are and finds each cap's "100n"; 2026-11-18: the right-angle header's body, a
 courtyard round it and its 3D model on C30 and C36, above; 2026-11-19: the RCA jack's body on F.Fab, the outline its
 silkscreen has, for `pcb-check`'s new BODIES line, which names a part with nothing drawn on the fab layer: TEXT's J2
 was the one. `J2 RCA COMPOSITE` moved 0.15 mm with it, the label placer going by the body where it had gone by the
-courtyard). The DB9, Eagle's F09HP, had only its nine pins' tails on the fab layer, 11 x 3.6 mm of a 31 x 14 mm
+courtyard). The DE-9, Eagle's F09HP, had only its nine pins' tails on the fab layer, 11 x 3.6 mm of a 31 x 14 mm
 connector, which `pcb-check` took for the whole part (its BODIES line names such a drawing since its `0e99e19`): the
-connector's outer line is on F.Fab now, and `J3 DB9 TTL 5151` keeps its place by a spot of its own in `place.py`, the
-1.5 mm between the DB9's back and R4's lead being narrower than the placer's steps. `common/silk.py <board>` brings
+connector's outer line is on F.Fab now, and `J3 DE-9 TTL 5151` keeps its place by a spot of its own in `place.py`, the
+1.5 mm between the DE-9's back and R4's lead being narrower than the placer's steps. `common/silk.py <board>` brings
 the drawing of every part from this library up to its file before it places the labels.
 
 ## Rebuild
@@ -102,7 +102,7 @@ After a build: `python3 common/bom.py <board>` and, for the book, `python3 tools
 both boards as they are now, with `--tests`, 2026-11-19: GFX at elf `77257f1` (run by the pcb-check session); TEXT at
 `77257f1` (the same), at `688e6ed` after its four KBD FLAG names moved 0.5 mm off JP3's outline, at `b4692e9`
 (pcb-check `bd032dd`, with its new BODIES line) after the RCA jack's body went on the fab layer, and at `b2252b7`
-(pcb-check `0b45f65`) after the DB9's; GFX again at `b2252b7` without its tests, the board unchanged:**
+(pcb-check `0b45f65`) after the DE-9's; GFX again at `b2252b7` without its tests, the board unchanged:**
 
 ```sh
 ~/Developer/pcb-check/pcb-check hardware/video-g/kicad/text-1.0/video-g-text.kicad_pcb hardware/video-g/kicad/text-1.0/video-g-text-gerbers.zip --layers 4 --tests
@@ -123,7 +123,7 @@ older check that `build.sh` ends with (DRC 0 errors and 0 warnings). Their earli
 `fb6ef67` and `0341f8a`, GFX after its power LED; 2026-11-18 at `e4d2fd5`, the silkscreen at 270) were of the 30-pin
 TEXT, and of boards with `J1 BUS` partly under the bus header, which `pcb-check` could not see then.
 
-Still Ken's, before an order (settled 2026-11-17: TEXT stays 188 mm, the DB9 stays, every part's value on the
+Still Ken's, before an order (settled 2026-11-17: TEXT stays 188 mm, the DE-9 stays, every part's value on the
 silkscreen, and the card is memory-mapped, which settles the ELF/OS boot loader's `OUT 4`): a look at the renders and
 at `check-*.png`, the fab's gerber viewer, and **4 layers** on the order form; then `pcb-check ... --archive --fab F
 --order NUMBER` (it stores what was sent beside the board) and the order in `hardware/FABRICATED.md`. The firmware is

@@ -351,6 +351,21 @@ class T(unittest.TestCase):
         wr(1, 0x01); u.receive("x"); self.assertTrue(u.intr()); m.reset(); self.assertFalse(u.intr())   # -RESET: MR
         self.assertEqual(rd(1), 0x00)
 
+    def test_io_panel_reset_button(self):
+        """the IO panel card's own RESET button (2026-11-23), in the fast machine: a boot reset. It holds the 1802 in
+        reset while it is down and clears the LOADED flag, so the ROM boots when it is let go; nothing while LOAD is on"""
+        m = Machine(cpu_rom=ROM104, panel=True); d = Shell(m).d
+        m.panel_set(run=False); m.panel_set(load=True)
+        for b in (0x7B, 0x30, 0x01): m.panel_set(switches=b); m.panel_set(input=True); m.panel_set(input=False)   # SEQ; BR 01
+        m.panel_set(load=False); m.panel_set(run=True); d.run(max_instructions=300)
+        self.assertTrue(m.loaded); self.assertEqual(m.cpu.Q, 1)            # the loaded program runs
+        m.panel_set(reset=True); self.assertTrue(m.held); self.assertFalse(m.loaded); self.assertEqual(m.cpu.Q, 0)
+        m.panel_set(reset=False); self.assertFalse(m.held); self.assertTrue(m.cpurom.remap)    # the boot map: the ROM
+        d.run(max_instructions=300); self.assertGreaterEqual(m.cpu.R[m.cpu.P], 0xF000)
+        m.panel_set(run=False); m.panel_set(load=True); self.assertTrue(m.loaded)
+        m.panel_set(reset=True); self.assertTrue(m.loaded); self.assertEqual(m.cpu.R[0], 0)    # LOAD on: nothing
+        m.panel_set(reset=False, load=False, run=True)
+
     def test_io_panel_toggle_in_and_run(self):
         """the IO panel card in the fast machine (--panel A): a program toggled in through LOAD mode runs and copies the
         toggles to the LEDs; RUN + LOAD pauses; INPUT is EF1 while held; the Reset button boots the ROM again"""

@@ -84,7 +84,7 @@ VIDEO_REVS = {
                    "block 7 (7000), where HBIOS puts the screen: seen in the 2026-10-07 photos."),
     "B-Clean": dict(net="hardware/video-6845/kicad/rev-b-clean/reports/netlist.net",
                     rework=[("jumper", "SV1", "1", "SV1", "2")],
-                    note="6845 Rev B-Clean (2026-11-20, not built): Rev B without the DB9 and with the 6845's light-pen input on "
+                    note="6845 Rev B-Clean (2026-11-20, not built): Rev B without the DE-9 and with the 6845's light-pen input on "
                          "ground; on the bus it is Rev B. SV1 1-2 fitted = block 7."),
     "B-Clean-Keyboard": dict(
         net="hardware/video-6845/kicad/rev-b-clean-keyboard/reports/netlist.net",
@@ -409,16 +409,21 @@ CPU_REVS = {
 CPU_REVS["D"] = dict(
     net="hardware/cpu/kicad/rev-d/reports/netlist.net", cpu="U1",
     external={"U1": "the CDP1802: the emulator's CPU core drives its address, data and strobe pins",
-              "U10": "the DS1813 reset chip: the emulator's reset drives -RESET",
+              "U10": "the DS1813 on -RESET: it only holds the line low longer (150 ms); the lines here have no time",
+              "U12": "the DS1813 on SW_RST (power-on, the RESET/RUN switch's debounce): the emulator's reset holds SW_RST low",
               "X1": "the 4 MHz oscillator: the emulator's clock"},
     jumpers=[("JP2", "1", "JP2", "2"), ("JP3", "3", "JP3", "4"),     # EF1's block on -EF1, EF2's on -EF2
              ("JP4", "7", "JP4", "8")],                              # EF3's on -EF: the 2005 IO card's keyboard
     note="CPU Rev D (2026-10-30, not built; hardware/cpu/kicad/rev-d/DESIGN.md): a 74HCT373 latches A8-A15 while TPA is "
          "high; the boot map (the 2732 at every address, -VMA high) ends on the first A15 rising edge (U4B, cleared by "
-         "CLEAR = -RESET through two 74HCT14s) unless LOADED (U8A: set by LOAD mode, cleared by the RESET/RUN switch and "
-         "power-on); a 74HCT20 decodes F000-FFFF; -VMA and the EPROM's CE come from a 74HCT00. Jumpers for the machine "
+         "CLEAR = -RESET through two 74HCT14s) unless LOADED (U8A: set by LOAD mode, cleared by a boot reset); a "
+         "74HCT20 decodes F000-FFFF; -VMA and the EPROM's CE come from a 74HCT00. Since 2026-11-22 a boot reset is a "
+         "state of the bus, -RESET and -DMAIN low with -PAUSE high: the RESET/RUN switch and power-on make it through "
+         "the card's own open-drain gates (U11, a 74HC03, from SW_RST), the front panel's RESET button and the bus "
+         "driver from outside; U6B decodes it and clears LOADED. The 1802's DMA IN is -DMAIN only once DMA_ARMED "
+         "(U8B): -PAUSE low, and -DMAIN seen high since. Jumpers for the machine "
          "as it is today: EF1 -EF1, EF2 -EF2 and EF3 -EF on the EF blocks JP2-JP4 (the 2005 IO card's keyboard flag). A machine reset is the "
-         "RESET/RUN switch: it clears LOADED, so it boots HBIOS.")
+         "RESET/RUN switch: a boot reset, so it boots HBIOS.")
 
 
 _IO_NOTE = ("IO Rev A, the built card (Fusion export 2026-10-06; = the 2005 order gerbers, holes and copper). A 74LS138 "
@@ -463,7 +468,9 @@ class NetlistCPUCard:
         if "jumpers" in spec:                                           # Rev D: boot flip-flop cleared by CLEAR, and LOADED
             boot = next((m, i) for m, i, h in halves if h[0].split("/")[-1] == "CLEAR")
             loaded = next((m, i) for m, i, h in halves if h[3].split("/")[-1] == "LOAD_L")
-            self.flops = [boot, loaded]; self.sw_rst = next(n for n in self.nl.nets if n.split("/")[-1] == "SW_RST")
+            self.flops = [boot, loaded]; named = lambda name: next((n for n in self.nl.nets if n.split("/")[-1] == name), None)
+            self.sw_rst, self.n_clear, self.n_wait, self.n_dma = named("SW_RST"), named("CLEAR"), named("WAIT"), named("DMA_IN")
+            self.own_reset = any(type(m).__name__ == "Nand03" for m in self.c.models)   # the card pulls -RESET itself (2026-11-22)
         else:                                                           # Rev A: the half -RESET clears
             rst = self.c.bus.sig["-RESET"]
             self.flops = [next((m, i) for m, i, h in halves if h[0] == rst)]; self.sw_rst = None
@@ -486,16 +493,53 @@ class NetlistCPUCard:
         EPROM-window decode is defined), then -RESET high. On the real card the latch holds whatever it powered up with
         until that first TPA."""
         c = self.c
-        if self.sw_rst: c.forced[self.sw_rst] = ("SW1", 0)               # Rev D: the RESET/RUN switch (or power-on) clears LOADED
-        c.drive(RESET=0, TPA=1, TPB=0, MRD=1, MRW=1, A=0); c.settle(); c.drive(TPA=0); c.settle()
-        c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
-        if self.sw_rst: c.forced.pop(self.sw_rst); c.settle()
-        c.drive(RESET=1); c.settle()
+        if self.sw_rst and self.own_reset:
+            # Rev D since 2026-11-22: the RESET/RUN switch (or U12 at power-on) holds SW_RST low, and the card's own
+            # gates (U11) pull -RESET and, unless -PAUSE is low, -DMAIN: a boot reset on the bus, which U6B decodes to
+            # clear LOADED. Nothing else drives -RESET here; U10 then holds it a little longer by itself (no boot
+            # reset: -DMAIN is high again), which must leave LOADED clear
+            c.forced[self.sw_rst] = ("SW1", 0)
+            c.drive(TPA=1, TPB=0, MRD=1, MRW=1, A=0); c.settle(); c.drive(TPA=0); c.settle()
+            c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
+            c.forced.pop(self.sw_rst); held = c.ext.get(c.bus.sig["-RESET"])
+            c.drive(RESET=0); c.settle(); c.drive(RESET=held); c.settle()
+        else:
+            if self.sw_rst: c.forced[self.sw_rst] = ("SW1", 0)           # Rev D as first drawn: SW1 cleared LOADED by a line of its own
+            c.drive(RESET=0, TPA=1, TPB=0, MRD=1, MRW=1, A=0); c.settle(); c.drive(TPA=0); c.settle()
+            c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
+            if self.sw_rst: c.forced.pop(self.sw_rst); c.settle()
+            c.drive(RESET=1); c.settle()
         self._snap0 = self._snapshot()
 
-    def mode(self, reset, pause):
-        """Rev D: hold -RESET / -PAUSE as a debug board or the IO card would (1 = released); e.g. mode(0, 0) = LOAD"""
-        self.c.drive(**{"-RESET": reset, "-PAUSE": pause}); self.c.settle(); self.cache.clear()
+    def mode(self, reset, pause, dmain=1):
+        """Rev D: -RESET, -PAUSE and -DMAIN as the other cards hold them (0 = pulled low, 1 = let go: the card's own
+        gates may still pull the line, and its pull-ups set it otherwise); e.g. mode(0, 0) = LOAD, mode(0, 1, 0) = a
+        boot reset from the front panel or the bus driver"""
+        self.c.drive(**{"-RESET": None if reset else 0, "-PAUSE": None if pause else 0, "-DMAIN": None if dmain else 0})
+        self.c.settle(); self.cache.clear()
+
+    lines = mode                                                        # (HWMachine's name for it, on every card)
+
+    def sw1(self, reset):
+        """Rev D's RESET/RUN switch held at RESET (True) or put back to RUN"""
+        if reset: self.c.forced[self.sw_rst] = ("SW1", 0)
+        else: self.c.forced.pop(self.sw_rst, None)
+        self.c.settle(); self.cache.clear()
+
+    def pulls(self):
+        """the open-collector lines this card itself holds low: -RESET and -DMAIN in a boot reset it makes (U11)"""
+        s = self.c.bus.sig
+        return {n for n in ("-RESET", "-PAUSE", "-DMAIN") if n in s and self.c.drives_low(s[n])}
+
+    def cpu_mode(self):
+        """the 1802's mode from its CLEAR and WAIT pins, as the card's gates drive them: 'run', 'reset', 'pause',
+        'load' (None while either is undefined)"""
+        v = self.c.val
+        return {(0, 0): "load", (0, 1): "reset", (1, 0): "pause", (1, 1): "run"}.get((v.get(self.n_clear), v.get(self.n_wait)))
+
+    def dma_request(self):
+        """the 1802's DMA IN pin low: a request it would take at clock 7 of this cycle"""
+        return self.c.val.get(self.n_dma) == 0
 
     def loaded(self):
         return len(self.flops) > 1 and self.flops[1][0].state.get(self.flops[1][1]) == 1
@@ -657,11 +701,36 @@ IOPANEL_REVS = {
                    "TPB's fall (the LEDs and two TIL311s show it); INP and this card's DMA IN put the eight toggles on the "
                    "bus through a 74HCT244 (played here: it drives exactly when its OE, from the card's gates, is low); "
                    "ELF-style RUN and LOAD on -RESET / -PAUSE; one DMA IN per INPUT press in LOAD mode (REQ, ACK, DRIVE "
-                   "flip-flops); a DS12885 real-time clock (rtc.py, played on the strobes the card's gates make: AS, "
+                   "flip-flops; since 2026-11-22 the bus line is -DMAIN = NAND(REQ, SC0), U9B, so the request is gone as "
+                   "the DMA cycle starts: the 1802 samples it at clock 7, before -MWR rises, and REQ alone made two "
+                   "cycles of a press); J3, the front panel's ribbon (the displays' and LEDs' lines, the data lines "
+                   "with pull-downs, INPUT, and the bus -RESET, -PAUSE, -DMAIN); a DS12885 real-time clock (rtc.py, played on the strobes the card's gates make: AS, "
                    "R/W, DS); since 2026-11-20 a 16C550 UART on the same port pair (uart.py, "
                    "played on its own pins: CS0 from the select latch U22, WR, -RD from U11B, A0-A2, MR; the byte "
                    "written to the address port picks it with bit 7 set, the DS12885 with bit 7 clear)."),
 }
+IOPANEL_REVS["A-req"] = dict(
+    net=IOPANEL_REVS["A"]["net"], rework=[("lift", "U9", "5"), ("wire", "U9", "5", "U9", "14")],
+    note="IO panel Rev A with its DMA request as it was drawn until 2026-11-22: -DMAIN = REQ alone (here: U9B's SC0 "
+         "input lifted and tied high), which lasts until -MWR rises, past clock 7 of the DMA cycle, where the 1802 "
+         "samples it again. Kept to show what that does: two DMA IN cycles for a press.")
+
+
+def switch_contact(c, ref, a, b):
+    """what closing the contact between pins a and b of switch `ref` does, read from the card's netlist. -> (net,
+    level): the net the contact sets, and the level its other pin gives it: the supply that pin is on (+5V 1, ground
+    0), or the supply its net is pulled to through a resistor (the front panel's data toggles reach +5V through RN2).
+    c: the card's Circuit. A contact between two supplies, or with a supply on neither side, raises ValueError.
+    (2026-11-23: until then each panel model set the net it knew a switch was on to the level it knew, so a switch
+    wired to the wrong rail passed every test. Found by the pcb-check session, which ran the IO panel's tests on
+    damaged copies of its netlist: SW12 between ground and BTN_H, in place of +5V, was not caught.)"""
+    na, nb = c.nl.net(ref, a), c.nl.net(ref, b)
+    for net, other in ((na, nb), (nb, na)):
+        if net not in c.POWER and other in c.POWER: return net, c.POWER[other]
+    for net, other in ((na, nb), (nb, na)):
+        if net not in c.POWER and net not in c.pulls and other in c.pulls: return net, c.pulls[other]
+    raise ValueError("switch %s: its contact between pins %s and %s joins %s and %s, which is no supply against a "
+                     "signal: a wiring fault, or a switch this model cannot play" % (ref, a, b, na, nb))
 
 
 class NetlistIOPanel:
@@ -672,14 +741,17 @@ class NetlistIOPanel:
     EFROWS = ("-EF1", "-EF2", "-EF3", "-EF")                 # JP3's rows
 
     def __init__(self, rev="A", root=ROOT, in_port=4, out_port=4, ef="-EF1", rtc_ports=6, rtc_int=False, rtc=None,
-                 uart_int=False, uart=None):
+                 uart_int=False, uart=None, toggles=True):
         """the jumpers as set on the card (Ken, 2026-11-17/18): in_port / out_port 1-7 (JP1 / JP2; None = no jumper),
         ef = INPUT's bus line (JP3), rtc_ports = the RTC's address port 2, 4 or 6 (JP4: data on the next; the UART's
         too), rtc_int = its IRQ on -INT (JP4's last row), uart_int = the UART's INTR on -INT (JP7). rtc: a DS12885
-        (rtc.py) to play the clock; None = a new one at the host's time. uart: a UART16550 (uart.py); None = a new one"""
+        (rtc.py) to play the clock; None = a new one at the host's time. uart: a UART16550 (uart.py); None = a new one.
+        toggles: the card's own data toggles SW1-SW8 are fitted (False: a card built for the front panel, whose toggles
+        reach the data lines through the ribbon)"""
         if rev not in IOPANEL_REVS: raise ValueError("IO panel revision %r: one of %s" % (rev, ", ".join(IOPANEL_REVS)))
         spec = IOPANEL_REVS[rev]; self.rev, self.note = rev, spec["note"]
         self.nl = Netlist(os.path.join(root, spec["net"]))
+        for op, *args in spec.get("rework", []): getattr(self.nl, op)(*args)
         int_pin = next(pin for (r, pin), (n, _) in self.nl.pins.items() if r == "J1" and n.split("/")[-1] == "-INT")
         fit = lambda ref, row: self.nl.jumper(ref, str(2 * row - 1), ref, str(2 * row))       # a jumper across row n
         if in_port: fit("JP1", in_port)
@@ -707,27 +779,76 @@ class NetlistIOPanel:
             self.u_a = [u("28"), u("27"), u("26")]
         self.sig = self.c.bus.sig
         self.switches, self.pressed, self.run_on, self.load_on = 0, False, True, False
+        self.sw_fitted, self.remote_sw, self.remote_input = toggles, 0, False     # the front panel's, through the ribbon
+        self.reset_pressed = False                          # the card's own RESET button, SW12 (2026-11-23)
+        self.btn_h = next((n for n in self.nl.nets if n.split("/")[-1] == "BTN_H"), None)
+        # each hand control's contact as the netlist has it wired (switch_contact): the net it sets, and to what
+        sw = lambda ref, a, b: switch_contact(self.c, ref, a, b)
+        self.k_bits = [(sw("SW%d" % (k + 1), 2, 3), sw("SW%d" % (k + 1), 2, 1)) for k in range(8)]   # a data toggle at 0, at 1
+        self.k_input, self.k_reset_sw, self.k_load = sw("SW9", 1, 2), sw("SW10", 1, 2), sw("SW11", 1, 2)   # INPUT; RUN off; LOAD on
+        self.k_boot = sw("SW12", 1, 2) if "SW12" in self.nl.parts else None                  # the RESET button
+        self._switched = ({net for pair in self.k_bits for net, _ in pair} | set(self.sw_nets) | {self.button} |
+                          {k[0] for k in (self.k_input, self.k_reset_sw, self.k_load, self.k_boot) if k})
+        self.load_h = next((n for n in self.nl.nets if n.split("/")[-1] == "LOAD_H"), None)
+        # what J3 sends to the front panel: the displays' and bit LEDs' lines, and the two LED sinks
+        names = ["ADR%d" % k for k in range(16)] + ["OUT%d" % k for k in range(8)] + ["LED_Q_K", "ROM_LED_L"]
+        self.ribbon_out = {n: x for n in names for x in self.nl.nets if x.split("/")[-1] == n}
         self.latch = None                                   # the '374 powers up undefined
+        self.c.drive(SC0=1, VMA=0, Q=0)                     # the 1802 not in a fetch or DMA cycle; the EPROM off; Q low
         self._apply(); self._idle(); self._uart_int()       # (the UART holds its INTR pin low from the start)
 
     # ---- the hand controls, as the card's nets see them
     def _apply(self):
+        """each closed contact sets its net to the level its other pin gives it, both as the netlist has the switch
+        wired (switch_contact); an open contact sets nothing, and the card's resistors then say what the net is"""
+        want = {}
+        def close(contact, who): want[contact[0]] = (who, contact[1])
+        for k in range(8):
+            if self.sw_fitted: close(self.k_bits[k][(self.switches >> k) & 1], "SW%d" % (k + 1))   # SPDT: driven both ways
+            elif (self.remote_sw >> k) & 1: want[self.sw_nets[k]] = ("J3", 1)                    # the front panel's toggle, through 1k
+        if self.pressed: close(self.k_input, "SW9")        # (released: R9 pulls the line up)
+        elif self.remote_input: want[self.button] = ("J3", 0)                                    # the front panel's INPUT button
+        if self.reset_pressed: close(self.k_boot, "SW12")  # RESET: +5V on BTN_H (R4 holds it low otherwise)
+        # RUN and LOAD are toggles on the bus lines themselves: what this card pulls, apart from what the other cards
+        # do (lines()). Let go, a line has no pull-up on this card: the gates read it as high
+        if not self.run_on: close(self.k_reset_sw, "SW10")
+        if self.load_on: close(self.k_load, "SW11")
         f = self.c.forced
-        for k, n in enumerate(self.sw_nets): f[n] = ("SW%d" % (k + 1), (self.switches >> k) & 1)   # SPDT: driven both ways
-        if self.pressed: f[self.button] = ("SW9", 0)
-        else: f.pop(self.button, None)                     # released: R9 pulls it up
-        self.c.drive(**{"-RESET": 1 if self.run_on else 0, "-PAUSE": 0 if self.load_on else 1})
+        for n in self._switched - set(want): f.pop(n, None)
+        f.update(want)
+
+    def lines(self, reset=1, pause=1, dmain=1):
+        """-RESET, -PAUSE and -DMAIN as the other cards hold them (0 = pulled low, 1 = let go)"""
+        self.c.drive(**{"-RESET": None if reset else 0, "-PAUSE": None if pause else 0, "-DMAIN": None if dmain else 0})
+        self.c.settle()
+
+    def pulls(self):
+        """the open-collector lines this card itself holds low: its RUN and LOAD toggles, its DMA request, and its
+        RESET button's boot reset (-RESET and -DMAIN together, unless -PAUSE is low)"""
+        return {n for n in ("-RESET", "-PAUSE", "-DMAIN") if self.c.drives_low(self.sig[n])}
+
+    def remote(self, switches, pressed):
+        """the front panel's data toggles and INPUT button, as they reach this card through the ribbon (J3)"""
+        self.remote_sw, self.remote_input = switches & 0xFF, bool(pressed); self._apply(); self.c.settle()
+
+    def sw_byte(self):
+        """the byte on the data lines SW0-SW7, as the '244 sees it: this card's toggles, or the front panel's"""
+        return sum(1 << k for k, n in enumerate(self.sw_nets) if self.c.val.get(n) == 1)
 
     def _idle(self):
         """a bus cycle with nothing for this card: N = 0, -MRD low (a fetch), TPA/TPB pulsed"""
         c = self.c; c.drive(N=0, MRD=0, MRW=1, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
         c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
 
-    def set(self, switches=None, pressed=None, run=None, load=None):
+    def set(self, switches=None, pressed=None, run=None, load=None, reset=None):
+        """the card's hand controls; reset: its own RESET button (SW12), a boot reset through U23's two gates"""
         if switches is not None: self.switches = switches & 0xFF
         if pressed is not None: self.pressed = pressed
         if run is not None: self.run_on = run
         if load is not None: self.load_on = load
+        if reset is not None:
+            if reset and not self.btn_h: raise ValueError("IO panel %s has no RESET button" % self.rev)
+            self.reset_pressed = bool(reset)
         self._apply(); self.c.settle()
         if self.has_uart and self.c.val.get(self.u_mr) == 1: self.uart.reset(); self._uart_int()   # MR = RESET_H
 
@@ -749,7 +870,10 @@ class NetlistIOPanel:
     def ef(self, line): return self.c.val.get(self.sig[line]) == 0     # a bus EF line pulled low (open collector)
     def ef1(self): return self.ef("-EF1")
     def dmain(self): return self.c.val.get(self.sig["-DMAIN"]) == 0
-    def load_mode(self): return not self.run_on and self.load_on
+    def load_mode(self):
+        """LOAD mode on the bus (-RESET and -PAUSE low), whichever card made it: the card's own LOAD_H"""
+        if self.load_h is None: return not self.run_on and self.load_on
+        return self.c.val.get(self.load_h) == 1
 
     def _io(self, n, out, v=None):
         """one INP / OUT cycle through the card's gates, in the order the 1802 makes it (data sheet, figures 10 and 11):
@@ -796,7 +920,7 @@ class NetlistIOPanel:
         """an INP n: -> the byte this card put on the bus (the toggles through the '244, or the RTC's register while
         its DS is low; both at once is a fight: their AND, as the bus would settle), None if it drove nothing"""
         s = self._io(n, False); bytes_ = []
-        if s["drive"]: bytes_.append(self.switches)
+        if s["drive"]: bytes_.append(self.sw_byte())
         if s["rd"] == 0 and s["rtc_sel"]: bytes_.append(self.rtc.read_data())
         if self.has_uart and s["urd"] == 0 and s["usel"] and s["ureg"] is not None:
             bytes_.append(self.uart.read(s["ureg"])); self._uart_int()
@@ -810,22 +934,46 @@ class NetlistIOPanel:
         s = self._io(n, out, 0 if out else None)
         return s["as"] == (1, 0), s["wr"] == (0, 1), s["rd"] == 0
 
-    def dma_in(self):
-        """one DMA IN cycle of LOAD mode: -> the byte the card put on the bus (None if it did not drive), after the
-        cycle as the 1802 runs it: -MRD high, -MWR low then high (the write), then the next IDLE (-MRD low)"""
+    def s2_begin(self, a=None):
+        """a DMA IN cycle (S2) as the 1802 runs it (data sheet, figures 4 and 12), up to the point where the 1802
+        samples its DMA request again, clock 7: SC0 low and -MRD high from the start, TPA, -MWR low at clock 5, TPB
+        high at 6.5. Whether the request still stands then decides what follows: another DMA cycle, or IDLE.
+        a: the address the byte goes to, R(0), for the address display (the high byte on A0-A7 during TPA)"""
         c = self.c
-        if not self.dmain(): return None
-        c.drive(N=0, MRD=1, MRW=1, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
-        c.drive(MRW=0); during = c.settle().get(self.oe244) == 0
-        c.drive(TPB=1); c.settle(); c.drive(MRW=1); held = c.settle().get(self.oe244) == 0   # past the write: still on?
-        c.drive(TPB=0); c.settle(); c.drive(MRD=0); c.settle()                                # the next IDLE
-        return self.switches if during and held else None
+        if a is not None: c.drive(A=a >> 8)
+        c.drive(SC0=0, N=0, MRD=1, MRW=1, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
+        if a is not None: c.drive(A=a & 0xFF); c.settle()
+        c.drive(MRW=0); self._during = c.settle().get(self.oe244) == 0
+        c.drive(TPB=1); c.settle()
 
-    def cycle(self, a, n=0, read=True):
-        """one machine cycle putting address a on the bus as the 1802 does: the high byte on A0-A7 while TPA is high,
-        then the low byte until TPB has fallen. -> the address the four TIL311s show (address())"""
+    def s2_end(self, again=False):
+        """the rest of the cycle: -MWR high at clock 7 (the write ends), TPB low; then, unless another DMA cycle
+        follows (again), the next IDLE: SC0 high, -MRD low. -> the byte the card had on the bus through the write
+        and past it, None if it did not drive"""
         c = self.c
-        c.drive(N=n, MRD=0 if read else 1, MRW=1, A=a >> 8, TPA=1, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
+        c.drive(MRW=1); held = c.settle().get(self.oe244) == 0                                # past the write: still on?
+        b = self.sw_byte() if self._during and held else None
+        c.drive(TPB=0); c.settle()
+        if not again: c.drive(SC0=1); c.settle(); c.drive(MRD=0); c.settle()
+        return b
+
+    def dma_in(self, limit=4):
+        """LOAD mode, the card by itself: the DMA IN cycles its request makes, the request being what the bus line
+        -DMAIN shows at clock 7 of each cycle (no CPU card between). -> the bytes it put on the bus, one for each
+        cycle: [] with no request, one byte for a press as the card is drawn; two would be the same byte loaded
+        twice (the card as drawn until 2026-11-22: its request lasted until -MWR rose)"""
+        out = []; again = self.dmain()                      # the request at clock 7 of an IDLE cycle
+        while again and len(out) < limit:                   # (once sampled, the cycle follows whatever the line does next)
+            self.s2_begin(); again = self.dmain(); out.append(self.s2_end(again))
+        return out
+
+    def cycle(self, a, n=0, read=True, tpa=True):
+        """one machine cycle putting address a on the bus as the 1802 does: the high byte on A0-A7 while TPA is high,
+        then the low byte until TPB has fallen. -> the address the four TIL311s show (address()). tpa=False: an IDLE
+        cycle of LOAD mode, where the 1802 leaves TPA out (data sheet: "TPA is suppressed in IDLE when the CPU is in
+        the load mode"), so the high byte's latch keeps what it had"""
+        c = self.c
+        c.drive(N=n, MRD=0 if read else 1, MRW=1, A=a >> 8, TPA=1 if tpa else 0, TPB=0); c.settle(); c.drive(TPA=0); c.settle()
         c.drive(A=a & 0xFF); c.settle(); c.drive(TPB=1); c.settle(); c.drive(TPB=0); c.settle()
         return self.address()
 
@@ -842,6 +990,115 @@ class NetlistIOPanel:
 
     def describe(self):
         return "IO panel %s: %s\n  %s" % (self.rev, os.path.relpath(self.nl.path, ROOT), self.note)
+
+
+FRONTPANEL_REVS = {
+    "A": dict(net="hardware/front-panel/kicad/rev-a/reports/netlist.net",
+              note="Front panel Rev A (2026-11-22, not built; hardware/front-panel/kicad/rev-a/DESIGN.md): the hand "
+                   "controls and displays on a board that mounts as the front of a case, on a 50-way ribbon from the IO "
+                   "panel card's J3 (pin n to pin n; tools/s5panel.py). Six TIL311s and eight LEDs show what the IO "
+                   "card sends (the bus address, its output port); the data toggles switch the IO card's data lines to "
+                   "+5V through 1k; RUN and LOAD pull the bus -RESET and -PAUSE; INPUT is the IO card's button. RESET "
+                   "pulls -RESET and -DMAIN together through a 74HC03, unless -PAUSE is low: a boot reset. Six status "
+                   "LEDs: PWR, Q, PAUSE, RESET, ROM, and START FROM RAM, a copy of the CPU card's LOADED flag made "
+                   "from the same three bus lines by the same two gates."),
+}
+
+
+class NetlistFrontPanel:
+    """the front panel from its netlist. Its "bus" is J1, the ribbon's header: lines() and show() set what the IO panel
+    card and the bus put on it, pulls() says which of -RESET, -PAUSE and -DMAIN the panel itself holds low. The hand
+    controls are held here: toggles (byte), INPUT and RESET (pressed), RUN and LOAD."""
+    name = "front"
+    STATUS = (("PWR", None), ("Q", "Q_LED_L"), ("PAUSE", "PAUSE_N"), ("RESET", "RESET_N"), ("ROM", "ROM_LED_L"),
+              ("RAM", "LED_RAM_K"))                           # each LED and the line that sinks it (PWR: ground)
+
+    def __init__(self, rev="A", root=ROOT):
+        if rev not in FRONTPANEL_REVS: raise ValueError("front panel revision %r: one of %s" % (rev, ", ".join(FRONTPANEL_REVS)))
+        spec = FRONTPANEL_REVS[rev]; self.rev, self.note = rev, spec["note"]
+        self.nl = Netlist(os.path.join(root, spec["net"]))
+        for op, *args in spec.get("rework", []): getattr(self.nl, op)(*args)
+        self.c = Circuit(self.nl, None, bus="J1"); self.sig = self.c.bus.sig
+        net = lambda name: next(n for n in self.nl.nets if n.split("/")[-1] == name)
+        self.sw_nets = [net("SW%d" % k) for k in range(8)]; self.input_net, self.btn_net = net("INPUT_L"), net("BTN_RC")
+        self.adr_nets = [net("ADR%d" % k) for k in range(16)]; self.out_nets = [net("OUT%d" % k) for k in range(8)]
+        self.sinks = {label: net(n) for label, n in self.STATUS if n}
+        self.switches, self.pressed, self.run_on, self.load_on, self.reset_pressed = 0, False, True, False, False
+        # each hand control's contact as the netlist has it wired (switch_contact): the net it sets, and to what.
+        # Read before the bus's pull-ups are added below: those are not this board's resistors
+        sw = lambda ref: switch_contact(self.c, ref, 1, 2)
+        self.k_bits = [sw("SW%d" % (k + 1)) for k in range(8)]         # a data toggle, on: its line to +5V through RN2
+        self.k_reset_sw, self.k_load, self.k_input, self.k_boot = sw("SW9"), sw("SW10"), sw("SW11"), sw("SW12")
+        self._switched = {k[0] for k in self.k_bits + [self.k_reset_sw, self.k_load, self.k_input, self.k_boot]}
+        for n in ("-RESET", "-PAUSE", "-DMAIN"): self.c.pulls[self.sig[n]] = 1   # the bus's pull-ups, through the ribbon
+        self._apply(); self.c.settle()
+
+    def _apply(self):
+        """each closed contact sets its net to the level its other pin gives it, both as the netlist has the switch
+        wired (switch_contact). A data toggle that is off leaves its line open (the IO card's RN3 pulls it down);
+        BTN_RC, let go, is pulled up by R7"""
+        want = {}
+        for k, contact in enumerate(self.k_bits):
+            if (self.switches >> k) & 1: want[contact[0]] = ("SW%d" % (k + 1), contact[1])
+        for contact, closed, who in ((self.k_reset_sw, not self.run_on, "SW9"), (self.k_load, self.load_on, "SW10"),
+                                     (self.k_input, self.pressed, "SW11"), (self.k_boot, self.reset_pressed, "SW12")):
+            if closed: want[contact[0]] = (who, contact[1])
+        f = self.c.forced
+        for n in self._switched - set(want): f.pop(n, None)
+        f.update(want)
+
+    def ribbon_in(self):
+        """what the panel's own nets put on the ribbon's switch lines: (the byte of the data lines SW7-SW0 its toggles
+        hold high, True while its INPUT line is held low). The IO panel card takes these, not the positions of the
+        controls: a toggle or a button wired to the wrong place then shows as it would on the bench"""
+        return (sum(1 << k for k, n in enumerate(self.sw_nets) if self.c.val.get(n) == 1),
+                self.c.drives_low(self.input_net))
+
+    def set(self, switches=None, pressed=None, run=None, load=None, reset=None):
+        if switches is not None: self.switches = switches & 0xFF
+        if pressed is not None: self.pressed = pressed
+        if run is not None: self.run_on = run
+        if load is not None: self.load_on = load
+        if reset is not None: self.reset_pressed = reset
+        self._apply(); self.c.settle()
+
+    def lines(self, reset=1, pause=1, dmain=1):
+        """-RESET, -PAUSE and -DMAIN as the other cards hold them (0 = pulled low, 1 = let go: the bus's pull-ups,
+        unless the panel pulls the line itself)"""
+        self.c.drive(**{"-RESET": None if reset else 0, "-PAUSE": None if pause else 0, "-DMAIN": None if dmain else 0})
+        self.c.settle()
+
+    def pulls(self):
+        """the open-collector lines the panel itself holds low: RUN off, LOAD on, the RESET button's two gates"""
+        return {n for n in ("-RESET", "-PAUSE", "-DMAIN") if self.c.drives_low(self.sig[n])}
+
+    def show(self, values):
+        """{name: level} from the IO panel card's J3: ADR15-ADR0, OUT7-OUT0, LED_Q_K (here Q_LED_L), ROM_LED_L"""
+        d = {{"LED_Q_K": "Q_LED_L"}.get(k, k): (None if v == X else v) for k, v in values.items()}
+        self.c.drive(**{k: v for k, v in d.items() if k in self.sig}); self.c.settle()
+
+    def _hex(self, nets):
+        q = [self.c.val.get(n) for n in nets]
+        return None if None in q or X in q else sum(b << k for k, b in enumerate(q))
+
+    def address(self): return self._hex(self.adr_nets)       # what the four address TIL311s show
+    def data(self): return self._hex(self.out_nets)          # the two data TIL311s and the eight bit LEDs
+
+    def leds(self):
+        """{'PWR', 'Q', 'PAUSE', 'RESET', 'ROM', 'RAM'}: True = lit (its sink line low)"""
+        return {label: True if label == "PWR" else self.c.val.get(self.sinks[label]) == 0 for label, _ in self.STATUS}
+
+    def text(self):
+        a, d, s = self.address(), self.data(), self.leds()
+        return "ADDR %s  DATA %s  %s   toggles %s (%02X)  INPUT %s  RUN %s  LOAD %s  RESET %s" % (
+            "????" if a is None else "%04X" % a, "??" if d is None else "%02X" % d,
+            " ".join("%s%s" % ("START FROM RAM" if k == "RAM" else k, "*" if v else ".") for k, v in s.items()),
+            "".join("1" if self.switches >> k & 1 else "0" for k in range(7, -1, -1)), self.switches,
+            "down" if self.pressed else "up", "on" if self.run_on else "off", "on" if self.load_on else "off",
+            "down" if self.reset_pressed else "up")
+
+    def describe(self):
+        return "front panel %s: %s\n  %s" % (self.rev, os.path.relpath(self.nl.path, ROOT), self.note)
 
 
 class _NetlistROM(CPUCardROM):
@@ -887,9 +1144,13 @@ class HWMachine(Machine):
     the card's jumpers; mhz is the 1802's clock, which the behavioural 6845's VSYNC and DE are counted from."""
     VMA_MODES = ("remap", "boot", "norom")
 
+    LINES = ("-RESET", "-PAUSE", "-DMAIN")                               # the open-collector lines the cards share
+
     def __init__(self, mem_rev="D", vma_mode="remap", cpu_rev="A-built", video_rev="B", ide_rev="A", io_rev="A", jumpers=None,
                  rom_lo=None, rom_hi=None, panel_rev=None, videog=None, monitor="ntsc", gfx=True, videog_block=7,
-                 kbd_flag="-EF", mhz=1.76, **kw):
+                 kbd_flag="-EF", mhz=1.76, front_rev=None, panel_toggles=None, **kw):
+        """front_rev: fit the front panel (a FRONTPANEL_REVS key) on the IO panel card's ribbon; it needs panel_rev.
+        panel_toggles: the IO panel card's own data toggles are fitted (None: yes, unless a front panel is)"""
         if vma_mode not in self.VMA_MODES: raise ValueError("vma mode: one of " + ", ".join(self.VMA_MODES))
         if videog: kw["pixie_port"] = 0; video_rev = io_rev = None       # no 6845 card and no IO card (no 1861)
         elif video_rev and VIDEO_REVS.get(video_rev, {}).get("keyboard"):
@@ -916,15 +1177,21 @@ class HWMachine(Machine):
                 self.vg = NetlistVideoG(self.video, str(videog), block=videog_block, kbd_flag=kbd_flag)
         self.icard = NetlistIDECard(ide_rev) if ide_rev else None
         self.iocard = NetlistIOBoard(io_rev) if io_rev else None
-        self.panel = NetlistIOPanel(panel_rev) if panel_rev else None    # the IO panel card (port 4, -EF1, RUN/LOAD)
-        self.held = False                                                # the panel's RUN off or LOAD on: the 1802 is not running
+        if front_rev and not panel_rev: raise ValueError("the front panel hangs on the IO panel card's ribbon: fit that card too")
+        if panel_toggles is None: panel_toggles = not front_rev
+        self.panel = NetlistIOPanel(panel_rev, toggles=panel_toggles) if panel_rev else None   # the IO panel card (port 4, -EF1, RUN/LOAD)
+        self.front = NetlistFrontPanel(front_rev) if front_rev else None # the front panel, on that card's J3
+        self.held = False                                                # -RESET or -PAUSE low: the 1802 is not running
+        self.run_mode = "run"; self.ext_pull = {}                        # {who: lines it holds low}: cards with no netlist here
+        self.bus_lines = {n: 1 for n in self.LINES}
+        if self.panel or self.front: self.lines_update()
         self.log = BusLog(); self.stop_on = set(); self.fault = None
         for path in (rom_lo, rom_hi):
             if path: self.load_rom(path)
 
     def describe(self):
         vg = self.video_name == "video-g"
-        return "\n".join([c.describe() for c in [self.ccard] + self.cards + [self.vg, self.icard, self.iocard, self.panel] if c] +
+        return "\n".join([c.describe() for c in [self.ccard] + self.cards + [self.vg, self.icard, self.iocard, self.panel, self.front] if c] +
                          (["VIDEO-G: behavioural (videog.py) on the modelled bus"] if vg and not self.vg else []) +
                          ([] if self.vcard or vg else ["6845 card: behavioural (machine.py)"]) +
                          ([] if self.icard else ["IDE card: behavioural (machine.py)"]) +
@@ -1083,35 +1350,109 @@ class HWMachine(Machine):
         return panel                                                    # the IO panel's INPUT on the line JP3 picks
 
     # ------------------------------------------------------------------ the IO panel's hand controls
-    def panel_set(self, switches=None, input=None, run=None, load=None):
+    def panel_set(self, switches=None, input=None, run=None, load=None, reset=None):
         """the IO panel's toggles (byte), INPUT (pressed), RUN and LOAD, as a person at the front panel would. RUN off holds
         the machine in reset (-RESET), LOAD on pauses it (-PAUSE); both = LOAD mode, where each INPUT press is one DMA IN
-        of the toggles to M(R0). The CPU card (Rev D) sees the same lines: its LOADED flag then keeps the boot map off."""
-        p = self.panel; was_pressed = p.pressed
-        mode = lambda: {(True, False): "run", (True, True): "pause", (False, False): "reset", (False, True): "load"}[(p.run_on, p.load_on)]
-        before = mode()
-        p.set(switches=switches, pressed=input, run=run, load=load)
-        if self.ccard and hasattr(self.ccard, "mode") and len(self.ccard.flops) > 1:
-            self.ccard.mode(1 if p.run_on else 0, 0 if p.load_on else 1)
-        if mode() == "reset" and before != "reset":                      # CLEAR low, WAIT high: the 1802 resets (R0 = 0000)
+        of the toggles to M(R0). The CPU card (Rev D) sees the same lines: its LOADED flag then keeps the boot map off.
+        reset: the card's own RESET button (2026-11-23), a boot reset: the machine starts in the EPROM when it is let go"""
+        self.panel.set(switches=switches, pressed=input, run=run, load=load, reset=reset)
+        self._controls(); return self.panel_text()
+
+    def front_set(self, switches=None, input=None, run=None, load=None, reset=None):
+        """the front panel's controls: the data toggles (byte), INPUT, RUN and LOAD as the IO panel's (through the
+        ribbon), and RESET (pressed): a boot reset, which starts the machine in the EPROM when it is let go"""
+        self.front.set(switches=switches, pressed=input, run=run, load=load, reset=reset)
+        self._controls(); return self.front_text()
+
+    def _controls(self):
+        """after a hand control has moved: the ribbon, the three bus lines, the 1802's mode, and the DMA IN an INPUT
+        press in LOAD mode asks for"""
+        if self.front: self.panel.remote(*self.front.ribbon_in())
+        self.lines_update(); self._panel_dma()
+
+    def _rev_d(self): return bool(self.ccard) and getattr(self.ccard, "sw_rst", None) is not None
+
+    def _settle_lines(self):
+        """-RESET, -PAUSE and -DMAIN are open collector: a line is low while any card pulls it. Each card with a netlist
+        here (CPU Rev D, the IO panel, the front panel) is told what the others hold low and asked what it holds
+        itself, round and round until nothing changes (the CPU card and the front panel let -DMAIN go when -PAUSE
+        falls, so one line can move another). ext_pull: the pulls of cards played without a netlist (the bus driver).
+        -> {line: 0 | 1}"""
+        cards = [c for c in (self.ccard if self._rev_d() else None, self.panel, self.front) if c]
+        own = {id(c): set() for c in cards}; ext = set().union(*self.ext_pull.values())
+        for _ in range(8):
+            moved = False
+            for c in cards:
+                others = ext.union(*(own[id(o)] for o in cards if o is not c))
+                c.lines(*(0 if n in others else 1 for n in self.LINES)); p = c.pulls()
+                if p != own[id(c)]: own[id(c)] = p; moved = True
+            if not moved: break
+        low = ext.union(*own.values())
+        return {n: 0 if n in low else 1 for n in self.LINES}
+
+    def lines_update(self):
+        """call after anything that pulls or lets go -RESET, -PAUSE or -DMAIN: the lines settle, the 1802 takes the
+        mode its CLEAR and WAIT pins give it (from the CPU card's gates on Rev D), resets as it enters RESET, and
+        stands still in every mode but RUN. -> the mode: 'run', 'reset', 'pause' or 'load'"""
+        before = self.run_mode; lv = self.bus_lines = self._settle_lines()
+        mode = (self.ccard.cpu_mode() if self._rev_d() else None) or \
+            {(1, 1): "run", (1, 0): "pause", (0, 1): "reset", (0, 0): "load"}[(lv["-RESET"], lv["-PAUSE"])]
+        if mode == "reset" and before != "reset":                        # CLEAR low, WAIT high: the 1802 resets (R0 = 0000)
             self.cpu.reset(); self.pixie.on = False                      # (in LOAD mode R0 counts the bytes instead)
-        self._video_reset(low=not p.run_on)                              # RUN off holds the bus -RESET low: VIDEO-G sees it
-        self.held = mode() != "run"
-        if p.load_mode() and p.pressed and not was_pressed:
-            b = p.dma_in()
+        self._video_reset(low=lv["-RESET"] == 0)                         # the bus -RESET held low: VIDEO-G sees it
+        self.run_mode = mode; self.held = mode != "run"
+        self._ribbon(); return mode
+
+    def _dma_request(self):
+        """the DMA request as the 1802 has it at clock 7 of a cycle: its DMA IN pin on CPU Rev D (the card's gates:
+        only in pause, and only once -DMAIN has been high since), else the bus line"""
+        lv = self.bus_lines = self._settle_lines()
+        return self.ccard.dma_request() if self._rev_d() else lv["-DMAIN"] == 0
+
+    def _panel_dma(self):
+        """LOAD mode: the DMA IN cycles the IO panel's request makes. The 1802 samples the request at clock 7 of
+        every cycle, the DMA cycle's own too: one that still stands there gets another cycle, the same byte at the
+        next address. More than one cycle for a press goes in the bus log ('double')"""
+        p = self.panel; n = 0
+        again = bool(p) and self.run_mode == "load" and "-DMAIN" in p.pulls() and self._dma_request()
+        while again and n < 4:
+            p.s2_begin(self.cpu.R[0]); again = self._dma_request(); b = p.s2_end(again); n += 1
             if b is None: self._event("undefined", ["panel"], 0, "INPUT in LOAD mode: the card did not drive the bus")
             else: self.cpu.dma_in(b)
-        return self.panel_text()
+        if n > 1: self._event("double", ["panel"], 0, "%d DMA IN cycles for one request: it outlasted the DMA cycle's clock 7" % n)
+        if n: self.lines_update()
+        return n
+
+    def _ribbon(self):
+        """what the IO panel card's J3 sends down the ribbon, onto the front panel's displays and LEDs: the address
+        and output latches, the Q LED's sink, and the ROM LED's (-VMA as a fetch at the 1802's program counter has it)"""
+        if not self.front: return
+        self._show_address()
+        p = self.panel; vma = self.cpu_card(self.cpu.R[self.cpu.P])[0] if self.ccard else 0
+        p.c.drive(Q=1 if self.cpu.Q else 0, VMA=vma); p.c.settle()
+        self.front.show({name: p.c.val.get(net) for name, net in p.ribbon_out.items()})
+
+    def _show_address(self):
+        """the IO panel's address latches as the 1802's cycles leave them, for the displays: in RUN and PAUSE the last
+        cycle's address (taken as a fetch at the program counter); in LOAD mode the 1802 idles on R(0) with TPA left
+        out, so only the low byte's latch follows (the high byte's holds the page of the last byte loaded); in RESET
+        neither pulse comes and the displays keep what they had"""
+        p = self.panel
+        if self.run_mode in ("run", "pause"): p.cycle(self.cpu.R[self.cpu.P])
+        elif self.run_mode == "load": p.cycle(self.cpu.R[0], tpa=False)
 
     def panel_text(self):
-        p = self.panel
-        return "%s  Q %s   toggles %s (%02X)  INPUT %s  RUN %s  LOAD %s   mode %s" % (
+        p = self.panel; self._show_address()
+        return "%s  Q %s   toggles %s (%02X)  INPUT %s  RUN %s  LOAD %s%s   mode %s" % (
             p.leds(), "*" if self.cpu.Q else ".", "".join("1" if p.switches >> k & 1 else "0" for k in range(7, -1, -1)),
             p.switches, "down" if p.pressed else "up", "on" if p.run_on else "off", "on" if p.load_on else "off",
-            {(True, False): "run", (True, True): "pause", (False, False): "reset", (False, True): "LOAD"}[(p.run_on, p.load_on)])
+            "  RESET down" if p.reset_pressed else "", "LOAD" if self.run_mode == "load" else self.run_mode)
+
+    def front_text(self):
+        self._ribbon(); return "%s   mode %s" % (self.front.text(), "LOAD" if self.run_mode == "load" else self.run_mode)
 
     def step(self):
-        if self.panel and self.held:                                     # reset or paused by the panel: no instruction
+        if self.held:                                                    # -RESET or -PAUSE low: no instruction
             self.cpu.cycles += 1; return None
         return super().step()
 
@@ -1128,6 +1469,12 @@ class HWMachine(Machine):
         elif self.video_name == "video-g" and low is not False: self.video.ctrl = 0
 
     def reset(self):
+        """the CPU card's RESET/RUN switch to RESET and back (or the power coming up). On CPU Rev D that is a boot
+        reset on the bus, which the front panel's copy of the LOADED flag follows"""
         super().reset(); self.fault = None
-        if self.ccard: self.ccard.reset()
+        if self.ccard:
+            shared = self._rev_d() and (self.panel or self.front or self.ext_pull)
+            if shared: self.ccard.sw1(True); self.lines_update()
+            self.ccard.reset()
+            if shared: self.lines_update()
         self._video_reset()

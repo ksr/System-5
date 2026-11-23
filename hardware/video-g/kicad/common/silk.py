@@ -9,7 +9,7 @@
     at the first spot clear of every pad, part, other text and the edge, under its part with the card standing first).
     The one exception is the name line (place.NAME), which runs along the bottom edge as drawn, angle 0: up the side
     with the card standing. Until 2026-11-18 the labels stood at 0 and 90 in the band above each socket.
-  * the bus connector's pin names (in J1's footprint, at 0) are written again at 270 in two staggered columns; the DB9's
+  * the bus connector's pin names (in J1's footprint, at 0) are written again at 270 in two staggered columns; the DE-9's
     pin numbers too
 
 add(b, N, P)        used by make_board.py on a new board
@@ -61,7 +61,7 @@ def add(b, N, P):
     # connector is a right-angle header, and its plastic body lies there (drawn on F.Fab in the C30 / C36 footprints
     # since 2026-11-18, so the placer keeps every label off it; until then "J1 BUS" was printed under the header)
     s.bus_label("J1", "J1 BUS", spots=SPOTS.get("J1"))    # tools/kicad/silk270.py: the same on every card
-    # 3. other footprints' own texts that belong on the silkscreen (place.FP_TEXTS: the DB9's pin numbers): where they
+    # 3. other footprints' own texts that belong on the silkscreen (place.FP_TEXTS: the DE-9's pin numbers): where they
     #    were, turned to 270
     for ref in getattr(P, "FP_TEXTS", ()):
         for x, y, t in s.fp_texts.get(ref, []):

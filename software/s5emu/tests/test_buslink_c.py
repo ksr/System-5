@@ -44,7 +44,7 @@ class RevC(unittest.TestCase):
     def test_the_card_follows_the_cpu_card(self):
         bd, m, link = machine()
         self.assertEqual((card_for(m), link.rev, bd.rev), ("C", "C", "C"))
-        for word in ("clk-2", "ext-1", "mode-1", "load-1", "BUSDRV-C"): self.assertIn(word, bd.banner[0])
+        for word in ("clk-2", "ext-1", "mode-2", "load-1", "BUSDRV-C"): self.assertIn(word, bd.banner[0])
         self.assertEqual(bd.status(), "bus=on mode=MONITOR board=C cpu=RUN clk=0")
         self.assertIn("a CPU card answers on the DEBUG cable", err(self, bd, "MASTER", 1))
         self.assertIn("MONITOR mode", err(self, bd, "RDMEM", 0))

@@ -316,10 +316,16 @@ class CpuCardD:
         self.switch(True); self.drive({"RESET": 0}, None, 0xFF); self.switch(False)      # power-on: LOADED cleared
 
     def switch(self, reset):
-        """SW1, the RESET/RUN switch (and power-on): RESET clears LOADED, so the next RUN boots the EPROM.
-        (Its pull on the bus -RESET through D1 is the backplane's business: Backplane36.press_sw1.)"""
+        """SW1, the RESET/RUN switch (and power-on, through U12): SW_RST low. The card's own open-drain gates (U11,
+        since 2026-11-22) then pull the bus -RESET and, unless -PAUSE is low, -DMAIN: a boot reset, which clears
+        LOADED, so the next RUN boots the EPROM. pulls() says which lines; Backplane36 puts them on the bus"""
         if reset: self.c.forced[self.n_swrst] = ("SW1", 0)
         else: self.c.forced.pop(self.n_swrst, None)
+
+    def pulls(self):
+        """the open-collector bus lines the card's own gates hold low now: RESET and DMAIN in a boot reset it makes"""
+        s = self.c.bus.sig
+        return {n for n in ("RESET", "DMAIN") if self.c.drives_low(s["-" + n])}
 
     def loaded(self):
         """the LOADED flag (U8A): set by LOAD mode, it keeps the boot map off so that RUN starts in RAM"""
@@ -387,7 +393,7 @@ class Backplane36(Backplane):
         self.cpu = None; self.drv = {}; self.clk_out = 0; self.lines = {}; self.keep = {}; self.dkeep = 0xFF
         self.reset_stretch = reset_stretch; self._stretch = 0; self._reset_pulled = False
         self.nopull = set(nopull); self.stuck_lines = dict(stuck_lines or {}); self.rng = random.Random(1802)
-        self.sw1 = False; self.writes = {}; self.transitions = {}; self.probe = {1: None, 2: None}
+        self.sw1 = False; self._own = set(); self.writes = {}; self.transitions = {}; self.probe = {1: None, 2: None}
         self._decoder = None; self._mem_args = (kw.get("mem_rev", "D"), kw.get("jumpers", "RRRRRRR-EEEEEEE-"))
         super().__init__(cards=cards, **kw)
         for bc in self.cards: self._count_writes(bc)
@@ -421,7 +427,7 @@ class Backplane36(Backplane):
 
     def _walk_strong(self):
         out = super()._walk_strong() + [(n, "held", v) for n, v in self.stuck_lines.items() if n in self.LINES]
-        if self.sw1: out.append(("RESET", "cpu SW1", 0))
+        out += [(n, "cpu U11 (SW1)", 0) for n in sorted(self._own)]
         if self._stretch: out.append(("RESET", "cpu U10 (DS1813)", 0))
         if self.cpu:                                        # the 1802 drives its lines whatever its mode, and the card -VMA and SC0
             o = self.cpu.pins.outputs(); v = self.cpu.val
@@ -443,7 +449,8 @@ class Backplane36(Backplane):
         self.clk_out = level; self._note("CLK_OUT", level); self._resolve36()
 
     def press_sw1(self, reset):
-        """the CPU card's RESET/RUN switch: RESET pulls the bus -RESET low (through D1) and clears LOADED"""
+        """the CPU card's RESET/RUN switch: at RESET the card's U11 pulls the bus -RESET and, unless -PAUSE is low,
+        -DMAIN: a boot reset, which clears LOADED (until 2026-11-22: -RESET alone, through a diode)"""
         self.sw1 = bool(reset)
         if self.cpu: self.cpu.switch(reset)
         self._resolve36()
@@ -478,20 +485,24 @@ class Backplane36(Backplane):
             if not self._stretch: self._resolve36()             # the DS1813 lets -RESET go
 
     def _resolve36(self):
-        d = self.drv
-        pulled = d.get("RESET") == 0 or self.sw1                # -RESET held from outside the DS1813
-        if self._reset_pulled and not pulled and self.cpu: self._stretch = self.reset_stretch
-        self._reset_pulled = pulled
-        oc = {n: self._line(n, [("bus driver", d.get(n)), ("cpu SW1", 0 if (n == "RESET" and self.sw1) else None),
-                                ("cpu U10 (DS1813)", 0 if (n == "RESET" and self._stretch) else None)])
-              for n in OPEN_COLLECTOR}
-        for a, b in self.shorts:                                # a short between two open-collector lines: low together
-            if a in oc and b in oc and 0 in (oc[a], oc[b]): oc[a] = oc[b] = 0
-        o = None; vma = sc0 = None
-        if self.cpu:
-            v = self.cpu.drive({n: (0 if oc[n] == 0 else None) for n in OPEN_COLLECTOR},
-                               self.clk_out if self.cable else None, self.dbus)
-            o = self.cpu.pins.outputs(); vma, sc0 = v.get(self.cpu.n_vma), v.get(self.cpu.n_sc0)
+        d = self.drv; own = self._own                            # own: what the CPU card's gates pull themselves (U11)
+        for _ in range(4):                                      # (-PAUSE moving changes what U11 pulls: settle the two)
+            pulled = d.get("RESET") == 0 or "RESET" in own      # -RESET held from outside the DS1813
+            if self._reset_pulled and not pulled and self.cpu: self._stretch = self.reset_stretch
+            self._reset_pulled = pulled
+            oc = {n: self._line(n, [("bus driver", d.get(n)), ("cpu U11 (SW1)", 0 if n in own else None),
+                                    ("cpu U10 (DS1813)", 0 if (n == "RESET" and self._stretch) else None)])
+                  for n in OPEN_COLLECTOR}
+            for a, b in self.shorts:                            # a short between two open-collector lines: low together
+                if a in oc and b in oc and 0 in (oc[a], oc[b]): oc[a] = oc[b] = 0
+            o = None; vma = sc0 = None; now = set()
+            if self.cpu:
+                v = self.cpu.drive({n: (0 if oc[n] == 0 else None) for n in OPEN_COLLECTOR},
+                                   self.clk_out if self.cable else None, self.dbus)
+                o = self.cpu.pins.outputs(); vma, sc0 = v.get(self.cpu.n_vma), v.get(self.cpu.n_sc0); now = self.cpu.pulls()
+            if now == own: break
+            own = now
+        self._own = own
         cpu = lambda k: None if o is None else o[k]
         pins = dict(oc)
         for n in ("TPA", "TPB", "MRD", "MRW", "Q"): pins[n] = self._line(n, [("bus driver", d.get(n)), ("cpu", cpu(n))])

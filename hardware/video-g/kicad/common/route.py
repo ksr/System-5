@@ -46,7 +46,8 @@ def main():
             t = re.sub(r'(\(class [^\n]*?) "?%s"?(?=[ )\n])' % re.escape(net), r'\1', t)
         seed = os.environ.get("ROUTE_SEED")
         seed = int(seed) if seed not in (None, "") else int(getattr(load(board_dir, "place"), "ROUTE_SEED", 0))
-        t = dsn_order.fixed(t, seed)
+        t = dsn_order.fixed(t, seed, getattr(load(board_dir, "place"), "ROUTE_AS", None))   # (ROUTE_AS: a renamed net
+        #                                                           keeps its old name's place in the order)
         open(dsn, "w").write(t)
         print("dsn: layers", re.findall(r'\(layer (\S+)\s*\(type (\w+)', t), "| GND/+5V still routed:",
               bool(re.search(r'\(net "?(GND|\+5V)"?\s*\(pins', t)), "| fixed order, route seed", seed)

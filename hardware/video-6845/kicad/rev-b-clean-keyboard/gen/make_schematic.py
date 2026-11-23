@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20
 """make_schematic.py - Rev B-Clean-Keyboard's schematic: Rev B-Clean's (../rev-b-clean, itself Rev B's 2005 Eagle
-drawing without the DB9) with the keyboard section of gen/keyboard.py. Starts from Rev B-Clean's files each run, so
+drawing without the DE-9) with the keyboard section of gen/keyboard.py. Starts from Rev B-Clean's files each run, so
 build that card first (its gen/build.sh); writes ../video-6845-rev-b-clean-keyboard.kicad_sch, its sheet, and this
 folder's symbol library and library tables.
 

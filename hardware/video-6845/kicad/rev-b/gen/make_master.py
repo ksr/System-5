@@ -17,7 +17,7 @@ VALUES = {
     "IC7": "74LS174", "IC8": "74LS163", "IC9": "74LS175", "IC10": "74LS174", "IC11": "74LS166", "IC12": "2732",
     "IC13": "74LS86", "IC14": "7416", "LED1": "LED 5mm", "Q1": "9MHz", "R1": "470", "R2": "1K", "R3": "1K",
     "R4": "1K", "R5": "33", "R6": "270", "RN1": "10k", "SV1": "2x4 header", "U$1": "System-5 bus 30-pin",
-    "U$4": "RCA jack", "X1": "DB9 female",
+    "U$4": "RCA jack", "X1": "DE-9 female",
 }
 JOBS = {
     "IC1": "VIDEO RAM (2K USED)", "IC2": "A8-A15 LATCH", "IC3": "CRTC", "IC4": "BLOCK SELECT (SV1)",

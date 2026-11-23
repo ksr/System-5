@@ -198,14 +198,15 @@ LOAD toggle and the bus driver's `MODE` LOAD, use the 1802's LOAD mode, and LOAD
 
 | What is done | LOADED | The next RUN starts in |
 |---|---|---|
-| Power on, or this card's RESET/RUN switch (SW1) | cleared | the EPROM: HBIOS |
+| Power on, or this card's RESET/RUN switch (SW1); since 2026-11-22 any boot reset (the front panel's RESET, the bus driver's `MODE:4#`: the next section) | cleared | the EPROM: HBIOS |
 | LOAD mode: -RESET and -PAUSE both low (IO panel: RUN off and LOAD on; bus driver: `MODE` LOAD) | set | RAM at 0000 |
 | A reset from the bus alone (IO panel: RUN off, then on; bus driver: `MODE` RESET, RUN) | as it was | whichever it was |
 | PAUSE alone (-PAUSE low) | as it was | |
 
 So LOAD, RESET, RUN runs what was loaded, a reset from the bus runs it again, and SW1 brings HBIOS back. The EPROM
 still answers at F000-FFFF while the flag is set, so a loaded program can call HBIOS or jump to it (`C0 F0 00` at 0000
-boots HBIOS without a hand on the card: the bus driver cannot clear the flag). Checked on the card's netlist
+boots HBIOS without a hand on the card: the bus driver could not clear the flag until 2026-11-22; its `MODE:4#` does
+now). Checked on the card's netlist
 (`software/s5emu/tests/test_hw.py`, `CPURevD`) and, with the 1802's pins, in the bus driver's simulator
 (`software/busdrv`, the `load` plan).
 
@@ -245,3 +246,76 @@ zone, pad and part position the same as before, the copper, mask, outline and dr
 94 of the 95 texts where they were. DRC 0 errors and 0 warnings; `tools/preorder_check.py --layers 2` PASS.
 **`pcb-check --tests` on the committed files (elf `735f80f`, pcb-check `f8c7489`): no failures, 0 warnings** (38 lines
 pass; LABELS: every text clear of the parts).
+
+## A boot reset on the bus, and the DMA interlock (Ken, 2026-11-22)
+
+Ken asked for a front panel for a cased machine, with the CPU's reset on it, and then: "unless the IO panel via the
+bus can do what the cpu card reset can do then we dont need line from cpu card all can come from io". Asked, he chose
+"Boot reset on the bus, one ribbon". So what this card's RESET/RUN switch does had to become something any card can
+do over the bus.
+
+### What it was, and what was missing
+
+SW1 did two things: it pulled the bus -RESET low through a diode (D1), and it cleared LOADED by a line of its own
+(POR_L), with a capacitor (C12) to do the same at power-on. A reset from the bus could do the first and not the
+second: once LOADED was set, nothing but a hand on this card brought HBIOS back.
+
+### A boot reset is a state of the bus
+
+**-RESET and -DMAIN low together, while -PAUSE is high, is a boot reset: reset, and start in the EPROM.**
+
+-DMAIN is the line to mark it with because nothing else uses it outside LOAD mode, and LOAD mode needs -PAUSE low.
+The card decodes the state and clears LOADED with it:
+
+    BOOT_L = NAND(RST_H, DMAIN_H, WAIT)        U6B, the 74HCT20's spare half; WAIT is high while -PAUSE is high
+    LOADED: set by LOAD_L (as before), cleared by BOOT_L        U8A
+
+The card's own switch now makes that state on the bus, like any other source:
+
+| Part | What it does |
+|---|---|
+| U12, DS1813-10 | on SW_RST: holds it low for 150 ms after power comes up and after SW1 is let go. In place of C12 |
+| U11A, U11B (74HC03, open drain) | while SW_RST is low: U11A pulls -RESET; U11B pulls -DMAIN, unless -PAUSE is low. In place of D1 |
+| U10, DS1813-10 | as before, on -RESET: holds it low 150 ms after whatever pulled it lets go, so -RESET outlasts -DMAIN |
+
+With -PAUSE low SW1 pulls -RESET alone. That is LOAD mode, as it was before.
+
+The DS1813's data sheet (Dallas, 111999) wants its pin under 0.4 V to take a pull for a push-button. The diode left
+-RESET a diode drop above ground, which was marginal. An open-drain gate does not.
+
+### The DMA interlock
+
+A low -DMAIN must never reach the 1802 as a DMA request by mistake: that writes a byte at R(0) and moves R(0) on.
+There are two ways it could.
+
+- **While the machine is not paused.** A boot reset holds -DMAIN low then. So the 1802's DMA IN is closed whenever
+  -PAUSE is high. System-5 makes DMA requests in LOAD mode only (`docs/manual/bus.md`), so nothing is lost.
+- **At the moment LOAD is switched on with a boot reset held.** A source lets -DMAIN go when it sees -PAUSE fall,
+  but that takes about a microsecond (the gates, then the line rising on its pull-ups), and for that microsecond the
+  bus shows LOAD mode with -DMAIN low. About one time in five the 1802 would take it.
+
+One flip-flop closes both (U8B, spare until now):
+
+    DMA_ARMED: cleared while -PAUSE is high; set once -DMAIN is seen high with -PAUSE low
+        ARM_L = NAND(PAUSE_H, DMAIN_N)         U11D, open drain, with R10; DMAIN_N from U9A
+    DMA IN (the 1802's pin 38) = NAND(DMAIN_H, DMA_ARMED)        U11C, open drain, with R9
+
+So a request counts only if the line was high first. It is logic, with no time constant in it, and the emulator
+tests it (`CPURevD.test_dma_reaches_the_1802_only_in_pause_and_once_dmain_was_high`).
+
+One thing follows for a card that loads by DMA: its request must start after LOAD mode has begun. The IO panel's and
+the bus driver's do.
+
+### Parts
+
+In: U11 (74HC03), U12 (DS1813-10), R9 and R10 (10k), C12 (0.1 uF, U11's). Out: D1 (BAT85), the old C12 (1 uF).
+U6B, U8B and U9A, spare until now, are used; U9C is spare. 51 parts.
+
+U11 stands in a fourth column beside U9, and the LEDs' resistors R3-R8 moved 7 mm towards the LEDs to make the room.
+U12 is where the 1 uF stood, between R1 and SW1. R9 and R10 are in the band under U8 and U9.
+
+### What the bus driver saw of it
+
+A -DMAIN stuck low used to make DMA cycles without end. Now the card ignores a line that has not been high in LOAD
+mode, so the bus driver's loader reports "-DMAIN is low before the request" (firmware `mode-2`).
+

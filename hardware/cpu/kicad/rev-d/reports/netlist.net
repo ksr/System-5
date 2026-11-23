@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "hardware/cpu/kicad/rev-d/cpu-rev-d.kicad_sch")
-		(date "2026-11-21T14:48:17")
+		(date "2026-11-22T11:31:51")
 		(tool "Eeschema 10.0.6")
 		(sheet
 			(number "1")
@@ -12,7 +12,7 @@
 				(title "System-5 CPU card Rev D")
 				(company)
 				(rev "D")
-				(date "2026-11-21")
+				(date "2026-11-22")
 				(source "cpu-rev-d.kicad_sch")
 				(comment
 					(number "1")
@@ -650,11 +650,11 @@
 		)
 		(comp
 			(ref "C12")
-			(value "1uF")
-			(footprint "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm")
+			(value "0.1uF")
+			(footprint "s5cpu:C025-050X050")
 			(fields
 				(field
-					(name "Footprint") "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm")
+					(name "Footprint") "s5cpu:C025-050X050")
 				(field
 					(name "Datasheet")
 				)
@@ -688,60 +688,6 @@
 				(tstamps "/")
 			)
 			(tstamps "229c6862-734e-5c96-99e2-cd55504920b4")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "2")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "D1")
-			(value "BAT85")
-			(footprint "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal")
-			(fields
-				(field
-					(name "Footprint") "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description")
-				)
-			)
-			(libsource
-				(lib "Device")
-				(part "D_Schottky")
-				(description "Schottky diode")
-			)
-			(property
-				(name "Sheetname")
-				(value "cpu-rev-d")
-			)
-			(property
-				(name "Sheetfile")
-				(value "cpu-rev-d.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "diode Schottky")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "TO-???* *_Diode_* *SingleDiode* D_*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "e6f9e65c-03c2-57fe-95c6-49cf60397c1e")
 			(units
 				(unit
 					(name "A")
@@ -2080,6 +2026,114 @@
 			)
 		)
 		(comp
+			(ref "R9")
+			(value "10k")
+			(footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+			(fields
+				(field
+					(name "Footprint") "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ec2568f5-0b08-5647-92c0-902c4eac8df6")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R10")
+			(value "10k")
+			(footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+			(fields
+				(field
+					(name "Footprint") "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "Device")
+				(part "R")
+				(description "Resistor")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "1900c461-cef4-544d-8e44-c97cf05763c6")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "RN1")
 			(value "10k")
 			(footprint "Resistor_THT:R_Array_SIP9")
@@ -3186,6 +3240,137 @@
 			)
 		)
 		(comp
+			(ref "U11")
+			(value "74HC03")
+			(footprint "Package_DIP:DIP-14_W7.62mm")
+			(fields
+				(field
+					(name "Footprint") "Package_DIP:DIP-14_W7.62mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "s5cpu")
+				(part "74HC03")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "69e6969a-d4b7-5b04-97fd-e3fe08d2a6bf")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "13")
+						)
+						(pin
+							(num "12")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "8")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U12")
+			(value "DS1813-10")
+			(footprint "Package_TO_SOT_THT:TO-92_Inline")
+			(fields
+				(field
+					(name "Footprint") "Package_TO_SOT_THT:TO-92_Inline")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(libsource
+				(lib "s5cpu")
+				(part "DS1813")
+				(description "")
+			)
+			(property
+				(name "Sheetname")
+				(value "cpu-rev-d")
+			)
+			(property
+				(name "Sheetfile")
+				(value "cpu-rev-d.kicad_sch")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "1c99d416-85ec-5cef-8884-1aeef16f402c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "X1")
 			(value "4MHz")
 			(footprint "Oscillator:Oscillator_DIP-8")
@@ -3895,43 +4080,6 @@
 		)
 		(libpart
 			(lib "Device")
-			(part "D_Schottky")
-			(description "Schottky diode")
-			(footprints
-				(fp "TO-???*")
-				(fp "*_Diode_*")
-				(fp "*SingleDiode*")
-				(fp "D_*")
-			)
-			(fields
-				(field
-					(name "Reference") "D")
-				(field
-					(name "Value") "D_Schottky")
-				(field
-					(name "Footprint")
-				)
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Schottky diode")
-			)
-			(pins
-				(pin
-					(num "1")
-					(name "K")
-					(type "passive")
-				)
-				(pin
-					(num "2")
-					(name "A")
-					(type "passive")
-				)
-			)
-		)
-		(libpart
-			(lib "Device")
 			(part "LED")
 			(description "Light emitting diode")
 			(footprints
@@ -4289,6 +4437,96 @@
 				)
 				(pin
 					(num "24")
+					(name "VCC")
+					(type "power_in")
+				)
+			)
+		)
+		(libpart
+			(lib "s5cpu")
+			(part "74HC03")
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "74HC03")
+				(field
+					(name "Footprint") "Package_DIP:DIP-14_W7.62mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description")
+				)
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "I0")
+					(type "input")
+				)
+				(pin
+					(num "2")
+					(name "I1")
+					(type "input")
+				)
+				(pin
+					(num "3")
+					(name "O")
+					(type "open_collector")
+				)
+				(pin
+					(num "4")
+					(name "I0")
+					(type "input")
+				)
+				(pin
+					(num "5")
+					(name "I1")
+					(type "input")
+				)
+				(pin
+					(num "6")
+					(name "O")
+					(type "open_collector")
+				)
+				(pin
+					(num "7")
+					(name "GND")
+					(type "power_in")
+				)
+				(pin
+					(num "8")
+					(name "O")
+					(type "open_collector")
+				)
+				(pin
+					(num "9")
+					(name "I0")
+					(type "input")
+				)
+				(pin
+					(num "10")
+					(name "I1")
+					(type "input")
+				)
+				(pin
+					(num "11")
+					(name "O")
+					(type "open_collector")
+				)
+				(pin
+					(num "12")
+					(name "I0")
+					(type "input")
+				)
+				(pin
+					(num "13")
+					(name "I1")
+					(type "input")
+				)
+				(pin
+					(num "14")
 					(name "VCC")
 					(type "power_in")
 				)
@@ -4883,6 +5121,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C12")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "C2")
 				(pin "1")
 				(pintype "passive")
@@ -4934,6 +5177,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R10")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "R3")
 				(pin "1")
 				(pintype "passive")
@@ -4955,6 +5203,11 @@
 			)
 			(node
 				(ref "R7")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R9")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4990,6 +5243,18 @@
 			)
 			(node
 				(ref "U10")
+				(pin "2")
+				(pinfunction "VCC_2")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U11")
+				(pin "14")
+				(pinfunction "VCC_14")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U12")
 				(pin "2")
 				(pinfunction "VCC_2")
 				(pintype "power_in")
@@ -5044,18 +5309,6 @@
 			)
 			(node
 				(ref "U6")
-				(pin "10")
-				(pinfunction "I1_10")
-				(pintype "input")
-			)
-			(node
-				(ref "U6")
-				(pin "12")
-				(pinfunction "I2_12")
-				(pintype "input")
-			)
-			(node
-				(ref "U6")
 				(pin "13")
 				(pinfunction "I3_13")
 				(pintype "input")
@@ -5067,28 +5320,10 @@
 				(pintype "power_in")
 			)
 			(node
-				(ref "U6")
-				(pin "9")
-				(pinfunction "I0_9")
-				(pintype "input")
-			)
-			(node
 				(ref "U7")
 				(pin "14")
 				(pinfunction "VCC_14")
 				(pintype "power_in")
-			)
-			(node
-				(ref "U8")
-				(pin "10")
-				(pinfunction "PRE_10")
-				(pintype "input")
-			)
-			(node
-				(ref "U8")
-				(pin "13")
-				(pinfunction "CLR_13")
-				(pintype "input")
 			)
 			(node
 				(ref "U8")
@@ -5130,6 +5365,12 @@
 				(pin "5")
 				(pinfunction "R4_5")
 				(pintype "passive")
+			)
+			(node
+				(ref "U11")
+				(pin "6")
+				(pinfunction "O_6")
+				(pintype "open_collector")
 			)
 			(node
 				(ref "U7")
@@ -5393,12 +5634,6 @@
 			(name "/-RESET")
 			(class "Default")
 			(node
-				(ref "D1")
-				(pin "2")
-				(pinfunction "A_2")
-				(pintype "passive")
-			)
-			(node
 				(ref "J1")
 				(pin "4")
 				(pinfunction "Pin_4_4")
@@ -5414,6 +5649,12 @@
 				(ref "U10")
 				(pin "1")
 				(pinfunction "~{RST}_1")
+				(pintype "open_collector")
+			)
+			(node
+				(ref "U11")
+				(pin "3")
+				(pinfunction "O_3")
 				(pintype "open_collector")
 			)
 			(node
@@ -5686,6 +5927,28 @@
 		)
 		(net
 			(code "21")
+			(name "/ARM_L")
+			(class "Default")
+			(node
+				(ref "R10")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U11")
+				(pin "11")
+				(pinfunction "O_11")
+				(pintype "open_collector")
+			)
+			(node
+				(ref "U8")
+				(pin "10")
+				(pinfunction "PRE_10")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "22")
 			(name "/BOOTMAP_L")
 			(class "Default")
 			(node
@@ -5702,7 +5965,24 @@
 			)
 		)
 		(net
-			(code "22")
+			(code "23")
+			(name "/BOOT_L")
+			(class "Default")
+			(node
+				(ref "U6")
+				(pin "8")
+				(pinfunction "O_8")
+				(pintype "output")
+			)
+			(node
+				(ref "U8")
+				(pin "1")
+				(pinfunction "CLR_1")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "24")
 			(name "/BOOT_PEND")
 			(class "Default")
 			(node
@@ -5719,7 +5999,7 @@
 			)
 		)
 		(net
-			(code "23")
+			(code "25")
 			(name "/CLEAR")
 			(class "Default")
 			(node
@@ -5748,7 +6028,7 @@
 			)
 		)
 		(net
-			(code "24")
+			(code "26")
 			(name "/CLKDIV_L")
 			(class "Default")
 			(node
@@ -5765,7 +6045,7 @@
 			)
 		)
 		(net
-			(code "25")
+			(code "27")
 			(name "/CLK_EXT")
 			(class "Default")
 			(node
@@ -5782,7 +6062,7 @@
 			)
 		)
 		(net
-			(code "26")
+			(code "28")
 			(name "/CLK_INT")
 			(class "Default")
 			(node
@@ -5799,7 +6079,7 @@
 			)
 		)
 		(net
-			(code "27")
+			(code "29")
 			(name "/CLOCK")
 			(class "Default")
 			(node
@@ -5822,7 +6102,7 @@
 			)
 		)
 		(net
-			(code "28")
+			(code "30")
 			(name "/CPU_EF1")
 			(class "Default")
 			(node
@@ -5863,7 +6143,7 @@
 			)
 		)
 		(net
-			(code "29")
+			(code "31")
 			(name "/CPU_EF2")
 			(class "Default")
 			(node
@@ -5904,7 +6184,7 @@
 			)
 		)
 		(net
-			(code "30")
+			(code "32")
 			(name "/CPU_EF3")
 			(class "Default")
 			(node
@@ -5945,7 +6225,7 @@
 			)
 		)
 		(net
-			(code "31")
+			(code "33")
 			(name "/CPU_EF4")
 			(class "Default")
 			(node
@@ -5986,7 +6266,7 @@
 			)
 		)
 		(net
-			(code "32")
+			(code "34")
 			(name "/D0")
 			(class "Default")
 			(node
@@ -6009,7 +6289,7 @@
 			)
 		)
 		(net
-			(code "33")
+			(code "35")
 			(name "/D1")
 			(class "Default")
 			(node
@@ -6032,7 +6312,7 @@
 			)
 		)
 		(net
-			(code "34")
+			(code "36")
 			(name "/D2")
 			(class "Default")
 			(node
@@ -6055,7 +6335,7 @@
 			)
 		)
 		(net
-			(code "35")
+			(code "37")
 			(name "/D3")
 			(class "Default")
 			(node
@@ -6078,7 +6358,7 @@
 			)
 		)
 		(net
-			(code "36")
+			(code "38")
 			(name "/D4")
 			(class "Default")
 			(node
@@ -6101,7 +6381,7 @@
 			)
 		)
 		(net
-			(code "37")
+			(code "39")
 			(name "/D5")
 			(class "Default")
 			(node
@@ -6124,7 +6404,7 @@
 			)
 		)
 		(net
-			(code "38")
+			(code "40")
 			(name "/D6")
 			(class "Default")
 			(node
@@ -6147,7 +6427,7 @@
 			)
 		)
 		(net
-			(code "39")
+			(code "41")
 			(name "/D7")
 			(class "Default")
 			(node
@@ -6170,9 +6450,21 @@
 			)
 		)
 		(net
-			(code "40")
+			(code "42")
 			(name "/DMAIN_H")
 			(class "Default")
+			(node
+				(ref "U11")
+				(pin "9")
+				(pinfunction "I0_9")
+				(pintype "input")
+			)
+			(node
+				(ref "U6")
+				(pin "10")
+				(pinfunction "I1_10")
+				(pintype "input")
+			)
 			(node
 				(ref "U7")
 				(pin "12")
@@ -6187,13 +6479,13 @@
 			)
 		)
 		(net
-			(code "41")
-			(name "/DMA_IN")
+			(code "43")
+			(name "/DMAIN_N")
 			(class "Default")
 			(node
-				(ref "U1")
-				(pin "38")
-				(pinfunction "~{DMA_IN}_38")
+				(ref "U11")
+				(pin "13")
+				(pinfunction "I1_13")
 				(pintype "input")
 			)
 			(node
@@ -6204,7 +6496,46 @@
 			)
 		)
 		(net
-			(code "42")
+			(code "44")
+			(name "/DMA_ARMED")
+			(class "Default")
+			(node
+				(ref "U11")
+				(pin "10")
+				(pinfunction "I1_10")
+				(pintype "input")
+			)
+			(node
+				(ref "U8")
+				(pin "9")
+				(pinfunction "Q_9")
+				(pintype "output")
+			)
+		)
+		(net
+			(code "45")
+			(name "/DMA_IN")
+			(class "Default")
+			(node
+				(ref "R9")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "38")
+				(pinfunction "~{DMA_IN}_38")
+				(pintype "input")
+			)
+			(node
+				(ref "U11")
+				(pin "8")
+				(pinfunction "O_8")
+				(pintype "open_collector")
+			)
+		)
+		(net
+			(code "46")
 			(name "/EXT_CLK")
 			(class "Default")
 			(node
@@ -6226,7 +6557,7 @@
 			)
 		)
 		(net
-			(code "43")
+			(code "47")
 			(name "/LA8")
 			(class "Default")
 			(node
@@ -6243,7 +6574,7 @@
 			)
 		)
 		(net
-			(code "44")
+			(code "48")
 			(name "/LA9")
 			(class "Default")
 			(node
@@ -6260,7 +6591,7 @@
 			)
 		)
 		(net
-			(code "45")
+			(code "49")
 			(name "/LA10")
 			(class "Default")
 			(node
@@ -6277,7 +6608,7 @@
 			)
 		)
 		(net
-			(code "46")
+			(code "50")
 			(name "/LA11")
 			(class "Default")
 			(node
@@ -6294,7 +6625,7 @@
 			)
 		)
 		(net
-			(code "47")
+			(code "51")
 			(name "/LA12")
 			(class "Default")
 			(node
@@ -6311,7 +6642,7 @@
 			)
 		)
 		(net
-			(code "48")
+			(code "52")
 			(name "/LA13")
 			(class "Default")
 			(node
@@ -6328,7 +6659,7 @@
 			)
 		)
 		(net
-			(code "49")
+			(code "53")
 			(name "/LA14")
 			(class "Default")
 			(node
@@ -6345,7 +6676,7 @@
 			)
 		)
 		(net
-			(code "50")
+			(code "54")
 			(name "/LA15")
 			(class "Default")
 			(node
@@ -6368,7 +6699,7 @@
 			)
 		)
 		(net
-			(code "51")
+			(code "55")
 			(name "/LED_PAUSE")
 			(class "Default")
 			(node
@@ -6384,7 +6715,7 @@
 			)
 		)
 		(net
-			(code "52")
+			(code "56")
 			(name "/LED_PWR")
 			(class "Default")
 			(node
@@ -6400,7 +6731,7 @@
 			)
 		)
 		(net
-			(code "53")
+			(code "57")
 			(name "/LED_Q")
 			(class "Default")
 			(node
@@ -6416,7 +6747,7 @@
 			)
 		)
 		(net
-			(code "54")
+			(code "58")
 			(name "/LED_RAM")
 			(class "Default")
 			(node
@@ -6432,7 +6763,7 @@
 			)
 		)
 		(net
-			(code "55")
+			(code "59")
 			(name "/LED_RESET")
 			(class "Default")
 			(node
@@ -6448,7 +6779,7 @@
 			)
 		)
 		(net
-			(code "56")
+			(code "60")
 			(name "/LED_ROM")
 			(class "Default")
 			(node
@@ -6464,7 +6795,7 @@
 			)
 		)
 		(net
-			(code "57")
+			(code "61")
 			(name "/LOADED")
 			(class "Default")
 			(node
@@ -6480,7 +6811,7 @@
 			)
 		)
 		(net
-			(code "58")
+			(code "62")
 			(name "/LOAD_L")
 			(class "Default")
 			(node
@@ -6497,7 +6828,7 @@
 			)
 		)
 		(net
-			(code "59")
+			(code "63")
 			(name "/N0")
 			(class "Default")
 			(node
@@ -6514,7 +6845,7 @@
 			)
 		)
 		(net
-			(code "60")
+			(code "64")
 			(name "/N1")
 			(class "Default")
 			(node
@@ -6531,7 +6862,7 @@
 			)
 		)
 		(net
-			(code "61")
+			(code "65")
 			(name "/N2")
 			(class "Default")
 			(node
@@ -6548,7 +6879,7 @@
 			)
 		)
 		(net
-			(code "62")
+			(code "66")
 			(name "/NOT_LOADED")
 			(class "Default")
 			(node
@@ -6565,7 +6896,7 @@
 			)
 		)
 		(net
-			(code "63")
+			(code "67")
 			(name "/OSC")
 			(class "Default")
 			(node
@@ -6582,9 +6913,15 @@
 			)
 		)
 		(net
-			(code "64")
+			(code "68")
 			(name "/PAUSE_H")
 			(class "Default")
+			(node
+				(ref "U11")
+				(pin "12")
+				(pinfunction "I0_12")
+				(pintype "input")
+			)
 			(node
 				(ref "U5")
 				(pin "13")
@@ -6603,26 +6940,15 @@
 				(pinfunction "O_8")
 				(pintype "output")
 			)
-		)
-		(net
-			(code "65")
-			(name "/POR_L")
-			(class "Default")
 			(node
 				(ref "U8")
-				(pin "1")
-				(pinfunction "CLR_1")
+				(pin "13")
+				(pinfunction "CLR_13")
 				(pintype "input")
-			)
-			(node
-				(ref "U9")
-				(pin "6")
-				(pinfunction "O_6")
-				(pintype "output")
 			)
 		)
 		(net
-			(code "66")
+			(code "69")
 			(name "/Q")
 			(class "Default")
 			(node
@@ -6645,7 +6971,7 @@
 			)
 		)
 		(net
-			(code "67")
+			(code "70")
 			(name "/Q_L")
 			(class "Default")
 			(node
@@ -6662,7 +6988,7 @@
 			)
 		)
 		(net
-			(code "68")
+			(code "71")
 			(name "/ROM_SEL_L")
 			(class "Default")
 			(node
@@ -6685,13 +7011,19 @@
 			)
 		)
 		(net
-			(code "69")
+			(code "72")
 			(name "/RST_H")
 			(class "Default")
 			(node
 				(ref "U5")
 				(pin "12")
 				(pinfunction "I0_12")
+				(pintype "input")
+			)
+			(node
+				(ref "U6")
+				(pin "9")
+				(pinfunction "I0_9")
 				(pintype "input")
 			)
 			(node
@@ -6708,7 +7040,7 @@
 			)
 		)
 		(net
-			(code "70")
+			(code "73")
 			(name "/SC0")
 			(class "Default")
 			(node
@@ -6731,7 +7063,7 @@
 			)
 		)
 		(net
-			(code "71")
+			(code "74")
 			(name "/SC0_L")
 			(class "Default")
 			(node
@@ -6748,7 +7080,7 @@
 			)
 		)
 		(net
-			(code "72")
+			(code "75")
 			(name "/SC0_RAW")
 			(class "Default")
 			(node
@@ -6765,7 +7097,7 @@
 			)
 		)
 		(net
-			(code "73")
+			(code "76")
 			(name "/SC1")
 			(class "Default")
 			(node
@@ -6782,37 +7114,38 @@
 			)
 		)
 		(net
-			(code "74")
+			(code "77")
 			(name "/SWRST_H")
 			(class "Default")
+			(node
+				(ref "U11")
+				(pin "1")
+				(pinfunction "I0_1")
+				(pintype "input")
+			)
+			(node
+				(ref "U11")
+				(pin "2")
+				(pinfunction "I1_2")
+				(pintype "input")
+			)
+			(node
+				(ref "U11")
+				(pin "4")
+				(pinfunction "I0_4")
+				(pintype "input")
+			)
 			(node
 				(ref "U9")
 				(pin "4")
 				(pinfunction "O_4")
 				(pintype "output")
 			)
-			(node
-				(ref "U9")
-				(pin "5")
-				(pinfunction "I_5")
-				(pintype "input")
-			)
 		)
 		(net
-			(code "75")
+			(code "78")
 			(name "/SW_RST")
 			(class "Default")
-			(node
-				(ref "C12")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "D1")
-				(pin "1")
-				(pinfunction "K_1")
-				(pintype "passive")
-			)
 			(node
 				(ref "R1")
 				(pin "2")
@@ -6825,6 +7158,12 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "U12")
+				(pin "1")
+				(pinfunction "~{RST}_1")
+				(pintype "open_collector")
+			)
+			(node
 				(ref "U9")
 				(pin "3")
 				(pinfunction "I_3")
@@ -6832,7 +7171,7 @@
 			)
 		)
 		(net
-			(code "76")
+			(code "79")
 			(name "/TPA")
 			(class "Default")
 			(node
@@ -6855,7 +7194,7 @@
 			)
 		)
 		(net
-			(code "77")
+			(code "80")
 			(name "/TPB")
 			(class "Default")
 			(node
@@ -6872,7 +7211,7 @@
 			)
 		)
 		(net
-			(code "78")
+			(code "81")
 			(name "/WAIT")
 			(class "Default")
 			(node
@@ -6888,6 +7227,18 @@
 				(pintype "input")
 			)
 			(node
+				(ref "U11")
+				(pin "5")
+				(pinfunction "I1_5")
+				(pintype "input")
+			)
+			(node
+				(ref "U6")
+				(pin "12")
+				(pinfunction "I2_12")
+				(pintype "input")
+			)
+			(node
 				(ref "U7")
 				(pin "10")
 				(pinfunction "O_10")
@@ -6895,7 +7246,7 @@
 			)
 		)
 		(net
-			(code "79")
+			(code "82")
 			(name "/WIN_L")
 			(class "Default")
 			(node
@@ -6912,7 +7263,7 @@
 			)
 		)
 		(net
-			(code "80")
+			(code "83")
 			(name "GND")
 			(class "Default")
 			(node
@@ -7029,6 +7380,18 @@
 				(pintype "power_in")
 			)
 			(node
+				(ref "U11")
+				(pin "7")
+				(pinfunction "GND_7")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U12")
+				(pin "3")
+				(pinfunction "GND_3")
+				(pintype "power_in")
+			)
+			(node
 				(ref "U2")
 				(pin "1")
 				(pinfunction "OC_1")
@@ -7102,6 +7465,12 @@
 			)
 			(node
 				(ref "U9")
+				(pin "5")
+				(pinfunction "I_5")
+				(pintype "input")
+			)
+			(node
+				(ref "U9")
 				(pin "7")
 				(pinfunction "GND_7")
 				(pintype "power_in")
@@ -7114,7 +7483,7 @@
 			)
 		)
 		(net
-			(code "81")
+			(code "84")
 			(name "unconnected-(SW1-A-Pad1)")
 			(class "Default")
 			(node
@@ -7125,7 +7494,7 @@
 			)
 		)
 		(net
-			(code "82")
+			(code "85")
 			(name "unconnected-(U1-~{XTAL}-Pad39)")
 			(class "Default")
 			(node
@@ -7136,7 +7505,7 @@
 			)
 		)
 		(net
-			(code "83")
+			(code "86")
 			(name "unconnected-(U4-Q-Pad9)")
 			(class "Default")
 			(node
@@ -7147,35 +7516,24 @@
 			)
 		)
 		(net
-			(code "84")
-			(name "unconnected-(U6-O-Pad8)")
-			(class "Default")
-			(node
-				(ref "U6")
-				(pin "8")
-				(pinfunction "O_8")
-				(pintype "output+no_connect")
-			)
-		)
-		(net
-			(code "85")
-			(name "unconnected-(U8-Q-Pad9)")
-			(class "Default")
-			(node
-				(ref "U8")
-				(pin "9")
-				(pinfunction "Q_9")
-				(pintype "output+no_connect")
-			)
-		)
-		(net
-			(code "86")
+			(code "87")
 			(name "unconnected-(U8-~{Q}-Pad8)")
 			(class "Default")
 			(node
 				(ref "U8")
 				(pin "8")
 				(pinfunction "~{Q}_8")
+				(pintype "output+no_connect")
+			)
+		)
+		(net
+			(code "88")
+			(name "unconnected-(U9-O-Pad6)")
+			(class "Default")
+			(node
+				(ref "U9")
+				(pin "6")
+				(pinfunction "O_6")
 				(pintype "output+no_connect")
 			)
 		)

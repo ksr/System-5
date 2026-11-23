@@ -21,7 +21,7 @@ Every footprint is where the photos show a part, with the same package and orien
 | IC11 | 74LS166N | SN74LS166N |
 | IC8 | 74HC160N | **SN74LS163AN**: the right part; the drawn '160 would divide by 5 (`../../../BYTE-COMPARISON.md`) |
 | IC9 | 74LS175N | **SN74AS175N** (pin-compatible, faster) |
-| U$4, X1 | RCA jack, DB9 | both fitted |
+| U$4, X1 | RCA jack, DE-9 | both fitted |
 | IC12 | 2732 | MBM2732A |
 | IC14 | 7416N | 7416N |
 | RN1, SV1 | resistor network, 2×4 header | fitted; SV1 1-2 (block 7) |

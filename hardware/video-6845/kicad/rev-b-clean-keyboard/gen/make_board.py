@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20
 """make_board.py - Rev B-Clean-Keyboard's board, before routing: Rev B-Clean's (../rev-b-clean: Rev B's copper, the
-card in Ken's machine, less the DB9) made larger, with the 36-pin connector and the keyboard section's parts placed
+card in Ken's machine, less the DE-9) made larger, with the 36-pin connector and the keyboard section's parts placed
 (gen/keyboard.py). Run with KiCad's Python after gen/make_schematic.py and gen/footprints.py; gen/route.py then has
 Freerouting add the new connections, with every Rev B track locked.
 

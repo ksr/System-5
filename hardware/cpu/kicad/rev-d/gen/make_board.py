@@ -17,8 +17,10 @@
     reference and value on it (pcb-check, 2026-11-17): "J1 BUS" along the bus edge; the LEDs are
     LED1-LED6, not D2-D7, labelled by their function alone (Ken, 2026-11-18: PWR, Q, PAUSE, RESET, ROM, and since
     2026-11-21 LED6, START / FROM / RAM on three lines; pcb-check.ini
-    exempts their references), and D1 carries its own reference field, because J1's pin labels name the data lines
-    D0-D7 and pcb-check took those for the parts' references
+    exempts their references): J1's pin labels name the data lines D0-D7, and pcb-check took those for parts' references
+  * the boot reset's parts (2026-11-22): U11 (74HC03) in a fourth column beside U9, with its 0.1 uF above it; the LEDs'
+    resistors R3-R8 7 mm nearer the LEDs to make the room; U12 (the DS1813 on SW_RST) where the 1 uF on that line
+    stood, between R1 and the RESET/RUN switch; R9 and R10 (U11's two pull-ups) in the free band under U8 and U9
 Writes ../cpu-rev-d.kicad_pcb."""
 import os, sys, re, json
 import pcbnew
@@ -55,8 +57,10 @@ PLACE = {
     "U3": (48.0, 26.0, 0), "U2": (48.0, 66.0, 0),
     "U4": (70.0, 26.0, 0), "U5": (84.0, 26.0, 0), "U6": (98.0, 26.0, 0), "X1": (112.0, 26.0, 0),
     "U7": (70.0, 58.0, 0), "U8": (84.0, 58.0, 0), "U9": (98.0, 58.0, 0), "U10": (112.0, 80.0, 0),
+    "U11": (112.0, 58.0, 0), "U12": (119.0, 87.0, 0),      # the boot reset (2026-11-22): the 74HC03, the DS1813 on SW_RST
+    "R9": (96.0, 79.0, 0), "R10": (84.0, 79.0, 0),         # U11's pull-ups: DMA_IN, ARM_L
     "RN1": (62.0, 92.0, 0), "RN2": (88.0, 92.0, 0),
-    "C1": (34.0, 17.0, 0), "C12": (119.0, 87.0, 0), "R1": (104.0, 87.0, 0), "R2": (124.0, 38.0, 0), "D1": (104.0, 93.0, 0),
+    "C1": (34.0, 17.0, 0), "R1": (104.0, 87.0, 0), "R2": (124.0, 38.0, 0),
     "SW1": (XR - 11.7, 88.0, 180),               # a Marquardt 9070-1W, YACC1's RESET/RUN toggle (Ken, 2026-11-18): origin on
                                                  # the common, the body flush with the front edge, bushing and lever past it
     "J2": (XR - 6.7, 20.0, 0),                   # DEBUG, the keyed 2x3 header (pin 1), at the front edge
@@ -68,8 +72,8 @@ PLACE = {
 for k, ref in enumerate(("LED1", "LED2", "LED3", "LED4", "LED5", "LED6")):   # LEDs down the front edge, below J2 (LED6
     # RAM, with R8, since 2026-11-21: under ROM, above the RESET/RUN switch)
     PLACE[ref] = (XR - 4.0, 46.0 + 6.0 * k, 90)
-    PLACE["R%d" % (k + 3)] = (XR - 30.0, 46.0 + 6.0 * k, 0)
-for k, u in enumerate(("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "X1")):   # 0.1 uF above each chip's pin 1
+    PLACE["R%d" % (k + 3)] = (XR - 23.0, 46.0 + 6.0 * k, 0)      # (XR - 30 until 2026-11-22: U11 stands there now)
+for k, u in enumerate(N.BYPASSED):                                                   # 0.1 uF above each chip's pin 1
     x, y, _ = PLACE[u]; PLACE["C%d" % (k + 2)] = (x + 2.0, y + 7.5, 0) if u == "X1" else (x + 2.0, y - 4.5, 0)
 
 for ref, (lib_id, value, fpid, pinmap) in N.PARTS.items():

@@ -30,9 +30,9 @@ PTIME and PDELAY answer only for PROBE1 on CLK OUT itself.
 FwCard wraps it in the serial wire protocol, so s5busdrv.BusDriver(transport=FwCard(...)) talks to it exactly as it
 talks to the real card.
 """
-DATE = "2026-11-21"
+DATE = "2026-11-22"
 BANNER = "s5-bus-driver blocks-1 io-2 clk-1 walk-1 %s BUSDRV-B (SIMULATED)" % DATE
-BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 walk-1 %s BUSDRV-C (SIMULATED)" % DATE
+BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-2 load-1 probe-1 walk-1 %s BUSDRV-C (SIMULATED)" % DATE
 LEGACY_BANNER = "s5-bus-driver blocks-1 2026-10-06 (SIMULATED, the old bus cycles)"
 BLOCK_MAX, WBLOCK_MAX = 64, 32
 CLOCK_EDGES_A_COMMAND = 640             # a steady clock: 40 machine cycles of the simulated 1802 before each command
@@ -47,7 +47,7 @@ SIGS = {"TPA": (1, 0, 2, 0), "TPB": (1, 0, 3, 0), "-MRD": (1, 0, 4, LOW_ACTIVE),
         "-DMAIN": (2, 0, 4, LOW_ACTIVE | OPEN_COLL)}
 PIN_OF = {"TPA": "TPA", "TPB": "TPB", "-MRD": "MRD", "-MRW": "MRW", "-VMA": "VMA", "Q": "Q", "-RESET": "RESET",
           "-INT": "INT", "-EF": "EF", "-EF1": "EF1", "-EF2": "EF2", "-EF3": "EF3", "-PAUSE": "PAUSE", "-DMAIN": "DMAIN"}
-VA_A7, VA_TPA, VA_MRD, VA_MRW, VB_RESET, WA_PAUSE, WA_SC0 = 0x02, 0x04, 0x10, 0x20, 0x02, 0x08, 0x20
+VA_A7, VA_TPA, VA_MRD, VA_MRW, VB_RESET, WA_PAUSE, WA_DMAIN, WA_SC0 = 0x02, 0x04, 0x10, 0x20, 0x02, 0x08, 0x10, 0x20
 C_COMMANDS = ("MODE", "DMA", "LOADBLK", "CLKHZ", "CLKSTOP", "PROBE", "PCOUNT", "PTIME", "PDELAY", "DBG", "SPDIR", "SPIN")
 # WALK: the bus lines of each port [chip][port] and which of them are open collector, as in the sketch; and every bus
 # line's pin, by the backplane's name for it (backplane.LINES30 / LINES36): (chip, port, bit)
@@ -275,6 +275,8 @@ class Firmware:
 
     def set_mode(self, m):
         self.load_synced = False
+        self.sig("-DMAIN", 0)                               # low with -RESET only in BOOT: let go before anything else
+        self.why = "-RESET stays low (the CPU card's switch, another card): -PAUSE now would be LOAD"
         if m == 2:
             self.sig("-RESET", 0)
             for _ in range(3000):                           # (the sketch: for half a second; here, 3000 expander reads)
@@ -282,10 +284,13 @@ class Firmware:
             else: return False
             self.sig("-PAUSE", 1); return True
         self.sig("-PAUSE", 0)
+        if m == 4 and not self.gpio(2, 0) & WA_PAUSE:       # BOOT with -PAUSE low would be LOAD mode with a DMA request
+            self.why = "-PAUSE is low (the LOAD switch, another card): a boot reset needs it high"; return False
         self.sig("-RESET", m != 0)
         if m and not self.clk_hz:
             for _ in range(32): self.clk_edge()
         if m == 3: self.sig("-PAUSE", 1)
+        if m == 4: self.sig("-DMAIN", 1)                    # BOOT: -RESET and -DMAIN low, -PAUSE high (mode-2)
         return True
 
     def load_ready(self):
@@ -308,6 +313,7 @@ class Firmware:
         i = 0
         while i < 40 and not self.gpio(2, 0) & WA_SC0: self.clk_edge(); i += 1
         if i == 40: self.why = "SC0 stays low: DMA cycles with no request (-DMAIN held low?)"; return None
+        if not self.gpio(2, 0) & WA_DMAIN: self.why = "-DMAIN is low before the request: something else holds it"; return None
         self.sig("-DMAIN", 1)
         if self.load_fault == "early-data": self.data_out(v); self.data_dir(True)
         i = 0
@@ -368,9 +374,9 @@ class Firmware:
         if not self.rev_c: return [NEEDS_C]
         out = []
         if op == "MODE":
-            if not 0 <= v <= 3: return ["Error: MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD"]
+            if not 0 <= v <= 4: return ["Error: MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD, 4 BOOT"]
             if self.master: return ["Error: MODE is for a CPU card in place: MASTER:0# first"]
-            if not self.set_mode(v): return ["Error: -RESET stays low (the CPU card's switch, another card): -PAUSE now would be LOAD"]
+            if not self.set_mode(v): return ["Error: " + self.why]
         elif op in ("DMA", "LOADBLK"):
             parts = arg.split(","); count = 1 if op == "DMA" else v
             if self.master: return ["Error: LOAD mode is for a CPU card in place: MASTER:0# first"]

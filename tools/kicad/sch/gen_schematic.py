@@ -44,6 +44,7 @@ STD = {
     "74HCT373": "74xx:74LS373", "CDP1802ACE": "CPU:CDP1802ACE",
     "74HCT138": "74xx:74LS138", "74HCT374": "74xx:74LS374", "74HCT244": "74xx:74LS244", "74HCT10": "74xx:74LS10",
     "74HC05": "74xx:74LS05", "74HCT02": "74xx:74LS02", "74HCT573": "74xx:74LS573",
+    "74HC03": "74xx:74LS03",                                # quad NAND, open drain (2026-11-22: CPU Rev D, IO panel, front panel)
 }
 
 

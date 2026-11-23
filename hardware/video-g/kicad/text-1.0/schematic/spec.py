@@ -30,11 +30,11 @@ SHEETS = [
      "IC15 counts 8-15 (8 dots): QC clocks the 6845, CHARCLOCK = NOT RCO loads the shifter and the latches. The code\n"
      "latch IC11 takes 7 bits of the IDT's left port: 28C64 A3-A9, A0-A2 = RA0-RA2. IC14 delays reverse/cursor (IC22A)\n"
      "and DE by two characters. For GFX: QCR = QC OR RCO (IC20B), WEPH = QA XOR QB (IC22D)."),
-    ("video", "Video out", "THE TEXT / GRAPHICS COMBINE, THE SYNC BUFFERS, RCA AND DB9",
+    ("video", "Video out", "THE TEXT / GRAPHICS COMBINE, THE SYNC BUFFERS, RCA AND DE-9",
      [("IC19", 1), ("IC20", 1), ("IC21", 1), ("IC21", 2), ("IC19", 3), ("IC18", 1), ("IC17", 4), ("IC23", 1),
       ("IC23", 2), ("IC23", 3), "R4", "R5", "J2", "J3", "JP2"], None,
      "dot = (text AND TEXT-ON) OR GDOT, or their XOR when XORM (from GFX); gated by DE3. The syncs are buffered (IC19C,\n"
-     "IC18A) so the cable never loads the 6845. RCA: composite through R4 / R5. DB9: TTL video, HSYNC, VSYNC +/- by JP2."),
+     "IC18A) so the cable never loads the 6845. RCA: composite through R4 / R5. DE-9: TTL video, HSYNC, VSYNC +/- by JP2."),
     ("keyboard", "Keyboard + status", "PS/2 KEYBOARD (ATmega328P), KEY LATCH (7802) AND -EF, STATUS (7804)",
      ["IC10", "Y2", "C28", "C29", "R7", "R8", "R9", "R10", "F1", "J4", "J5", "C27", "IC9", ("IC24", 2), ("IC20", 3),
       ("IC19", 2), ("IC23", 4), "JP3", ("IC18", 2), ("IC23", 5), ("IC23", 6), "IC8", "JP1"], None,

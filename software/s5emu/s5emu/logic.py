@@ -98,6 +98,18 @@ class Nor02(Quad):
             yield o, 0 if 1 in (x, y) else 1 if x == y == 0 else X
 
 
+class Nand03(Quad):
+    """74HC03 quad 2-input NAND with open-drain outputs (2026-11-22: CPU Rev D's boot reset, the IO panel's DMA request,
+    the front panel's RESET button): both inputs high pull the output low; otherwise it is let go, for a pull-up or
+    another card's gate on the same line"""
+    def __init__(self, nl, ref): super().__init__(nl, ref, "nand")
+
+    def outputs(self, val):
+        for o, a, b in self.gates:
+            x, y = ttl(val.get(a)), ttl(val.get(b))
+            yield o, (None if 0 in (x, y) else 0 if x == y == 1 else X)
+
+
 class Nand3(Model):
     """74HCT10 triple 3-input NAND (the IO panel's OUT 4 strobe)"""
     GATES = (("12", "1", "2", "13"), ("6", "3", "4", "5"), ("8", "9", "10", "11"))
@@ -558,6 +570,8 @@ class BusConnector(Model):
 REV_D_PASSIVE = ("R", "C", "C_Polarized", "LED", "D_Schottky", "SW_SPDT", "Conn_01x02", "Conn_01x03", "Conn_01x06",
                  "Conn_02x03_Odd_Even", "Conn_02x04_Odd_Even", "Conn_02x07_Odd_Even", "OSC_DIP8", "DS1813", "SW_Push",
                  "TIL311", "Crystal", "Battery_Cell",      # TIL311: the IO panel's displays; jumper blocks: fitted as shorts
+                 "Conn_02x25_Odd_Even", "MountingHole", "R_Pack08",   # the front panel's ribbon header (the front
+                 # panel's own Circuit names it as its bus: bus="J1"), its holes, the LEDs' isolated resistors
                  "MAX232", "DE9_Socket_MountingHoles",     # the IO panel's serial line (2026-11-20): outside the logic.
                  "Polyfuse", "RCA", "DE9_SHIELD", "MINIDIN6", "Conn_02x20_Odd_Even", "Conn_01x30")   # VIDEO-G: jacks, the
 #                ribbon's headers (hwvideog.py joins the two boards' netlists pin for pin) and GFX's own bus connector
@@ -567,7 +581,7 @@ REV_D_PASSIVE = ("R", "C", "C_Polarized", "LED", "D_Schottky", "SW_SPDT", "Conn_
 def classify(lib):
     m = re.match(r"74HCT?(\d+)$", lib)                                 # CPU Rev D, the IO panel (74HCTxx, 74HC05)
     if m:
-        return {"00": "nand", "02": "02", "05": "05", "10": "nand3", "14": "04", "20": "nand4", "74": "74", "373": "373",
+        return {"00": "nand", "02": "02", "03": "nand03", "05": "05", "10": "nand3", "14": "04", "20": "nand4", "74": "74", "373": "373",
                 "573": "373", "374": "374", "138": "138"}.get(m.group(1), "unmodelled")   # 573: the 373's latch, pins by name
     m = re.match(r"74LS(\d+)$", lib)                                   # KiCad's own 74xx symbols (VIDEO-G)
     if m:
@@ -600,19 +614,22 @@ class Circuit:
     pins float. drive(signal=value, ...) sets the bus connector's pins; settle() returns {net: value}."""
     POWER = {"VCC": 1, "+5V": 1, "GND": 0}
     LOGIC = {"or": lambda nl, r: Quad(nl, r, "or"), "nand": lambda nl, r: Quad(nl, r, "nand"), "02": Nor02, "04": Hex04, "05": Hex05, "74": DFF74, "85": Comp85,
-             "nand3": Nand3, "nand4": Nand4, "138": Dec138, "151": Mux151, "373": Latch373, "374": Reg374, "75": Latch75, "4042": Latch4042, "4050": Buffer4050,
+             "nand3": Nand3, "nand4": Nand4, "nand03": Nand03, "138": Dec138, "151": Mux151, "373": Latch373, "374": Reg374, "75": Latch75, "4042": Latch4042, "4050": Buffer4050,
              "k74": KDFF74, "k85": KComp85, "k138": KDec138, "k157": KMux157, "k373": KLatch373}
     LOGIC.update({k: (lambda nl, r, k=k: KGates(nl, r, k)) for k in KGates.TABLES})
 
-    def __init__(self, nl, fitted=None, controls=(), external=None):
+    def __init__(self, nl, fitted=None, controls=(), external=None, bus=None):
         """controls: more nets the bus-path check starts from (e.g. a drive's strobes on a header).
         external: {ref: reason} for parts the emulator plays itself (the 1802, the reset chip): their outputs may feed
-        the bus path; the nets they drive are set with drive()."""
+        the bus path; the nets they drive are set with drive().
+        bus: the reference of the connector drive() sets, for a board whose "bus" is a cable header (the front panel's
+        J1, the ribbon from the IO panel card); None = the System-5 bus connector, found by its symbol."""
         self.nl = nl; self.extra_controls = list(controls); self.external = dict(external or {}); self.models = []; self.mem = []; self.empty = []; self.unmodelled = []; self.pulls = {}; self.bus = None
         for ref, part in nl.parts.items():
-            if classify(part.lib) == "bus": self.bus = BusConnector(nl, ref)
+            if ref == bus or (bus is None and classify(part.lib) == "bus"): self.bus = BusConnector(nl, ref)
         for ref, part in sorted(nl.parts.items()):
             kind = classify(part.lib)
+            if ref == bus: continue
             if kind is None:
                 if "R-US" in part.lib or part.lib == "R": self._resistor(ref)
                 continue
@@ -673,8 +690,16 @@ class Circuit:
         if bad: raise ValueError("%s: the bus path reaches parts with no model: %s" % (self.nl.path, "; ".join(sorted(bad))))
         return seen
 
+    def drives_low(self, net):
+        """True while this card itself holds `net` low: a gate's output or a forced part (a switch), not what drive()
+        put on the bus pins. For the open-collector bus lines, where the level alone does not say who pulls"""
+        if any(n == net and v == 0 for n, (_, v) in self.forced.items()): return True
+        return any(n == net and v == 0 for m in self.models for n, v in m.outputs(self.val))
+
     def drive(self, **sig):
-        """bus pins by name: A=byte (A0-A7), N=0-7 (N0-N2), TPA, TPB, MRD, MRW, VMA (the active-low ones by their plain name)"""
+        """bus pins by name: A=byte (A0-A7), N=0-7 (N0-N2), TPA, TPB, MRD, MRW, VMA (the active-low ones by their plain
+        name), or a pin's own name ("-PAUSE", "SC0", "ADR7"). A value of None lets the pin go (an open-collector line
+        that no other card pulls: the card's own pull-up, if it has one, then sets it)"""
         s = self.bus.sig
         for k, v in sig.items():
             if k in ("A", "D"):                                         # D=None: nothing drives the data lines

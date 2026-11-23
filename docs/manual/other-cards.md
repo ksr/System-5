@@ -8,7 +8,9 @@ Cards that were designed, half-designed or planned, but are not in the machine.
 
 ## Front panel
 
-Never designed. The 2005 website lists a "Front Panel Card" page that was never written. The CPU card is ready for one: its SV6 header carries the run-control lines (-RUN, -PAUSE, -LOAD, CLEAR, WAIT), DMA IN, SC1 and a flag (FEF, routed to an EF line by JP2), and SV1 takes an external reset switch. System-4's wire-wrap front panel (switches and LEDs on two CDP1852s at N2, plus Q, Reset/Run and EF4) used those lines.
+**2005:** never designed. The 2005 website lists a "Front Panel Card" page that was never written. The CPU card is ready for one: its SV6 header carries the run-control lines (-RUN, -PAUSE, -LOAD, CLEAR, WAIT), DMA IN, SC1 and a flag (FEF, routed to an EF line by JP2), and SV1 takes an external reset switch. System-4's wire-wrap front panel (switches and LEDs on two CDP1852s at N2, plus Q, Reset/Run and EF4) used those lines.
+
+**2026:** there is one now, drawn on 2026-11-22 and not built: `hardware/front-panel/kicad/rev-a` ([its design notes](../../hardware/front-panel/kicad/rev-a/DESIGN.md)). It is a board that mounts as the front of a case, with six hex displays (the bus address and the data byte), bit and status LEDs, eight data toggles, RUN and LOAD, INPUT and a RESET button. One 50-way ribbon joins it to the IO panel card, which is the front panel as a card in the bus; nothing goes to the CPU card. Its RESET button boots the EPROM by a boot reset, a state of the bus lines that the new CPU card decodes ([bus.md](bus.md), the 36-pin extension).
 
 ## Bus (backplane)
 

@@ -12,7 +12,8 @@ BUSDRV-C (rev "C", 2026-11-20; a machine with CPU Rev D: --hw --cpu-rev D). The 
 place, so here it never becomes bus master (the real one refuses too: its DEBUG cable shows it the CPU card). It has:
   MODE:n#        0 RUN, 1 RESET, 2 PAUSE, 3 LOAD, by -RESET and -PAUSE, which the CPU card's gates (hw.NetlistCPUCard)
                  see as from any card: LOAD sets LOADED, a reset from the bus keeps it, and the machine stands still
-                 in every mode but RUN
+                 in every mode but RUN. 4 BOOT (2026-11-22): -RESET and -DMAIN low with -PAUSE high, a boot reset,
+                 which clears LOADED: MODE:0# after it starts the machine in the EPROM
   DMA / LOADBLK  LOAD mode: each byte one DMA IN cycle into M(R(0)) through the machine's bus, so the memory card's
                  netlist decides where it lands (with LOADED set: RAM, not the boot EPROM)
   -EF1 -EF2 -EF3 (and -EF, -INT) pulled low reach the 1802's flag inputs through the CPU card's EF jumpers
@@ -21,16 +22,19 @@ What the emulator does not have is the clock: it runs instructions, not clock ed
 CLKHZ / CLKSTOP only remember the rate, CLK:n# runs whole instructions for at least n / 16 machine cycles and prints
 no trace lines, and the probes read 0. The firmware's steps on the real pins, edge for edge, are in
 software/busdrv/fwsim.py with backplane.Backplane36.
-The IO panel's RUN and LOAD toggles pull the same two lines: whichever of the two last changed mode wins here.
+The IO panel's and the front panel's RUN and LOAD toggles, the front panel's RESET button and the CPU card's own
+RESET/RUN switch pull the same open-collector lines: hw.HWMachine settles them among all the cards (lines_update();
+this card's pulls are its ext_pull["busdrv"]), so a line is low while any one of them holds it.
 """
 import os, threading, tty
 
 BANNER = "s5-bus-driver blocks-1 2026-10-06 (EMULATED)"
-BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-1 load-1 probe-1 2026-11-20 BUSDRV-C (EMULATED)"
+BANNER_C = "s5-bus-driver blocks-1 io-2 clk-2 ext-1 mode-2 load-1 probe-1 2026-11-22 BUSDRV-C (EMULATED)"
 C_COMMANDS = ("MODE", "DMA", "LOADBLK", "CLKHZ", "CLKSTOP", "PROBE", "PCOUNT", "PTIME", "PDELAY", "DBG", "SPDIR", "SPIN")
 C_LINES = ("-EF1", "-EF2", "-EF3", "-PAUSE", "-DMAIN")
 OC_LINES = ("-RESET", "-INT", "-EF") + C_LINES
-MODES = ("RUN", "RESET", "PAUSE", "LOAD")
+MODES = ("RUN", "RESET", "PAUSE", "LOAD")          # as the 1802 has it (cpu=); MODE:4# BOOT is a RESET with -DMAIN low
+SHARED = ("-RESET", "-PAUSE", "-DMAIN")            # the lines hw.HWMachine settles among the cards
 NEEDS_C = "Error: needs BUSDRV-C (no U3 at 0x22)"
 MONITOR = "Error: MONITOR mode: send MASTER:1# first (CPU card out)"
 
@@ -49,7 +53,7 @@ class BusLink:
         if self.rev == "C" and card_for(machine) != "C":
             raise ValueError("the BUSDRV-C link needs a machine with CPU Rev D (--hw --cpu-rev D)")
         self.port4 = 0; self.log = []; self.pull = {n: False for n in OC_LINES}; self.clk_hz = 0; self.spdir = 0
-        self.hold = False; self.path = None
+        self.path = None
         if self.rev == "C": self._hook()
         if pty:
             self.fd, slave = os.openpty(); tty.setraw(slave); self.path = os.ttyname(slave); self._slave = slave
@@ -82,44 +86,33 @@ class BusLink:
 
     # ------------------------------------------------------------------ BUSDRV-C: its lines on the emulated machine
     def _hook(self):
-        """the machine stands still while this card holds -RESET or -PAUSE, and the 1802's flag inputs see the lines
-        this card pulls (through the CPU card's EF jumpers, as hw.HWMachine.ef reads them for the other cards)"""
-        m = self.m; step, ef = m.step, m.ef
-        def held_step():
-            if self.hold: m.cpu.cycles += 1; return None
-            return step()
+        """the 1802's flag inputs see the lines this card pulls (through the CPU card's EF jumpers, as
+        hw.HWMachine.ef reads them for the other cards). (The machine stands still by itself while -RESET or -PAUSE
+        is low, whoever holds it: hw.HWMachine.held)"""
+        m = self.m; ef = m.ef
         def flags(n):
             src = m.ccard.ef_map.get(n)
             return bool(self.pull.get("-EF" if src == "-EF4" else src)) or ef(n)
-        m.step, m.ef = held_step, flags
+        m.ef = flags
 
     def cpu_mode(self):
-        """0 RUN, 1 RESET, 2 PAUSE, 3 LOAD: as -RESET and -PAUSE stand, this card's pull or the IO panel's toggles"""
-        p = getattr(self.m, "panel", None)
-        rst = self.pull["-RESET"] or (p is not None and not p.run_on)
-        pse = self.pull["-PAUSE"] or (p is not None and p.load_on)
-        return (1 if rst else 0) | (2 if pse else 0)
-
-    def _lines_changed(self, before):
-        """-RESET or -PAUSE moved: the CPU card's gates see it, the 1802 resets when it enters RESET, and the machine
-        stands still in every mode but RUN"""
-        m = self.m; now = self.cpu_mode()
-        m.ccard.mode(0 if now & 1 else 1, 0 if now & 2 else 1)
-        if now == 1 and before != 1:
-            m.cpu.reset()
-            if hasattr(m, "pixie"): m.pixie.on = False
-        self.hold = bool(self.pull["-RESET"] or self.pull["-PAUSE"])
+        """0 RUN, 1 RESET, 2 PAUSE, 3 LOAD: the 1802's mode as the bus lines stand, whichever cards hold them"""
+        return {"run": 0, "reset": 1, "pause": 2, "load": 3}[self.m.run_mode]
 
     def _set(self, name, low):
-        before = self.cpu_mode(); self.pull[name] = bool(low)
-        if name in ("-RESET", "-PAUSE"): self._lines_changed(before)
+        self.pull[name] = bool(low)
+        if name in SHARED:                          # the machine settles the line among all the cards that pull it
+            self.m.ext_pull["busdrv"] = {n for n in SHARED if self.pull[n]}; self.m.lines_update()
         elif name == "-INT": self.m.cpu.int_line = bool(low)
 
     def set_mode(self, n):
-        """as the sketch's setMode(): -RESET and -PAUSE are low together only for LOAD, which goes through RESET"""
+        """as the sketch's setMode(): -RESET and -PAUSE are low together only for LOAD, which goes through RESET;
+        -DMAIN is low with -RESET only for BOOT (4), and is let go first on the way to any other mode"""
+        self._set("-DMAIN", False)
         if n == 2: self._set("-RESET", False); self._set("-PAUSE", True); return
         self._set("-PAUSE", False); self._set("-RESET", n != 0)
         if n == 3: self._set("-PAUSE", True)
+        if n == 4: self._set("-DMAIN", True)
 
     def _snap(self):
         m = self.m
@@ -135,7 +128,7 @@ class BusLink:
     def run_c(self, op, arg):
         m = self.m; a = arg.split(","); v = int(a[0] or 0) if a[0].lstrip("-").isdigit() or not a[0] else 0
         if op == "MODE":
-            if not 0 <= v <= 3: return ["Error: MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD"]
+            if not 0 <= v <= 4: return ["Error: MODE 0 RUN, 1 RESET, 2 PAUSE, 3 LOAD, 4 BOOT"]
             self.set_mode(v); return ["Complete"]
         if op in ("DMA", "LOADBLK"):
             if op == "DMA":
@@ -148,7 +141,10 @@ class BusLink:
                 except ValueError: return ["Error: bad hex in LOADBLK"]
             if self.cpu_mode() != 3: return ["Error: not in LOAD mode: MODE:3# first"]
             first = m.cpu.R[0]
-            for b in data: m.cpu.dma_in(b)                  # one DMA IN cycle each: M(R(0)) through the machine's bus
+            for b in data:                                  # one DMA IN cycle each: M(R(0)) through the machine's bus,
+                self._set("-DMAIN", True); took = m._dma_request(); self._set("-DMAIN", False)   # if the CPU card's
+                if not took: return ["Error: no DMA cycle: -DMAIN does not reach the 1802"]      # gates pass the request
+                m.cpu.dma_in(b)
             return ["Data: %04X" % first if op == "DMA" else "Data: %d %04X" % (len(data), first), "Complete"]
         if op == "CLKHZ":
             if not 1 <= v <= 2000000: return ["Error: CLKHZ 1..2000000 (the cards are timed for 2 MHz)"]
@@ -194,7 +190,7 @@ class BusLink:
         if rev_c and op == "CLK":                           # whole instructions for at least n / 16 machine cycles
             n = int(arg or 0)
             if n < 1: return ["Error: CLK:n, n >= 1"]
-            if not self.hold and not self.cpu_running():
+            if not self.m.held and not self.cpu_running():
                 target = m.cpu.cycles + n // 16
                 while m.cpu.cycles < target: m.step()
             return ["Data: %d" % n, "Complete"]

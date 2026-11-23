@@ -57,6 +57,8 @@ PARTS = {
     "74HCT00": dict(tpd=25, src="TI SN74HCT00 (4.5 V, 85 C)"),
     "74HCT14": dict(tpd=40, src="TI SN74HCT14 (4.5 V, 85 C; Schmitt)"),
     "74HCT20": dict(tpd=30, src="TI SN74HCT20 (4.5 V, 85 C)"),
+    "74HC03": dict(tpd=31, tpd_hl=31, src="TI SN74HC03 (4.5 V, 85 C, RL = 1k; open drain: the low-to-high edge is the "
+                                          "pull-up's RC; 2026-11-22, typed in from memory, to verify)"),
     "74HCT74": dict(clk_q=44, setup=31, hold=0, src="TI SN74HCT74 (4.5 V, 85 C)"),
     "74HCT373": dict(d_q=48, le_q=51, setup=16, hold=8, src="TI SN74HCT373 (4.5 V, 85 C)"),
     "CD4050B": dict(tpd=140, tpd_min=55, src="TI/RCA CD4050B, VDD = 5 V, CL = 50 pF (typ 55-70)"),

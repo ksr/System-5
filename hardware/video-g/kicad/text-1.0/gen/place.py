@@ -11,8 +11,8 @@ Every IC stands with pin 1 at the top-left (rotation 0) in columns: bus side fir
 status and key latch), then the IDT7134, the 6845 and the character ROM with its code latch, then the dot pipeline,
 the gates and the keyboard ATmega. The band above each socket holds its bypass cap (right) and its label "ICn / type"
 (left), readable with the chips in (Ken's rule, 2026-10-31). The ribbon header J6 lies along the bottom edge at
-x 88-147.5, the same place as GFX's J4. Front edge, top to bottom: the DB9 (its flange at the edge, the D-shell
-overhanging it, as right-angle DB9s mount), the RCA, the keyboard jack, the LED and the FTDI header; behind them a
+x 88-147.5, the same place as GFX's J4. Front edge, top to bottom: the DE-9 (its flange at the edge, the D-shell
+overhanging it, as right-angle DE-9s mount), the RCA, the keyboard jack, the LED and the FTDI header; behind them a
 strip of standing resistors and caps labelled on their sides. The MONITOR jumper JP1 sits under the bus-side columns,
 past the bus header's GND end; the KBD FLAG block JP3 in the strip at the +5V end, by J1's -EF1, -EF2 and -EF3 pins.
 """
@@ -26,6 +26,10 @@ YTOP = 10.025 - 10.375
 J1 = (15.735, 50.50, 90)                          # the C36's middle; pad 1 (GND) at y 94.95, pad 36 at 6.05
 ROUTE_SEED = 7          # common/route.py: the order of Freerouting's input. Tried 2026-11-17, seeds 0-10: nine routed
 #                         every net; 7 finished soonest, with 14.9 m of track and 222 vias (0, the sorted order, routes too)
+ROUTE_AS = {"DE9VS": "DB9VS"}   # (common/route.py, tools/kicad/dsn_order.py) the net at the DE-9's pin 9 was DB9VS until
+#                         2026-11-22 (Ken: the part is a DE-9, "change to de-9 everywhere"). Under its new name it would
+#                         sort after DE, DE2 and DE3 in Freerouting's input and the board would route another way; it
+#                         keeps the place its old name had
 X0, Y0, Y1 = 10.025, 10.025, 106.215
 X1 = X0 + LENGTH
 BAND, GAP = 4.8, 0.3
@@ -83,7 +87,7 @@ column(150.8, TOP, [("IC17", 14), ("IC19", 14), ("IC23", 14), ("IC20", 14)])
 column(165.8, TOP, [("IC22", 14), ("IC14", 16), ("IC10", 28)])             # XORs, delays, keyboard ATmega
 # ---- the strip behind the jacks (x 176.5-183.3): standing parts, labels turned on their right ---------------------------
 SX, LX = 178.0, 182.4
-PLACE["JP2"] = (178.3, 14.6, 0)                                            # VSYNC +/-, next to the DB9
+PLACE["JP2"] = (178.3, 14.6, 0)                                            # VSYNC +/-, next to the DE-9
 PLACE["R4"] = (SX, 25.5, 0); side("R4", LX, 25.5)                          # video mix
 PLACE["R5"] = (SX, 30.5, 0); side("R5", LX, 30.5)
 PLACE["F1"] = (178.0, 46.0, 90); side("F1", 181.6, 42.6)                   # keyboard +5 V
@@ -96,8 +100,8 @@ PLACE["C25"] = (179.0, 75.0, 0); side("C25", LX, 75.0)                     # ATm
 PLACE["Y2"] = (179.4, 86.0, 90); side("Y2", 183.0, 83.0)                   # 16 MHz
 PLACE["C28"] = (179.0, 93.0, 0); side("C28", LX, 93.0)
 PLACE["C29"] = (179.0, 98.0, 0); side("C29", LX, 98.0)
-# ---- front edge: DB9 (flange at the edge), RCA, keyboard, LED, FTDI ----------------------------------------------------
-PLACE["J3"] = (X1 - 11.5, 27.2, -90)                                        # DB9: TTL video / IBM 5151
+# ---- front edge: DE-9 (flange at the edge), RCA, keyboard, LED, FTDI ----------------------------------------------------
+PLACE["J3"] = (X1 - 11.5, 27.2, -90)                                        # DE-9: TTL video / IBM 5151
 PLACE["J2"] = (X1 - 11.8, 48.0, -90)                                        # RCA: composite
 PLACE["J4"] = (X1 - 0.3, 70.0, 0)                                           # keyboard
 PLACE["R6"] = (185.5, 83.5, 0); side("R6", 189.7, 83.5)
@@ -111,7 +115,7 @@ PLACE["J6"] = (93.6, 101.3, 90)
 # ---- silkscreen (common/silk.py; Ken's rule of 2026-11-18: every text upright with the card standing, KiCad 270) ------
 # jacks, jumpers and LEDs by what they do: (one line, two lines); the chips and passives get "ref value" by themselves
 LABELS.update({
-    "J2": ("J2 RCA COMPOSITE", "J2 RCA\nCOMPOSITE"), "J3": ("J3 DB9 TTL 5151", "J3 DB9\nTTL 5151"),
+    "J2": ("J2 RCA COMPOSITE", "J2 RCA\nCOMPOSITE"), "J3": ("J3 DE-9 TTL 5151", "J3 DE-9\nTTL 5151"),
     "J4": ("J4 KEYBOARD", "J4\nKEYBOARD"), "J5": ("J5 FTDI", "J5\nFTDI"), "J6": ("J6 TO GFX (J4)", "J6\nTO GFX (J4)"),
     "LED1": "PWR",                                # by its function alone, centred on the LED (Ken, 2026-11-18; pcb-check.ini)
     "SV1": "SV1 ADDRESS BLOCK\nSHUNT = 0\nA15 ONLY = 7000",    # all three lines or none (Ken: "can sv1 have better label")
@@ -137,9 +141,9 @@ SPOTS = {"LED1": [(X1 - 5.5 + 1.27 - 2.5 - 1.3 - 0.2 * k, 85.5) for k in range(1
          # "JP1 / MONITOR" under JP1 with the card standing (left of it as drawn), past "5151": the corner between the
          # bus header's GND end and the card-guide strip, 6 mm along the edge, which the placer's 1 mm steps miss
          "JP1": [(14.2 - 0.2 * k, 99.4 + dy) for k in range(10) for dy in (0.0, 0.1, -0.1, 0.2, -0.2)],
-         # "J3 DB9 TTL 5151" in the 1.5 mm between the DB9's back and R4's lead, level with the connector's middle: the
+         # "J3 DE-9 TTL 5151" in the 1.5 mm between the DE-9's back and R4's lead, level with the connector's middle: the
          # one place for it on the board side of the jack, and narrower than the placer's 0.2 mm steps from the part's
-         # body (it was found by chance while the DB9's fab drawing was its pin tails; with the whole connector drawn
+         # body (it was found by chance while the DE-9's fab drawing was its pin tails; with the whole connector drawn
          # there, 2026-11-19, the steps fell either side of it and the label went beyond the resistors)
          "J3": [(182.376 + dx, 27.2) for dx in (0.0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03)]}
 # the name line along the bottom edge as drawn, angle 0 (up the right-hand side with the card standing), clear of the

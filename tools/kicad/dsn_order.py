@@ -12,6 +12,7 @@ does not reroute a board. A board's pre-routed tracks (the wiring: the bus Rev D
 panel's crystal and +5V runs) came in KiCad's order too, until 2026-11-18: they are sorted as well.
 
     t = dsn_order.fixed(open(dsn).read(), seed)      # the DSN text in a fixed order
+    t = dsn_order.fixed(text, seed, {"DE9VS": "DB9VS"})   # ... a renamed net keeping the place its old name had
 A seed (0 or none = the sorted order) shuffles the components and their place lines reproducibly: another seed is
 another try when one order leaves a net unrouted. Used by hardware/video-g/kicad/common/route.py and
 hardware/cpu/kicad/rev-d/gen/route.py. Plain Python, no KiCad needed.
@@ -56,12 +57,18 @@ def kids(node, head):
     return [x for x in node if isinstance(x, list) and x and x[0] == head]
 
 
-def canonical(tree, seed=0):
+def canonical(tree, seed=0, order_as=None):
     """sort what KiCad lists in no fixed order: the board's keepouts, the images (their pins and keepouts; images left
     the same once their outlines are gone become one; which of two same-named images is NAME::1), the components and
     their place lines, the padstacks, the nets and their pins, the nets of each class; then, with a seed, shuffle the
-    components and their place lines"""
+    components and their place lines. order_as: {a net's name (its last part, after any "/"): the name it is sorted
+    as}. A net that is renamed would otherwise move in the order, and the board would route another way: with its old
+    name given here it keeps its place (2026-11-22: VIDEO-G TEXT's DB9VS became DE9VS, which sorts after DE, DE2, DE3)"""
     def is_(x, *heads): return isinstance(x, list) and x and x[0] in heads
+    def net_key(name):
+        s = name.strip('"'); leaf = s.split("/")[-1]
+        if order_as and leaf in order_as: s = s[:len(s) - len(leaf)] + order_as[leaf]
+        return natural(s)
     rename = {}
     for sec in tree:                                        # the library first: the placement uses its image names
         if is_(sec, "library"):
@@ -124,16 +131,16 @@ def canonical(tree, seed=0):
             nets = kids(sec, "net")
             for n in nets:
                 for p in kids(n, "pins"): p[1:] = sorted(p[1:], key=natural)
-            nets.sort(key=lambda n: natural(n[1]))
+            nets.sort(key=lambda n: net_key(n[1]))
             classes = kids(sec, "class")
             for c in classes:
                 names = [x for x in c[2:] if not isinstance(x, list)]
-                c[:] = c[:2] + sorted(names, key=natural) + [x for x in c[2:] if isinstance(x, list)]
+                c[:] = c[:2] + sorted(names, key=net_key) + [x for x in c[2:] if isinstance(x, list)]
             other = [x for x in sec[1:] if not is_(x, "net", "class")]
             sec[:] = [sec[0]] + other + nets + classes
     return tree
 
 
-def fixed(text, seed=0):
-    """the DSN text in the fixed order (see the docstring at the top)"""
-    return write(canonical(parse(text), seed)).replace(QUOTE, '"') + "\n"
+def fixed(text, seed=0, order_as=None):
+    """the DSN text in the fixed order (see the docstring at the top; order_as: canonical())"""
+    return write(canonical(parse(text), seed, order_as)).replace(QUOTE, '"') + "\n"

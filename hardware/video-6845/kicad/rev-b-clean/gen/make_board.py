@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20
 """make_board.py - Rev B-Clean's board: Rev B's (../rev-b/video-6845-rev-b.kicad_pcb, the copper of Ken's working card,
-track for track as the 2005 Eagle board) without the DB9 (Ken, 2026-11-20: "no need for db9, composite only ... a
+track for track as the 2005 Eagle board) without the DE-9 (Ken, 2026-11-20: "no need for db9, composite only ... a
 cleanup with minimal to no changes to circuit"), and with the 6845's light-pen input tied to ground (Ken, the same day:
 "Yes tie light pen to gnd"). Run with KiCad's Python after gen/make_schematic.py and
 gen/footprints.py; writes ../video-6845-rev-b-clean.kicad_pcb with Rev B's silkscreen texts still on it (gen/silk.py
@@ -9,7 +9,7 @@ redoes them).
 
   0. Rev B's board under its new names: the project and its libraries; the bus connector U$1 (Eagle's name) is J1, the
      RCA jack U$4 is J2; the title block (rev B-Clean)
-  1. X1, the DB9, taken off, with the comment-layer area Eagle drew round it
+  1. X1, the DE-9, taken off, with the comment-layer area Eagle drew round it
   2. the copper that ran only to X1's four used pins (ground, video, HSYNC, VSYNC) removed: the track at each pin, then
      whatever that leaves with an end on nothing, until nothing dangles. Every other track and via is Rev B's, and is
      locked
@@ -56,10 +56,10 @@ def main():
     open(PCB, "w").write(src)
     b = pcbnew.LoadBoard(PCB)
     tb = b.GetTitleBlock(); tb.SetTitle("System-5 6845 video Rev B-Clean"); tb.SetRevision("B-Clean"); tb.SetDate("2026-11-20")
-    tb.SetComment(0, "Rev B (Ken's working card, 2005) without the DB9; see README.md")
+    tb.SetComment(0, "Rev B (Ken's working card, 2005) without the DE-9; see README.md")
     before = {(f.GetReference(), p.GetNumber()): p.GetNetname() for f in b.GetFootprints() for p in f.Pads()}
     b.FindFootprintByReference("SV1").SetValue("ADDRESS BLOCK 2x4")   # as the schematic (gen/make_schematic.py)
-    # 1 and 2. the DB9's copper: found here, removed below on the file's text (pcbnew loses its place when items are
+    # 1 and 2. the DE-9's copper: found here, removed below on the file's text (pcbnew loses its place when items are
     #    removed while walking a list), by each item's uuid
     x1 = b.FindFootprintByReference(GONE)
     old = {p.GetNumber(): (p.GetNetname(), p.GetPosition()) for p in x1.Pads() if p.GetNetname()}
@@ -99,7 +99,7 @@ def main():
             break
         gone |= more
     kinds = [("via" if t.Type() == pcbnew.PCB_VIA_T else "track", t.GetNetname()) for t in b.GetTracks() if t.m_Uuid.AsString() in gone]
-    print("copper removed with the DB9: %d tracks and %d vias (%s)" % (
+    print("copper removed with the DE-9: %d tracks and %d vias (%s)" % (
         sum(k == "track" for k, _ in kinds), sum(k == "via" for k, _ in kinds),
         ", ".join("%s %d" % (n, sum(1 for _, m in kinds if m == n)) for n in sorted(nets))))
     xbox = x1.GetBoundingBox(False)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20
 """make_schematic.py - Rev B-Clean's schematic: Rev B's (../rev-b/video-6845-rev-b*.kicad_sch, converted from the 2005
-Eagle drawing and proven against the board) without the DB9. Ken, 2026-11-20: "a clean version of current video card,
+Eagle drawing and proven against the board) without the DE-9. Ken, 2026-11-20: "a clean version of current video card,
 no need for db9, composite only ... a cleanup with minimal to no changes to circuit. Lets call this Rev B-Clean";
 and the same day, asked about the 6845's open light-pen input: "Yes tie light pen to gnd".
 Starts from Rev B's files each run; writes ../video-6845-rev-b-clean.kicad_sch, its sheet, and this folder's copy of
@@ -14,10 +14,10 @@ What changes from Rev B (everything else is Rev B's, wire for wire):
   * the 6845's light-pen strobe input (IC3 pin 3, LPSTB; Eagle's symbol calls it LPSTD) is tied to ground: a ground
     symbol on the pin, where Rev B has a no-connect mark. The one change to the circuit. Open, as BYTE and the 2005
     drawing have it, the NMOS part's input floats
-  * X1, the DB9, is gone: its nine one-pin symbols, the no-connect marks on its five unused pins, and nothing else. It
+  * X1, the DE-9, is gone: its nine one-pin symbols, the no-connect marks on its five unused pins, and nothing else. It
     carried three signals that all go on to other parts (the 7416's video on pin 7, which still feeds the RCA jack
     through R5; the 6845's VSYNC on pin 9 and HSYNC on pin 8, which still feed the 7416) and ground on pin 1, so no
-    net loses anything but its DB9 pin. The wires that ran only to it go too.
+    net loses anything but its DE-9 pin. The wires that ran only to it go too.
 """
 import os, re, uuid
 
@@ -53,7 +53,7 @@ def main():
     root = open(os.path.join(REVB, OLD + ".kicad_sch")).read().replace(OLD, NEW)
     sheet = open(os.path.join(REVB, OLD + "-sheet1.kicad_sch")).read().replace(OLD, NEW)
     c1 = "64 x 16 text card (BYTE, May 1979), composite out; KiCad master - edit in KiCad"
-    c2 = "Rev B (Ken's working card, 2005) without the DB9, 2026-11-20; see README.md"
+    c2 = "Rev B (Ken's working card, 2005) without the DE-9, 2026-11-20; see README.md"
     root = title(root, "System-5 6845 video Rev B-Clean", c1, c2)
     sheet = title(sheet, "System-5 6845 video Rev B-Clean, sheet 1", c1, c2)
     for old, new in RENAME.items():
@@ -65,7 +65,7 @@ def main():
     i = sheet.index('(property "Reference" "SV1"'); j = sheet.index('(property "Value" "', i)
     assert sheet[j:j + 40].startswith('(property "Value" "2x4 header"'), sheet[j:j + 40]
     sheet = sheet[:j] + '(property "Value" "%s"' % SV1_VALUE + sheet[j + len('(property "Value" "2x4 header"'):]
-    # the DB9: every symbol whose reference is X1, and where each one's pin ended (to find the no-connect marks there)
+    # the DE-9: every symbol whose reference is X1, and where each one's pin ended (to find the no-connect marks there)
     gone = 0; ends = []
     while True:
         i = sheet.find('(property "Reference" "%s"' % GONE)

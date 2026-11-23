@@ -16,9 +16,9 @@ made as a new board:
 
 | | Rev B (2005) | Rev B-Clean |
 |---|---|---|
-| Circuit | the 6845's light-pen input (IC3 pin 3, LPSTB) left open | **the same, less the DB9, and with the light-pen input tied to ground** (Ken, 2026-11-20): the netlist is Rev B's with X1's pins taken out and IC3 pin 3 on GND, and nothing else (99 nets of two pins or more in both) |
-| Video out | composite on the RCA jack, and video, HSYNC and VSYNC on a DB9 (X1) | **composite only**: the RCA jack (J2). The DB9 carried three signals that all go on to other parts, so no net loses anything but its DB9 pin |
-| Copper | 2 layers, 0.254 mm tracks | **Rev B's, track for track**, less the 19 track segments and 2 vias that ran only to the DB9, plus three segments on the top copper for the light-pen tie (from pin 3 out past the pad row, round pin 2 and up to the ground track that leaves pin 1); nothing else was routed |
+| Circuit | the 6845's light-pen input (IC3 pin 3, LPSTB) left open | **the same, less the DE-9, and with the light-pen input tied to ground** (Ken, 2026-11-20): the netlist is Rev B's with X1's pins taken out and IC3 pin 3 on GND, and nothing else (99 nets of two pins or more in both) |
+| Video out | composite on the RCA jack, and video, HSYNC and VSYNC on a DE-9 (X1) | **composite only**: the RCA jack (J2). The DE-9 carried three signals that all go on to other parts, so no net loses anything but its DE-9 pin |
+| Copper | 2 layers, 0.254 mm tracks | **Rev B's, track for track**, less the 19 track segments and 2 vias that ran only to the DE-9, plus three segments on the top copper for the light-pen tie (from pin 3 out past the pad row, round pin 2 and up to the ground track that leaves pin 1); nothing else was routed |
 | Bypass capacitors | positions C1-C7 and C9-C15 (0.1 µF, one a chip) and C8 (10 µF) are on the board; Ken's card has none fitted | **the same fourteen positions and C8, to be fitted**: 0.1 µF on 0.1-inch leads (2.5 mm pitch), each named with its value on the silkscreen |
 | Silkscreen | each chip's label inside the chip's outline, where the chip hides it; texts at 0 and 90 degrees; no name line | **redone to the layout rules**: every label beside its part and readable with the parts fitted, every text upright with the card standing in the bus, each reference with its type or value, the bus pins named, the name line |
 | Names | the bus connector U$1, the RCA jack U$4 (Eagle's) | **J1** (bus) and **J2** (RCA); SV1's value says what it is, `ADDRESS BLOCK 2x4` |
@@ -29,7 +29,7 @@ made as a new board:
 
 Every text is at KiCad angle 270: upright, left to right, with the card standing in the bus, connector down. The one
 exception is the name line, `System-5 6845 video  Rev B-Clean  2026` with `cottageworker.com`, which runs along the
-bottom edge as drawn (up the side of the standing card), ending where the DB9 was.
+bottom edge as drawn (up the side of the standing card), ending where the DE-9 was.
 
 - **Chips:** reference and type over the job (`IC4 74LS85` / `BLOCK SELECT`), beside the chip. IC2 and IC7 have room
   for the reference and type only.
@@ -79,7 +79,7 @@ As Rev B (`../rev-b/README.md`), which this board's circuit is:
 | `gen/build.sh` | builds and checks everything below, from Rev B's files |
 | `gen/make_schematic.py` | Rev B's schematic without X1, with IC3 pin 3 on ground; the new names |
 | `gen/footprints.py` | this folder's footprint library: Rev B's with every part's body and courtyard drawn (seven of them memory Rev F's files, the same Eagle parts pad for pad) |
-| `gen/make_board.py` | Rev B's board without the DB9 and the copper that ran only to it; the light-pen tie; every track locked; the nets under the schematic's names; it stops if any other pad's net is not Rev B's |
+| `gen/make_board.py` | Rev B's board without the DE-9 and the copper that ran only to it; the light-pen tie; every track locked; the nets under the schematic's names; it stops if any other pad's net is not Rev B's |
 | `gen/silk.py` | the silkscreen (on `tools/kicad/silk270.py`); it can be run alone for a silkscreen-only change |
 | `video-6845-rev-b-clean.kicad_sch`, `-sheet1.kicad_sch` | the schematic, Eagle's 2005 drawing converted (as Rev B's); `-schematic.pdf` is its print |
 | `schematic/` | the redrawn schematic in blocks (`spec.py`), proven pin for pin against the board; in the book `docs/manual/pdf/system5-schematics.pdf` |
@@ -90,7 +90,7 @@ As Rev B (`../rev-b/README.md`), which this board's circuit is:
 
 ## Checks (2026-11-20)
 
-- **The circuit is Rev B's less the DB9, with the light-pen tie:** the schematic's netlist equals Rev B's with X1's
+- **The circuit is Rev B's less the DE-9, with the light-pen tie:** the schematic's netlist equals Rev B's with X1's
   pins removed and IC3 pin 3 moved onto GND (132 nets, 99 of them of two pins or more); `gen/make_board.py` checks
   that every pad has the net Rev B gave it before it adds the tie.
 - **ERC:** 0 errors; 89 warnings, the same 89 as Rev B (Eagle's bare wire ends and off-grid ends).

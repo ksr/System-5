@@ -1,0 +1,231 @@
+(footprint "C025-050X050"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "CAPACITOR\n\ngrid 2.5 mm; body 4.0 x 2.5 mm (F.Fab, a dipped 0.1 uF), courtyard 0.25 mm beyond it (VIDEO-G, CPU Rev D and the IO panel, 2026-11-17); on the IO panel the silkscreen outline is the body's (2026-11-18: Eagle's 5 x 5 mm outline stood out of the courtyard, past the board edge at C15)")
+	(property "Reference" "C1"
+		(at -2.286 -2.54 180)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "da9b9c62-bd1d-460d-b035-e7db2c5a6f2d")
+		(effects
+			(font
+				(size 1.1557 1.1557)
+				(thickness 0.1143)
+			)
+			(justify right top)
+		)
+	)
+	(property "Value" ".1"
+		(at -2.286 3.81 180)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "d2431a27-a439-48d6-907a-e5982cb926ff")
+		(effects
+			(font
+				(size 1.1557 1.1557)
+				(thickness 0.1143)
+			)
+			(justify right top)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 180)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6465ac6e-9236-4d3b-872d-e4cdee96b7a2")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 180)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "88dd1d8c-d733-4a92-894e-9ec78243f37c")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(duplicate_pad_numbers_are_jumpers no)
+	
+	
+	(fp_line
+		(start -0.254 -0.762)
+		(end -0.254 0)
+		(stroke
+			(width 0.254)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "c978da0e-a28e-4dcb-9fd5-a36bfb62e04f")
+	)
+	(fp_line
+		(start -0.254 0)
+		(end -0.381 0)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d32a5699-1448-4f7e-b8d9-240bee74f789")
+	)
+	(fp_line
+		(start -0.254 0)
+		(end -0.254 0.762)
+		(stroke
+			(width 0.254)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "57c84109-e3dc-44b9-9002-e579bd5748fc")
+	)
+	(fp_line
+		(start 0.254 0)
+		(end 0.254 -0.762)
+		(stroke
+			(width 0.254)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "6b5d8502-ad75-4884-a3e0-dff87dfb74bb")
+	)
+	(fp_line
+		(start 0.254 0)
+		(end 0.254 0.762)
+		(stroke
+			(width 0.254)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d06fab36-1b30-4ef8-b409-dfa1d59c05ec")
+	)
+	(fp_line
+		(start 0.381 0)
+		(end 0.254 0)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "019a06ec-fd2c-4fc7-979b-0019e525adc3")
+	)
+	
+	
+	
+	
+	
+	
+	(fp_line
+		(start -0.381 0)
+		(end -0.762 0)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "9e21910a-7387-44c2-9732-c793de973ed3")
+	)
+	(fp_line
+		(start 0.762 0)
+		(end 0.381 0)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "37a69ffc-c7ed-4b0c-b02c-5e55003ef6b9")
+	)
+	(fp_line
+		(start -2.12 -1.37)
+		(end 2.12 -1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start 2.12 -1.37)
+		(end 2.12 1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start 2.12 1.37)
+		(end -2.12 1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_line
+		(start -2.12 1.37)
+		(end -2.12 -1.37)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		)
+	(fp_rect
+		(start -2.25 -1.5)
+		(end 2.25 1.5)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "632ca86f-7f24-5dc3-a20b-a0b9037b2d16")
+	)
+	(fp_rect
+		(start -2 -1.25)
+		(end 2 1.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "5ce7a09e-7019-5bed-8666-33b7c9df69b7")
+	)
+	(pad "1" thru_hole roundrect
+		(at -1.27 0)
+		(size 1.3208 1.3208)
+		(drill 0.8128)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.25)
+		(chamfer_ratio 0.2928932188)
+		(chamfer top_left top_right bottom_left bottom_right)
+		(solder_mask_margin 0.1016)
+		(thermal_bridge_angle 0)
+		(uuid "12402166-738a-41a1-a3f6-3874882ec872")
+	)
+	(pad "2" thru_hole roundrect
+		(at 1.27 0)
+		(size 1.3208 1.3208)
+		(drill 0.8128)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(roundrect_rratio 0.25)
+		(chamfer_ratio 0.2928932188)
+		(chamfer top_left top_right bottom_left bottom_right)
+		(solder_mask_margin 0.1016)
+		(thermal_bridge_angle 0)
+		(uuid "aaf1b4d6-cf71-4fb1-bee8-d66b4c1e100c")
+	)
+	(embedded_fonts no)
+)

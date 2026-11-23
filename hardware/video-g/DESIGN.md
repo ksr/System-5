@@ -30,7 +30,7 @@ cut down, so the parts below keep V2.0's circuit wherever the text says nothing 
 Both are System-5 cards, 4 layers (In1 GND, In2 +5V), in neighbouring slots: GFX with the 30-pin connector where
 every card has it, TEXT with the 36-pin one since 2026-11-18 (its positions 1-30 in the same place; section 9).
 **GFX is the standard 141 x 96 mm card; TEXT is 188 x 106.6 mm** - the same bus edge and card-guide corner at the GND
-end, 47 mm taller, and 10.4 mm more along the backplane at the +5V end for the six added positions. Its 24 ICs (four 600-mil or 28-pin) and the DB9
+end, 47 mm taller, and 10.4 mm more along the backplane at the +5V end for the six added positions. Its 24 ICs (four 600-mil or 28-pin) and the DE-9
 (21 mm deep at the front edge) need about 11,000 mm2 of socket cells, against the standard card's ~9,000 usable; even
 with the keyboard moved off it would need ~167 mm. **Approved by Ken, 2026-11-17: 188 mm fits.** A **40-pin ribbon
 (2 x 20 IDC, about 10 cm)** joins them: both headers lie along the same side edge, 88-148 mm from the bus edge, so
@@ -83,7 +83,7 @@ the ATmega drives the keyboard LEDs itself), the dot-clock divider (IC21 and SV4
 12 MHz dot clock, 8 dots a character: **1.5 MHz character clock**, the same as the 6845 card's 9 MHz / 6, so the
 horizontal values barely change. The **MONITOR** jumper (status bit 4, read at 7804) tells HBIOS which table to load.
 
-| | NTSC (RCA composite, or DB9 at TV rates) | MDA (DB9 to an IBM 5151) |
+| | NTSC (RCA composite, or DE-9 at TV rates) | MDA (DE-9 to an IBM 5151) |
 |---|---|---|
 | Text | **64 x 25** | **64 x 32** |
 | Graphics | **512 x 200** | **512 x 256** |
@@ -171,7 +171,7 @@ A11 low; CE from TSEL, -OE = -MRD, R/-W = -MRW), the 6845 on the left (MA0-MA11,
 because HBIOS writes lower case - V2.0's font has 64), 28C64 (a 128-character 8 x 8 font), 74LS166 shifter, 74LS175
 delays, 74LS86 cursor/reverse XORs (bit 7 = reverse, as now), combine gates, 7416 open-collector outputs.
 
-**Outputs, front edge:** RCA composite (video + composite sync through R11/R12, as now); DB9 TTL (1, 2 GND, 7 video,
+**Outputs, front edge:** RCA composite (video + composite sync through R11/R12, as now); DE-9 TTL (1, 2 GND, 7 video,
 8 HSYNC, 9 VSYNC through the **VSYNC +/-** jumper: + for TV-rate monitors, - for the 5151).
 
 **Keyboard.** An ATmega328P (16 MHz, Arduino Uno bootloader; firmware `embedded/video-g-ps2`, one sketch for both
@@ -300,7 +300,7 @@ With GFX absent, TEXT's RN2/RN3 hold TEXT-ON high and GDOT, XOR, MOUSE-READY, GF
 ## 9. Decisions
 
 Settled (Ken, 2026-11-01): the existing 30-pin bus; the name VIDEO-G 1.0; keyboard on TEXT, mouse on GFX; no
-80-column mode; DB9 kept for an IBM 5151; text shows at reset (TEXT-OFF bit); the BLOCK jumper kept; GFX in the slot
+80-column mode; DE-9 kept for an IBM 5151; text shows at reset (TEXT-OFF bit); the BLOCK jumper kept; GFX in the slot
 next to TEXT; the IDT7134 dual-port RAM kept for text (after weighing a 62256 shared in slots).
 
 Made while drawing (2026-11-01, for Ken to confirm): **TEXT is 188 mm tall** (section 1); the **control register moved
@@ -311,7 +311,7 @@ Settled 2026-11-17 (Ken): **everything memory-mapped** (section 3), which also s
 loader** (section 8): VIDEO-G no longer uses port 4, so the loader's `OUT 4` needs no patch, and port 4 is the IO
 panel's. HBIOS backwards compatibility is not a concern.
 
-Settled 2026-11-17 (Ken): **TEXT stays 188 mm tall** (it fits the card cage); the **right-angle DB9 stays on the
+Settled 2026-11-17 (Ken): **TEXT stays 188 mm tall** (it fits the card cage); the **right-angle DE-9 stays on the
 board** for the IBM 5151; and the **2026-11-02 silkscreen rule applies** (every part's value beside its reference,
 outside the part: the bypass capacitors' 100n too), although the boards were drawn just before it. And **GFX gets
 its own power LED** (LED1 PWR through R7, 330 ohm, as TEXT's LED1), level with TEXT's at the front edge.

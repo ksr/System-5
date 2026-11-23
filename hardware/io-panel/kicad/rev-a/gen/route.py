@@ -15,7 +15,13 @@ HERE = os.path.dirname(os.path.abspath(__file__)); DEST = os.path.dirname(HERE)
 ROOT = os.path.abspath(os.path.join(DEST, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "kicad")); import kicad_route, dsn_order
 PROJ = "io-panel-rev-a"
-ROUTE_SEED = 1          # 2026-11-20, with the serial port (the card 1.75 in longer): seeds 1 and 2
+ROUTE_SEED = 3          # 2026-11-23, with the card's own RESET button (SW12, U23, R4, C26; R2 and R3 3 mm nearer the
+                        # LEDs): seed 3 routes every net; 2 and 0 leave two links open, 1 one (D0). Until then 2:
+                        # 2026-11-22, with the front panel's header J3 and RN3 (the card 0.5 in longer; J3's +5V pins
+                        # drawn in make_board.py): seed 2 routes every net; 1 leaves the toggle column's +5V open
+                        # from the displays' rail (0 not tried). Judged with the autorouter alone (-mt 0), 3.5 minutes
+                        # a seed. Until then 1:
+                        # 2026-11-20, with the serial port (the card 1.75 in longer): seeds 1 and 2
                         # route every net, 0 leaves two links open, once make_board.py draws the six links round JP6 and
                         # the serial block's +5V; without the +5V drawn every seed left one to four +5V links open.
                         # (A seed is judged in two minutes with the autorouter alone: java ... -mt 0.)

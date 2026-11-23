@@ -11,7 +11,7 @@ DATE = "2026-11-20"
 REV = "B-Clean-Keyboard"
 BUSREF = "J1"
 SYMBOLS = {"IC8": "74xx:74LS161"}        # the 74LS163 pinout; KiCad's 74LS163 symbol hides VCC (an ERC complaint)
-ROOT_NOTE = "Rev B-Clean (Rev B, Ken's working card, without the DB9) on the 36-pin bus, with VIDEO-G TEXT's PS/2 keyboard section, 2026-11-20: the 6845 at 7800 / 7801 only, the key at 7802, status at 7804. Redrawn from the board netlist and proven pin for pin against it (gen_schematic.py). IC8 must be a 74LS163."
+ROOT_NOTE = "Rev B-Clean (Rev B, Ken's working card, without the DE-9) on the 36-pin bus, with VIDEO-G TEXT's PS/2 keyboard section, 2026-11-20: the 6845 at 7800 / 7801 only, the key at 7802, status at 7804. Redrawn from the board netlist and proven pin for pin against it (gen_schematic.py). IC8 must be a 74LS163."
 RENAME = {
     "Net-(IC1-~{CER})": "~VRAM_CE", "Net-(IC1-~{OER})": "~MRD", "Net-(IC10-CLR)": "PULLUP", "Net-(IC12-A9)": "CG_A9",
     **{"Net-(IC10-Q%d)" % i: "CG_A%d" % (9 - i) for i in range(1, 7)},
@@ -46,7 +46,7 @@ SHEETS = [
      "IC10 / IC7 latch the character (bits 0-6) onto the 2732's A3-A9; VROWS are A0-A2: the font is 128 x 8 at 000-3FF\n"
      "(goodfont). IC11 shifts out the five dots. Bit 7 XOR CURSOR (IC13A) is reverse video; IC9 delays it and DE by two\n"
      "characters; IC13B XORs it into the dots; IC5D blanks outside DE. IC14 (7416) mixes video and syncs for the RCA jack\n"
-     "(composite). Rev B's DB9, which carried the same video and the two syncs separately, is not on this board."),
+     "(composite). Rev B's DE-9, which carried the same video and the two syncs separately, is not on this board."),
     ("kbdbus", "Keyboard bus", "THE KEYBOARD ON THE BUS: KEY LATCH (7802), STATUS (7804), KEY-READY, THE FLAG LINE",
      ["IC16", "IC17", "IC18", "IC19", "IC20", "IC22", "JP1", "R10", "R11"], None,
      "IC16: -RDKEY and -RDSTAT are the decoder's selects while -MRD is low; KRDT is -RDKEY while TPB is high. IC19, the key latch,\n"

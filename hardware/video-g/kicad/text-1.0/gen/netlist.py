@@ -17,7 +17,7 @@ System-5's: everything memory-mapped in the card's block, no I/O ports (Ken, 202
     low and cleared while -MRW is low, so it keeps its level between cycles and never changes while E is high
   * display: 12 MHz, IC15 counts 8-15 (8 dots), QC clocks the 6845; IDT7134 left port -> 7-bit code latch IC11 ->
     28C64 IC12 (A0-A2 = RA0-RA2) -> shifter IC13; IC14 delays reverse/cursor and DE two characters; the combine:
-    dot = (text AND TEXT-ON) OR GDOT, or the XOR of the two when XORM; 7416 to the RCA composite and the DB9.
+    dot = (text AND TEXT-ON) OR GDOT, or the XOR of the two when XORM; 7416 to the RCA composite and the DE-9.
     TEXT-ON, XORM and GDOT come from GFX (its control register); alone, RN2/RN3 hold text on, XOR off, GDOT low
   * keyboard: ATmega328P IC10 loads IC9 (LDDATA) and sets KEY-READY (IC24B); a read of 7802 clears it at TPB. KEY-READY
     also pulls one bus flag line low (IC23D, open collector): JP3 picks -EF1, -EF2, -EF3 or -EF (Ken, 2026-11-18), the
@@ -83,7 +83,7 @@ PARTS = {
     "Y1":   ("12MHz", "Device:Crystal", "Crystal:Crystal_HC49-U_Vertical", "dot clock"),
     "Y2":   ("16MHz", "Device:Crystal", "Crystal:Crystal_HC49-U_Vertical", "ATmega clock"),
     "J2":   ("RCA", LOC + ":RCA", LOC + ":RCA", "composite video"),
-    "J3":   ("DB9 F", LOC + ":DE9_SHIELD", LOC + ":F09HP", "TTL video: 7 video, 8 HSYNC, 9 VSYNC (JP2), 1 2 GND"),
+    "J3":   ("DE-9 F", LOC + ":DE9_SHIELD", LOC + ":F09HP", "TTL video: 7 video, 8 HSYNC, 9 VSYNC (JP2), 1 2 GND"),
     "J4":   ("KEYBOARD", LOC + ":MINIDIN6", LOC + ":MiniDIN6_MD-60SM", "PS/2 keyboard (Same Sky MD-60SM)"),
     "J5":   ("FTDI", "Connector_Generic:Conn_01x06", FP_H % 6, "GND CTS VCC(nc) TXD RXD DTR: ATmega bootloader"),
     "J6":   ("TO GFX", "Connector_Generic:Conn_02x20_Odd_Even", "Connector_IDC:IDC-Header_2x20_P2.54mm_Vertical",
@@ -91,7 +91,7 @@ PARTS = {
     "SV1":  ("BLOCK", "Connector_Generic:Conn_02x04_Odd_Even", "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical",
              "card block: fitted = 0; 1-2 only = block 7 (7000)"),
     "JP1":  ("MONITOR", "Connector_Generic:Conn_01x03", FP_H % 3, "1-2 NTSC (64 x 25), 2-3 MDA / IBM 5151 (64 x 32)"),
-    "JP2":  ("VSYNC", "Connector_Generic:Conn_01x03", FP_H % 3, "DB9 pin 9: 1-2 +VSYNC, 2-3 -VSYNC (5151)"),
+    "JP2":  ("VSYNC", "Connector_Generic:Conn_01x03", FP_H % 3, "DE-9 pin 9: 1-2 +VSYNC, 2-3 -VSYNC (5151)"),
     "JP3":  ("KBD FLAG", "Connector_Generic:Conn_02x04_Odd_Even", "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical",
              "one shunt: KEY-READY onto -EF1, -EF2, -EF3 or -EF (set to -EF)"),
     "F1":   ("0.5A PTC", "Device:Polyfuse", "Fuse:Fuse_Bourns_MF-RHT050", "keyboard +5 V"),
@@ -260,7 +260,7 @@ c("GND", "IC17.11", "IC17.13")                                             # IC1
 c("VIDN", "IC23.1"); c("VIDEO", "IC23.2", "R4.2", "J3.7")
 c("VSBUF", "IC23.3"); c("HSBUF", "IC23.5", "J3.8")
 c("SYNC", "IC23.4", "IC23.6", "R4.1", "R5.2", "J2.C1"); c("+5V", "R5.1")
-c("VSBUF", "JP2.1"); c("DB9VS", "JP2.2", "J3.9"); c("NVSYNC", "JP2.3")
+c("VSBUF", "JP2.1"); c("DE9VS", "JP2.2", "J3.9"); c("NVSYNC", "JP2.3")
 c("GND", "J3.1", "J3.2", "J3.G1", "J3.G2", "J2.S1", "J2.S2", "J2.S3")
 c("PWRLED", "R6.1", "LED1.2"); c("+5V", "R6.2"); c("GND", "LED1.1")       # LED: 1 = K, 2 = A
 

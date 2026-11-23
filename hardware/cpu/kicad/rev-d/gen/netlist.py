@@ -8,14 +8,30 @@ Blocks:
             EXT_CLK comes in on J2 (the debug header, a jumper wire from a debug board), pulled down by R2, through U7A
             (a Schmitt inverter: an external clock's polarity does not matter)
   control   no run latches: CLEAR = -RESET and WAIT = -PAUSE, each through two Schmitt inverters (U7). The four 1802
-            modes follow directly: reset (-RESET low), run, pause (-PAUSE low), load (both low). DMA_IN = -DMAIN, the same.
+            modes follow directly: reset (-RESET low), run, pause (-PAUSE low), load (both low).
+            DMA_IN = -DMAIN while DMA_ARMED is set, and off otherwise (U11C, open drain, with R9; 2026-11-22).
+            DMA_ARMED (U8B) is clear whenever -PAUSE is high and is set once -DMAIN has been seen high with -PAUSE
+            low (ARM_L = NAND(PAUSE_H, DMAIN_N), U11D with R10; DMAIN_N from U9A). So the 1802 takes a DMA request
+            only in LOAD mode, the one place System-5 makes one, which leaves -DMAIN free to mark a boot reset when
+            the machine is not paused; and a -DMAIN that is still low when LOAD is switched on (RESET held: a boot
+            reset takes about a microsecond to let the line go) is never taken for a request.
   reset     U10 DS1813 (power-on reset and push-button debounce, open drain, no watchdog: Rev A's CM1232 watchdog, fed by
-            TPA, would reset a paused or stepped machine) on the bus -RESET. SW1 RESET/RUN: RESET grounds SW_RST, which
-            pulls -RESET through D1 (the DS1813 then holds it 150 ms after release) and clears LOADED.
+            TPA, would reset a paused or stepped machine) on the bus -RESET: it holds -RESET low for 150 ms after
+            whatever pulled it lets go (anything that gets it under 0.4 V: its data sheet's VIL).
+            **A boot reset is a state of the bus** (Ken, 2026-11-22: a front panel on one ribbon from the IO card, "all
+            can come from io"): -RESET and -DMAIN low together with -PAUSE high = reset, and boot the EPROM.
+            SW1 RESET/RUN and power-on make it: SW1 grounds SW_RST, a second DS1813 (U12) holds SW_RST low for 150 ms
+            after power comes up and after SW1 is let go, and U11 (74HC03, open drain) pulls -RESET (U11A) and, unless
+            the machine is paused, -DMAIN (U11B) for as long as SW_RST is low. The front panel's RESET button and the
+            bus driver make the same state from outside. U10 then holds -RESET 150 ms longer than -DMAIN.
+            (Until 2026-11-22 SW1 pulled -RESET through a diode, D1, and cleared LOADED by a line of its own, with
+            C12 for power-on: a reset from the bus could not boot the EPROM once LOADED was set.)
   boot      U2 latches A8-A15 on TPA (a 74HCT373, transparent while TPA is high: timing finding T1 fixed). U3 2732 at
             F000-FFFF. Boot map (the EPROM at every address, -VMA high) after a reset, until the first access with A15
-            high (U4B, as Rev A built) -- unless LOADED (U8A) is set: LOAD mode sets it, and SW1 or power-on clears it,
-            so a program loaded at 0000 runs from RAM after LOAD -> RESET -> RUN (ELF-style), while SW1 boots HBIOS.
+            high (U4B, as Rev A built) -- unless LOADED (U8A) is set: LOAD mode sets it (LOAD_L, U5D) and a boot reset
+            clears it (BOOT_L = NAND(RST_H, DMAIN_H, WAIT), U6B), so a program loaded at 0000 runs from RAM after
+            LOAD -> RESET -> RUN (ELF-style), while SW1, power-on or the front panel's RESET boots HBIOS. The two
+            never hold together: LOAD needs -PAUSE low, a boot reset needs it high.
             WIN_L = A12.A13.A14.A15 (U6A); -VMA = ROM_SEL_H = BOOTMAP + WIN (U5B); the EPROM's !CE = ROM_SEL_L.
   flags     JP2-JP5, one 2x4 block per 1802 flag input (EF1-EF4), each row a bus flag line (-EF1, -EF2, -EF3, -EF): a
             jumper across a row puts that line on the block's input, so any input takes any line (Ken, 2026-11-17; was
@@ -63,6 +79,9 @@ CHIPS = {      # pin names as the emulator's models read them (software/s5emu/s5
         ("1:I0:I 2:I1:I 4:I2:I 5:I3:I 6:O:O 7:GND:P 8:O:O 9:I0:I 10:I1:I 12:I2:I 13:I3:I 14:VCC:P"))),
     "74HCT14": ("Package_DIP:DIP-14_W7.62mm", _p(
         ("1:I:I 2:O:O 3:I:I 4:O:O 5:I:I 6:O:O 7:GND:P 8:O:O 9:I:I 10:O:O 11:I:I 12:O:O 13:I:I 14:VCC:P"))),
+    # 74HC03: quad 2-input NAND with open-drain outputs (the 74HC00's pins; TI SN74HC03N)
+    "74HC03": ("Package_DIP:DIP-14_W7.62mm", _p(
+        ("1:I0:I 2:I1:I 3:O:%s 4:I0:I 5:I1:I 6:O:%s 7:GND:P 8:O:%s 9:I0:I 10:I1:I 11:O:%s 12:I0:I 13:I1:I 14:VCC:P" % ((OC,) * 4)))),
     "DS1813": ("Package_TO_SOT_THT:TO-92_Inline", _p("1:~{RST}:%s 2:VCC:%s 3:GND:%s" % (OC, P, P))),
     "OSC_DIP8": ("Oscillator:Oscillator_DIP-8", _p("1:EN:%s 4:GND:%s 5:OUT:%s 8:VCC:%s" % (I, P, O, P))),
 }
@@ -93,14 +112,23 @@ chip("U5", "74HCT00", "74HCT00", {1: "BOOT_PEND", 2: "NOT_LOADED", 3: "BOOTMAP_L
      9: "-VMA", 10: "-VMA", 8: "ROM_SEL_L",
      12: "RST_H", 13: "PAUSE_H", 11: "LOAD_L", 7: "GND", 14: "+5V"})
 chip("U6", "74HCT20", "74HCT20", {1: "LA12", 2: "LA13", 4: "LA14", 5: "LA15", 6: "WIN_L",
-     9: "+5V", 10: "+5V", 12: "+5V", 13: "+5V", 8: None, 7: "GND", 14: "+5V"})
+     9: "RST_H", 10: "DMAIN_H", 12: "WAIT", 13: "+5V", 8: "BOOT_L", 7: "GND", 14: "+5V"})   # B: a boot reset on the bus
 chip("U7", "74HCT14", "74HCT14", {1: "EXT_CLK", 2: "CLK_EXT", 3: "-RESET", 4: "RST_H", 5: "RST_H", 6: "CLEAR",
      9: "-PAUSE", 8: "PAUSE_H", 11: "PAUSE_H", 10: "WAIT", 13: "-DMAIN", 12: "DMAIN_H", 7: "GND", 14: "+5V"})
-chip("U8", "74HCT74", "74HCT74", {1: "POR_L", 2: "GND", 3: "GND", 4: "LOAD_L", 5: "LOADED", 6: "NOT_LOADED",   # A: LOADED
-     13: "+5V", 12: "GND", 11: "GND", 10: "+5V", 9: None, 8: None, 7: "GND", 14: "+5V"})                   # B: spare
-chip("U9", "74HCT14", "74HCT14", {1: "DMAIN_H", 2: "DMA_IN", 3: "SW_RST", 4: "SWRST_H", 5: "SWRST_H", 6: "POR_L",
+chip("U8", "74HCT74", "74HCT74", {1: "BOOT_L", 2: "GND", 3: "GND", 4: "LOAD_L", 5: "LOADED", 6: "NOT_LOADED",   # A: LOADED
+     13: "PAUSE_H", 12: "GND", 11: "GND", 10: "ARM_L", 9: "DMA_ARMED", 8: None, 7: "GND", 14: "+5V"})      # B: DMA_ARMED
+chip("U9", "74HCT14", "74HCT14", {1: "DMAIN_H", 2: "DMAIN_N", 3: "SW_RST", 4: "SWRST_H", 5: "GND", 6: None,    # C: spare
      9: "SC0_RAW", 8: "SC0_L", 11: "SC0_L", 10: "SC0", 13: "Q", 12: "Q_L", 7: "GND", 14: "+5V"})
 chip("U10", "DS1813", "DS1813-10", {1: "-RESET", 2: "+5V", 3: "GND"})
+# the boot reset (2026-11-22): U12 holds SW_RST low at power-on and after SW1; U11 puts it on the bus, open drain
+chip("U12", "DS1813", "DS1813-10", {1: "SW_RST", 2: "+5V", 3: "GND"})
+chip("U11", "74HC03", "74HC03", {1: "SWRST_H", 2: "SWRST_H", 3: "-RESET",          # A: -RESET, whatever the mode
+     4: "SWRST_H", 5: "WAIT", 6: "-DMAIN",                                          # B: -DMAIN too, unless paused
+     9: "DMAIN_H", 10: "DMA_ARMED", 8: "DMA_IN",                                    # C: the 1802's DMA IN, once armed
+     12: "PAUSE_H", 13: "DMAIN_N", 11: "ARM_L", 7: "GND", 14: "+5V"})               # D: arm: paused and -DMAIN high
+_R = "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
+PARTS["R9"] = ("Device:R", "10k", _R, {1: "+5V", 2: "DMA_IN"})                      # U11's two inside outputs are open
+PARTS["R10"] = ("Device:R", "10k", _R, {1: "+5V", 2: "ARM_L"})                      # drain too: a pull-up each
 chip("X1", "OSC_DIP8", "4MHz", {1: "+5V", 4: "GND", 5: "OSC", 8: "+5V"})
 
 PARTS["J1"] = ("Connector_Generic:Conn_01x36", "System-5 bus (36)", "s5cpu:C36",
@@ -118,9 +146,8 @@ for k in range(4):        # JP2-JP5: one 2x4 block per 1802 flag input EF1-EF4, 
 # SW1: a Marquardt 9070-1W, the RESET/RUN toggle of Ken's YACC1 (Ken, 2026-11-18: "change reset to same on yacc1"; until
 # then an E-Switch 100 series). 2 the common; 3 RESET (the lever at pin 1's end joins the common to pin 3); 1 RUN, open
 PARTS["SW1"] = ("Switch:SW_SPDT", "RESET/RUN", "s5cpu:SW_Toggle_SPDT_Marquardt_9070-1W", {2: "GND", 3: "SW_RST", 1: None})
-PARTS["D1"] = ("Device:D_Schottky", "BAT85", "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal", {1: "SW_RST", 2: "-RESET"})   # 1 K, 2 A
-PARTS["R1"] = ("Device:R", "10k", R, {1: "+5V", 2: "SW_RST"})
-PARTS["C12"] = ("Device:C", "1uF", "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P2.50mm", {1: "SW_RST", 2: "GND"})  # power-on clear of LOADED
+PARTS["R1"] = ("Device:R", "10k", R, {1: "+5V", 2: "SW_RST"})          # (U12 has a pull-up of its own, 3.5 to 7.5 k)
+# (D1, a BAT85 from SW_RST to -RESET, and the 1 uF on SW_RST went on 2026-11-22: U11 and U12 do their work)
 PARTS["R2"] = ("Device:R", "10k", R, {1: "EXT_CLK", 2: "GND"})
 PARTS["RN1"] = ("Device:R_Network08", "10k", "Resistor_THT:R_Array_SIP9",
                 {1: "+5V", 2: "-RESET", 3: "-INT", 4: "-PAUSE", 5: "-DMAIN", 6: "-EF", 7: "-EF1", 8: "-EF2", 9: "-EF3"})
@@ -136,6 +163,7 @@ for ref, label, sink, k in (("LED1", "PWR", "GND", 3), ("LED2", "Q", "Q_L", 4), 
 PARTS["LED6"] = ("Device:LED", "RAM", "LED_THT:LED_D3.0mm", {1: "GND", 2: "LED_RAM"})                # 1 = K, 2 = A
 PARTS["R8"] = ("Device:R", "1k", R, {1: "LOADED", 2: "LED_RAM"})
 PARTS["C1"] = ("Device:C_Polarized", "10uF", "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm", {1: "+5V", 2: "GND"})
-for k, u in enumerate(("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "X1")):
+BYPASSED = ("U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9", "X1", "U11")       # C2 ... C12, in this order
+for k, u in enumerate(BYPASSED):      # (C12 was a 1 uF on SW_RST until 2026-11-22; it is U11's 0.1 uF now)
     PARTS["C%d" % (k + 2)] = ("Device:C", "0.1uF", CAP, {1: "+5V", 2: "GND"})                        # one per chip
 DOCS = {}

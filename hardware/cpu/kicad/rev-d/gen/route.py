@@ -15,9 +15,9 @@ HERE = os.path.dirname(os.path.abspath(__file__)); DEST = os.path.dirname(HERE)
 ROOT = os.path.abspath(os.path.join(DEST, "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "kicad")); import kicad_route, dsn_order
 PROJ = "cpu-rev-d"
-ROUTE_SEED = 0          # 2026-11-18, with JP1 at the top edge, the EF blocks 1.5 in nearer the bus and the 9070-1W for
-                        # SW1: seed 0 (the sorted order) routes every net, 1029 segments, 35 vias (2 leaves two +5V links
-                        # open; the others not tried). Before those moves: 1; before the slot's renumbering: 3
+ROUTE_SEED = 1          # 2026-11-22, with the boot reset's parts (U11 in a fourth column, U12, R9, R10; the LEDs'
+                        # resistors 7 mm nearer the LEDs): seed 1 routes every net; 0 leaves three links open (+5V,
+                        # DMA_IN, D0). Until then 0 (2026-11-18: JP1 at the top edge, the EF blocks moved, the 9070-1W)
 
 
 def main():

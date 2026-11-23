@@ -314,6 +314,7 @@ class IOPanel:
 
     def __init__(self, rtc=None, uart=None):
         self.switches, self.pressed, self.run_on, self.load_on = 0, False, True, False
+        self.reset_pressed = False                      # the card's own RESET button (2026-11-23): a boot reset
         self.latch = None                               # the '374 powers up undefined
         self.rtc = rtc if rtc is not None else DS12885(start=datetime.datetime.now())
         self.uart = uart if uart is not None else UART16550()
@@ -424,17 +425,23 @@ class Machine:
         return False
 
     # ------------------------------------------------------------------ the IO panel's hand controls
-    def panel_set(self, switches=None, input=None, run=None, load=None):
+    def panel_set(self, switches=None, input=None, run=None, load=None, reset=None):
         """the IO panel's toggles (byte), INPUT (pressed), RUN and LOAD, as a person at the front panel would. RUN off
         resets and holds the 1802; LOAD on pauses it; both = LOAD mode, where each INPUT press stores the toggles at M(R0)
         and R0 counts on. After LOAD mode, RUN runs RAM from 0000 (CPU Rev D's LOADED flag); otherwise a reset boots the
-        ROM as the Reset button does."""
-        p = self.panel; was_pressed = p.pressed; before = p.mode()
+        ROM as the Reset button does. reset: the card's own RESET button (2026-11-23): a boot reset, which clears that
+        flag and holds the 1802 in reset while it is down; it does nothing while LOAD is on."""
+        p = self.panel; was_pressed = p.pressed
+        boot = lambda: p.reset_pressed and not p.load_on           # (not while paused: -DMAIN would be a DMA request)
+        mode = lambda: "reset" if boot() and p.mode() == "run" else p.mode()
+        before = mode()
         if switches is not None: p.switches = switches & 0xFF
         if input is not None: p.pressed = bool(input)
         if run is not None: p.run_on = bool(run)
         if load is not None: p.load_on = bool(load)
-        now = p.mode()
+        if reset is not None: p.reset_pressed = bool(reset)
+        now = mode()
+        if boot(): self.loaded = False; self.cpurom.remap = self.cpurom.loaded      # a boot reset: the EPROM next
         if now == "load": self.loaded = True; self.cpurom.remap = False    # LOADED: the boot map is off, 0000 is RAM
         if now == "reset" and before != "reset":       # CLEAR low, WAIT high: the 1802 resets (R0 = 0000)
             self.cpu.reset(); self.pixie.on = False     # (in LOAD mode R0 counts the bytes instead)

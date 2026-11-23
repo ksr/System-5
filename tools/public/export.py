@@ -65,6 +65,10 @@ BIG = 50 * 1024 * 1024
 ALLOW = [  # (rule, path pattern, matched-text pattern, why): findings checked by hand and left in
     ("email", r"^hardware/libraries/eagle/library/74xx-eu\.lbr$", r"^librarian@cadsoft\.de$",
      "CadSoft's library contact address, inside their own Eagle library (2026-11-15)"),
+    ("email", r"^hardware/video-g/kicad/text-1\.0/video-g-text-gerbers\.zip$", r"^q@4\.ls$",
+     "six bytes of the zip's packed data (offset 94324, in the deflate stream of video-g-text-F_Silkscreen.gbr), "
+     "not text: the files in the zip, scanned unpacked, have no finding. The zip is the one made on 2026-11-22; "
+     "a rebuilt zip has other bytes, and this entry then matches nothing (2026-11-23)"),
 ]
 
 

@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "hardware/video-g/kicad/text-1.0/schematic/video-g-text-schematic.kicad_sch")
-		(date "2026-11-19T08:16:10")
+		(date "2026-11-22T14:26:20")
 		(tool "Eeschema 10.0.6")
 		(sheet
 			(number "1")
@@ -3398,7 +3398,7 @@
 		)
 		(comp
 			(ref "J3")
-			(value "DB9 F")
+			(value "DE-9 F")
 			(footprint "video-g-local:F09HP")
 			(fields
 				(field
@@ -12041,23 +12041,6 @@
 		)
 		(net
 			(code "71")
-			(name "/DB9VS")
-			(class "Default")
-			(node
-				(ref "J3")
-				(pin "9")
-				(pinfunction "9_9")
-				(pintype "passive")
-			)
-			(node
-				(ref "JP2")
-				(pin "2")
-				(pinfunction "Pin_2_2")
-				(pintype "passive")
-			)
-		)
-		(net
-			(code "72")
 			(name "/DE")
 			(class "Default")
 			(node
@@ -12080,7 +12063,7 @@
 			)
 		)
 		(net
-			(code "73")
+			(code "72")
 			(name "/DE2")
 			(class "Default")
 			(node
@@ -12097,7 +12080,7 @@
 			)
 		)
 		(net
-			(code "74")
+			(code "73")
 			(name "/DE3")
 			(class "Default")
 			(node
@@ -12110,6 +12093,23 @@
 				(ref "IC21")
 				(pin "5")
 				(pintype "input")
+			)
+		)
+		(net
+			(code "74")
+			(name "/DE9VS")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "9")
+				(pinfunction "9_9")
+				(pintype "passive")
+			)
+			(node
+				(ref "JP2")
+				(pin "2")
+				(pinfunction "Pin_2_2")
+				(pintype "passive")
 			)
 		)
 		(net

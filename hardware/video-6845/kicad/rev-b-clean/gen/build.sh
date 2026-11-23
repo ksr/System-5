@@ -3,8 +3,8 @@
 #
 # build.sh - build and check the 6845 video card Rev B-Clean (Ken, 2026-11-20: "a clean version of current video card,
 #   no need for db9, composite only. Add bypass caps and proper silkscreen ... minimal to no changes to circuit"):
-#   its schematic from Rev B's without the DB9 (make_schematic.py), ERC and netlist; the footprint library with every
-#   part drawn (footprints.py); the board from Rev B's with Rev B's copper kept and locked, less the DB9's tracks
+#   its schematic from Rev B's without the DE-9 (make_schematic.py), ERC and netlist; the footprint library with every
+#   part drawn (footprints.py); the board from Rev B's with Rev B's copper kept and locked, less the DE-9's tracks
 #   (make_board.py: nothing is routed, no connection is new); the silkscreen (silk.py); DRC with schematic parity; the
 #   order files, the 1:1 print and tools/preorder_check.py --layers 2, which also redraws schematic/ and rebuilds the
 #   book. hardware/video-6845/kicad/rev-b-clean/gen/build.sh

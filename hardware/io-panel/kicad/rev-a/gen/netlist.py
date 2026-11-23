@@ -32,11 +32,39 @@ Blocks:
   LOAD      ELF-style toggles straight onto the open-collector bus lines: SW10 RUN/RESET grounds -RESET, SW11 LOAD grounds
             -PAUSE; LOAD mode = both low. LOAD_H = NOT(NAND(NOT -RESET, NOT -PAUSE)) (U4, U6) is high in LOAD mode,
             whichever card made it.
-            One DMA request per press (U10): REQ (U10A) is clocked by INPUT_H rising with D = LOAD_H; it drives -DMAIN
-            (open collector, U9). ACK (U10B) is clocked by -MRW rising (the DMA IN write has ended) with D = REQ; its
-            !Q clears REQ. ACK is held clear while the button is up (!CLR = INPUT_H), so a held button loads one byte.
+            One DMA request per press (U10): REQ (U10A) is clocked by INPUT_H rising with D = LOAD_H. The bus line is
+            -DMAIN = NAND(REQ, SC0) (U9B, open drain): low while REQ is set and the 1802 is not yet in the DMA cycle.
+            The 1802 samples its DMA input at clock 7 of every cycle (data sheet, figure 4), before -MWR rises, so
+            the request has to be gone early in the DMA cycle itself or a second one follows (figure 12): SC0 falls
+            as that cycle (S2) starts and lets -DMAIN go, as the COSMAC ELF does with SC1. (Until 2026-11-22 -DMAIN
+            was REQ alone, which lasted until -MWR rose: two bytes for a press on a real 1802. The emulator ran one
+            cycle a press and did not show it.) ACK (U10B) is clocked by -MRW rising (the DMA IN write has ended)
+            with D = REQ; its !Q clears REQ, which is over well before SC0 rises again. ACK is held clear while the
+            button is up (!CLR = INPUT_H), so a held button loads one byte. RN1 holds SC0 high with no CPU card.
   Q         the Q LED (LED9) sinks into U5B = NAND(Q, 1, 1), push-pull: on while Q is high (it was U9, open collector,
-            which pcb-check rightly saw as an output with no pull-up).
+            which pcb-check took for an output with no pull-up; the LED and its resistor were its load, and the
+            check knows an LED only by the word LED in its value, as the pcb-check session found on 2026-11-22).
+  panel     J3 (Ken, 2026-11-22: "I want to add ability to have a front panel if system is ever put in a case. This
+            will mean bringing all IO switches, LEDs, and TIL311 signals out to a ribbon cable connector"; "dont
+            forget q line"; "and cpu status leds for mode"): a keyed 2x25 header at the front edge, a straight 50-way
+            ribbon to the front panel card (hardware/front-panel), pin n to pin n; the one pin map for both boards
+            is tools/s5panel.py. On it: ADR15-ADR0 and OUT7-OUT0 (the displays and bit LEDs), SW7-SW0 (the data
+            toggles), LED_Q_K (the Q LED), ROM_LED_L, INPUT_RC (the INPUT button), and the bus lines -RESET, -PAUSE
+            and -DMAIN themselves (RUN, LOAD, the RESET button, the mode LEDs), with +5V and ground.
+            ROM_LED_L = NAND(-VMA, -VMA) (U9D, open drain): low while the CPU card's EPROM answers (-VMA high), to
+            sink the front panel's ROM LED. RN3 (10k x8) pulls SW0-SW7 down: the front panel's toggles switch each
+            line to +5V through 1k and leave it open otherwise, and the '244's inputs do not float with neither
+            the card's own toggles nor a front panel fitted. This card's own toggles are SPDT between +5V and
+            ground: fitted, they win over the front panel's (nothing is harmed); a card built for a front panel
+            leaves SW1-SW8 out. RUN, LOAD and INPUT on the two boards work together (either pulls its line low).
+  RESET     SW12 (Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not installed"): a
+            push-button for a boot reset, as the front panel's. Pressed, it puts +5V on BTN_H (R4 holds it low
+            otherwise), and U23 (74HC03, open drain) pulls -RESET (U23A) and -DMAIN (U23B) low together: the CPU card
+            clears LOADED, so the machine starts in the EPROM when the button is let go (docs/manual/bus.md). Both
+            gates take the bus line -PAUSE as their other input, so the button does nothing while -PAUSE is low: in
+            LOAD mode a low -DMAIN would be a DMA request. No debounce: a bouncing boot reset is a boot reset, and
+            the CPU card's DS1813 holds -RESET for 150 ms after the last release. (RUN/RESET, the toggle, is another
+            thing: it holds -RESET alone, a plain reset, which starts again whatever ran before.)
   rtc       U13 DS12885+ (Ken, 2026-11-18): clock, calendar, 114 bytes of battery-backed RAM; Intel timing (MOT low), CS
             tied low, RESET tied high (the datasheet's typical connection); Y1 32.768 kHz (6 pF), BT1 a CR2032 in a flat
             holder (Keystone 103: an upright one stands taller than the room between cards), straight on VBAT. Its two
@@ -47,7 +75,7 @@ Blocks:
             MRD_H) (U12D, U5C), low through the whole INP. IRQ (open drain) reaches the bus -INT through JP4's last row
             (off). RN1 holds the jumper selects and IRQ high.
   serial    (Ken, 2026-11-20: "for io card create a test branch for adding serial io and db 9 to board, ok to lengthen
-            board"; his choices: a 16C550 as on his YACC1 I/O card, the DB9 on the side edge. Drawn on the branch
+            board"; his choices: a 16C550 as on his YACC1 I/O card, the DE-9 on the side edge. Drawn on the branch
             io-panel-serial and merged the same day.) U20 16C550 UART (DIP-40: XR16C550, TL16C550C, PC16550D) with its own clock X1, a 1.8432 MHz can
             (divisor 12 = 9600 baud, 3 = 38400), -BAUDOUT to RCLK; U21 MAX232 with four 1 uF capacitors; J2 a DE-9
             socket at the side edge, 2 and 3 through the null-modem block JP6 (1-3 and 2-4: the card sends on pin 2;
@@ -75,7 +103,11 @@ BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 
 POS = [BUS[i] for i in range(30, 0, -1)] + ["-EF1", "-EF2", "-EF3", "-DMAIN", "SC0", "-PAUSE"]   # position 1..36, counted from GND
 # (Ken, 2026-11-18: GND 1 ... +5V 30, then -EF1 31, -EF2 32, -EF3 33, -DMAIN 34, SC0 35, -PAUSE 36; bus pin n = position 31 - n)
 USED = {"+5V", "GND", "-EF1", "-EF2", "-EF3", "-EF", "-INT", "-RESET", "-PAUSE", "-DMAIN", "N0", "N1", "N2", "-MRD", "-MRW", "TPB", "Q",
-        "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "TPA", "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"}
+        "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "TPA", "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
+        "SC0", "-VMA"}        # (2026-11-22: SC0 ends the DMA request, -VMA lights the front panel's ROM LED)
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "..", "tools"))
+import s5panel                # the front panel ribbon's pin map, shared with hardware/front-panel
 
 I, O, T, P, B, OC, NC = "input", "output", "tri_state", "power_in", "bidirectional", "open_collector", "no_connect"
 _TYPES = {"I": I, "O": O, "T": T, "P": P, "B": B, "OC": OC, "N": NC}
@@ -102,7 +134,8 @@ CHIPS = {
     "74HCT10": (DIP14, _p("1:I0:I 2:I1:I 3:I0:I 4:I1:I 5:I2:I 6:O:O 7:GND:P 8:O:O 9:I0:I 10:I1:I 11:I2:I 12:O:O 13:I2:I 14:VCC:P")),
     "74HCT02": (DIP14, _p("1:O:O 2:I0:I 3:I1:I 4:O:O 5:I0:I 6:I1:I 7:GND:P 8:I0:I 9:I1:I 10:O:O 11:I0:I 12:I1:I 13:O:O 14:VCC:P")),
     "74HCT00": (DIP14, _p("1:I0:I 2:I1:I 3:O:O 4:I0:I 5:I1:I 6:O:O 7:GND:P 8:O:O 9:I0:I 10:I1:I 11:O:O 12:I0:I 13:I1:I 14:VCC:P")),
-    "74HC05": (DIP14, _p("1:I:I 2:O:OC 3:I:I 4:O:OC 5:I:I 6:O:OC 7:GND:P 8:O:OC 9:I:I 10:O:OC 11:I:I 12:O:OC 13:I:I 14:VCC:P")),
+    # 74HC03: quad 2-input NAND with open-drain outputs (the 74HC00's pins); U9 was a 74HC05 until 2026-11-22
+    "74HC03": (DIP14, _p("1:I0:I 2:I1:I 3:O:OC 4:I0:I 5:I1:I 6:O:OC 7:GND:P 8:O:OC 9:I0:I 10:I1:I 11:O:OC 12:I0:I 13:I1:I 14:VCC:P")),
     "74HCT74": (DIP14, _p("1:CLR:I 2:D:I 3:CLK:I 4:PRE:I 5:Q:O 6:~{Q}:O 7:GND:P 8:~{Q}:O 9:Q:O 10:PRE:I 11:CLK:I 12:D:I 13:CLR:I 14:VCC:P")),
     # DS12885 RTC, 24-pin PDIP (Maxim datasheet Rev 3, 2/07, pin description, read on 2026-11-18 from two copies):
     # 12 and 16 are both GND on the PDIP; 22 is the only N.C.; RCLR has an internal pull-up (no external one)
@@ -143,8 +176,10 @@ chip("U5", "74HCT10", "74HCT10", {1: "POUT_H", 2: "MRD_H", 13: "TPB", 12: "OUTCL
 chip("U6", "74HCT00", "74HCT00", {1: "PORTIN_L", 2: "DRIVE_L", 3: "ANY_H", 4: "-MRD", 5: "ANY_H", 6: "OE244_L",
      9: "RESET_H", 10: "PAUSE_H", 8: "LOAD_L", 12: "MRD_H", 13: "TPB", 11: "OSTB_L",       # D: OSTB_L, TPB of a read
      7: "GND", 14: "+5V"})
-chip("U9", "74HC05", "74HC05", {1: "INPUT_H", 2: "EFOUT", 3: "REQ", 4: "-DMAIN", 5: "UART_INT", 6: "UIRQ_L",  # C: the UART's INTR
-     9: "GND", 8: None, 11: "GND", 10: None, 13: "GND", 12: None, 7: "GND", 14: "+5V"})                       # 3 spare
+chip("U9", "74HC03", "74HC03", {1: "INPUT_H", 2: "INPUT_H", 3: "EFOUT",      # A: INPUT's flag
+     4: "REQ", 5: "SC0", 6: "-DMAIN",                                          # B: the DMA request, until the DMA cycle starts
+     9: "UART_INT", 10: "UART_INT", 8: "UIRQ_L",                               # C: the UART's INTR
+     12: "-VMA", 13: "-VMA", 11: "ROM_LED_L", 7: "GND", 14: "+5V"})            # D: the front panel's ROM LED
 chip("U10", "74HCT74", "74HCT74", {1: "ACK_L", 2: "LOAD_H", 3: "INPUT_H", 4: "+5V", 5: "REQ", 6: "REQ_L",    # A: REQ
      13: "INPUT_H", 12: "REQ", 11: "-MRW", 10: "+5V", 9: None, 8: "ACK_L", 7: "GND", 14: "+5V"})             # B: ACK
 chip("U11", "74HCT74", "74HCT74", {4: "REQ_L", 1: "-MRD", 2: "GND", 3: "GND", 5: None, 6: "DRIVE_L",   # A: DRIVE
@@ -180,7 +215,20 @@ EFLINES = ("-EF1", "-EF2", "-EF3", "-EF")
 PARTS["JP3"] = ("Connector_Generic:Conn_02x04_Odd_Even", "INPUT EF", HDR % 4,                   # INPUT's flag on any bus EF line
                 {p: (EFLINES[(p - 1) // 2] if p % 2 else "EFOUT") for p in range(1, 9)})
 PARTS["RN1"] = ("Device:R_Network08", "10k", "Resistor_THT:R_Array_SIP9",                       # pull-ups: no jumper, no port
-                {1: "+5V", 2: "PORTIN_L", 3: "PORTOUT_L", 4: "EFOUT", 5: "RTCA_L", 6: "RTCD_L", 7: "RTC_IRQ", 8: "UIRQ_L", 9: None})
+                {1: "+5V", 2: "PORTIN_L", 3: "PORTOUT_L", 4: "EFOUT", 5: "RTCA_L", 6: "RTCD_L", 7: "RTC_IRQ", 8: "UIRQ_L", 9: "SC0"})
+# the front panel (Ken, 2026-11-22): J3, the ribbon's header (pin map: tools/s5panel.py), and RN3, pull-downs for the
+# data lines, which the front panel's toggles switch to +5V through 1k
+PARTS["J3"] = ("Connector_Generic:Conn_02x25_Odd_Even", "FRONT PANEL", "Connector_IDC:IDC-Header_2x25_P2.54mm_Vertical",
+               s5panel.io_pins())
+PARTS["RN3"] = ("Device:R_Network08", "10k", "Resistor_THT:R_Array_SIP9",
+                dict([(1, "GND")] + [(k + 2, "SW%d" % k) for k in range(8)]))
+# the card's own RESET button (Ken, 2026-11-23): a boot reset, -RESET and -DMAIN low together, unless -PAUSE is low
+PARTS["SW12"] = ("Switch:SW_Push", "RESET", "Button_Switch_THT:SW_PUSH_6mm", {1: "+5V", 2: "BTN_H"})
+PARTS["R4"] = ("Device:R", "10k", R, {1: "BTN_H", 2: "GND"})
+chip("U23", "74HC03", "74HC03", {1: "BTN_H", 2: "-PAUSE", 3: "-RESET",          # A: -RESET
+     4: "BTN_H", 5: "-PAUSE", 6: "-DMAIN",                                      # B: -DMAIN, with it
+     9: "GND", 10: "GND", 8: None, 12: "GND", 13: "GND", 11: None, 7: "GND", 14: "+5V"})   # C, D: spare
+PARTS["C26"] = ("Device:C", "0.1uF", "s5io:C025-050X050", {1: "+5V", 2: "GND"})   # U23's (C22-C25 are the MAX232's)
 # the real-time clock (Ken, 2026-11-18): a DS12885+ with its crystal and a CR2032 that can be replaced
 chip("U13", "DS12885", "DS12885+", {1: "GND", 2: "RTC_X1", 3: "RTC_X2", 4: "D0", 5: "D1", 6: "D2", 7: "D3", 8: "D4", 9: "D5",
      10: "D6", 11: "D7", 12: "GND", 13: "SEL_UART", 14: "RTC_AS", 15: "RTC_WR_L", 16: "GND", 17: "RTC_RD_L", 18: "+5V",
@@ -245,13 +293,13 @@ PARTS["C25"] = ("Device:C_Polarized", "1uF", CPOL, {1: "GND", 2: "VMINUS"})     
 # the null-modem block, as the YACC1 I/O card's JP1: 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a
 # straight cable to a PC); 3-5 and 4-6 = sends on 3, hears on 2
 PARTS["JP6"] = ("Connector_Generic:Conn_02x03_Odd_Even", "TX PIN", HDR % 3,
-                {1: "RX_IN", 2: "TX_OUT", 3: "DB9_3", 4: "DB9_2", 5: "TX_OUT", 6: "RX_IN"})
+                {1: "RX_IN", 2: "TX_OUT", 3: "DE9_3", 4: "DE9_2", 5: "TX_OUT", 6: "RX_IN"})
 # the DE-9 socket: KiCad's own footprint for a right-angle socket with the pin pattern of the YACC1 I/O card's (built,
 # V1.1): pins 2.77 mm apart in rows 2.84 mm apart, the mounting holes 25 mm apart and level with the middle of the
 # rows; make_board.py places it as that card has it. Its shell (the two mounting holes, "SH") to GND
 DE9 = "Connector_Dsub:DSUB-9_Socket_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm"
 PARTS["J2"] = ("Connector:DE9_Socket_MountingHoles", "RS-232", DE9,
-               {1: None, 2: "DB9_2", 3: "DB9_3", 4: None, 5: "GND", 6: None, 7: None, 8: None, 9: None, "SH": "GND"})
+               {1: None, 2: "DE9_2", 3: "DE9_3", 4: None, 5: "GND", 6: None, 7: None, 8: None, 9: None, "SH": "GND"})
 PARTS["JP7"] = ("Connector_Generic:Conn_01x02", "UART INT", "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
                 {1: "UIRQ_L", 2: "-INT"})                                       # fitted: the UART's INTR pulls -INT low
 PARTS["C2"] = ("Device:C_Polarized", "10uF", "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm", {1: "+5V", 2: "GND"})

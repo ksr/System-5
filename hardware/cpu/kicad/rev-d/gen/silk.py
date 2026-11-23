@@ -11,8 +11,6 @@
     (tools/kicad/silk270.py), under its part with the card standing first. The one exception is the name line, which
     runs along the bottom edge as drawn at angle 0 (up the right-hand side with the card standing), just above the
     bottom strip. Until 2026-11-18 the labels stood at 0
-  * D1 keeps its own reference field (J1's pin labels name the data lines D0-D7, and pcb-check reads a part's field
-    before any free text with its name)
 
 add(b)              used by make_board.py on a new board
 silk.py             refresh: replace the silkscreen texts of the routed board, copper untouched (run with KiCad's Python);
@@ -73,23 +71,8 @@ def add(b):
         s.place([(name, 0.8)], [(xx, y) for xx in xs])
     for k in range(4):
         s.label("JP%d" % (k + 2), "JP%d EF%d" % (k + 2, k + 1), "JP%d\nEF%d" % (k + 2, k + 1))
-    # 4. D1: its reference field and its type beside it; its cathode mark (the footprint's own "K") at 270
-    got = s.place([("D1 BAT85", 1.0), ("D1 BAT85", 0.8)], s.beside("D1"), nearest=True)
-    if got:
-        x, y, txt, h = got
-        for d in list(b.GetDrawings()):                   # the placeholder becomes the field and the type, in its box
-            if isinstance(d, pcbnew.PCB_TEXT) and d.GetText() == txt and abs(T(d.GetPosition().x) - x) < 0.01 \
-                    and abs(T(d.GetPosition().y) - y) < 0.01:
-                bb = d.GetBoundingBox(); b.Remove(d); break
-        y0, y1 = T(bb.GetTop()), T(bb.GetBottom())
-        fr = fp("D1").Reference()
-        fr.SetVisible(True); fr.SetLayer(pcbnew.F_SilkS); fr.SetTextSize(V(h, h)); fr.SetTextThickness(MM(0.18))
-        fr.SetKeepUpright(False); fr.SetTextAngleDegrees(270); fr.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
-        fr.SetPosition(V(x, y0 + 0.1))
-        s.put("BAT85", x, y1 - 0.1, h, just="right")
-    for x, y, txt in s.fp_texts.get("D1", []):
-        s.place([(txt, 0.8)], [(x, y), (x, y - 0.4), (x - 0.6, y), (x + 0.6, y)], need=False)
-    # 5. the chips ("U3 2732 HBIOS"), then the passives ("R1 10k", "C2 0.1uF")
+    # 4. the chips ("U3 2732 HBIOS"), then the passives ("R1 10k", "C2 0.1uF"). (No diode on the card since 2026-11-22:
+    #    D1, which kept its own reference field, went with the boot reset's 74HC03)
     for ref in sorted([r for r in N.PARTS if r.startswith(("U", "X"))], key=lambda r: (r[0], int(r[1:]))):
         s.label(ref, "%s %s" % (ref, N.PARTS[ref][1]), "%s\n%s" % (ref, N.PARTS[ref][1]))
     for ref in sorted([r for r in N.PARTS if r[0] in "RC"], key=lambda r: (r[:2] if r.startswith("RN") else r[0], int(r.lstrip("RNC")))):

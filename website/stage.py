@@ -27,8 +27,23 @@ PHOTO_PX = 1400            # photos and renders are resized to fit this box
 # with the turn (degrees anticlockwise) that brings the connector down
 TURN = {"hardware/cpu/eagle/rev-a/photos/2026-10-07-front-1.jpg": 180,
         "hardware/io-1861-keyboard/eagle/rev-a/photos/2026-10-07-front-1.jpg": 180,
+        "hardware/ide-cf/eagle/rev-a/photos/2005-03-front-1.jpg": 270,
         "hardware/memory/eagle/rev-b/photos/2026-10-07-front-1.jpg": 90,
         "hardware/video-6845/eagle/rev-b/photos/2026-10-07-front-1.jpg": 90}
+
+# the KiCad renders: every card is drawn with its bus connector on the left (on the right seen from the bottom side),
+# so a top view is turned 90 and a bottom view 270; the backplane (hardware/bus) is not a card and is not turned
+RENDER = re.compile(r"^hardware/([^/]+)/kicad/[^/]+/[^/]+-render-(top|bottom)\.png$")
+
+
+def render(src, dst, card, side):
+    """A render: the empty space around the board cut off, the connector turned down, then resized."""
+    im = Image.open(src).convert("RGBA")
+    solid = im.getchannel("A").point(lambda a: 255 if a > 128 else 0).getbbox()     # without the faint shadow
+    if solid: im = im.crop(solid)
+    if card != "bus": im = im.rotate(90 if side == "top" else 270, expand=True)
+    im.thumbnail((PHOTO_PX, PHOTO_PX))
+    im.save(dst, optimize=True)
 
 
 def copy(rel):
@@ -40,6 +55,8 @@ def copy(rel):
         if rel in TURN: im = im.rotate(TURN[rel], expand=True)
         im.thumbnail((PHOTO_PX, PHOTO_PX))
         im.convert("RGB").save(dst, quality=85, optimize=True)
+    elif RENDER.match(rel):
+        render(src, dst, *RENDER.match(rel).groups())
     elif ext == ".png":
         im = Image.open(src)
         if max(im.size) > PHOTO_PX:

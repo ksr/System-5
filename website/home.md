@@ -70,30 +70,58 @@ boards, the manual, the emulator and this site.
     **[Bus driver](docs/manual/bus-driver-card.md)** — runs bus cycles from an Arduino Nano in place of the CPU, to
     bring up the other cards (Rev B, new in 2026, in use).
 
+-   ![IDE / CF card Rev A with a CompactFlash adapter, March 2005](hardware/ide-cf/eagle/rev-a/photos/2005-03-front-1.jpg)
+
+    **[IDE / CF](docs/manual/ide-cf-card.md)** — holds the disk: a CompactFlash card in an adapter (Rev A, photo of
+    March 2005).
+
 </div>
 
-**[IDE / CF](docs/manual/ide-cf-card.md)** holds the disk. Which revisions
-were made, ordered or only drawn: [Boards fabricated](hardware/FABRICATED.md).
+Which revisions were made, ordered or only drawn: [Boards fabricated](hardware/FABRICATED.md).
 
 ## Next: the 36-pin machine
 
 The six spare pins of the 36-pin slots are being given jobs: the three extra 1802 flags (-EF1 to -EF3), -PAUSE and
 -DMAIN for front-panel control, and SC0 to show instruction fetches ([the 36-pin extension](docs/manual/bus.md)).
-New cards for it, all drawn in KiCad, none ordered yet:
+New cards for it, all drawn in KiCad, none ordered yet, so the pictures are KiCad renders:
 
-- **[Backplane Rev D](hardware/bus/kicad/rev-d/notes.md)** — eight 36-pin slots, a barrel jack for a 7-15 V
-  adapter, reverse-polarity protection and a 5 V switching regulator, or screw terminals for an external 5 V supply,
-  a jumper to pick the source and a power switch.
-- **[CPU Rev D](hardware/cpu/kicad/rev-d/DESIGN.md)** — just the 1802 and its 4K boot EPROM, at 2 MHz or from an
-  external clock; a load-then-run flag, with an LED to show it, so a program toggled in runs from RAM.
-- **[IO panel](hardware/io-panel/kicad/rev-a/DESIGN.md)** — the ELF-style front panel: eight toggles, eight LEDs, six
-  TIL311 hex displays (the data byte and the bus address), Q, INPUT, RUN and LOAD, a battery-backed real-time
-  clock and a serial port (a 16C550 with a DE-9 socket). The emulator already runs a program toggled in through it.
-- **[VIDEO-G](hardware/video-g/DESIGN.md)** — the next video card, two boards joined by a ribbon cable: TEXT, a 6845
-  text display of 64 × 25 or 64 × 32 with a PS/2 keyboard, and GFX, graphics of 512 × 200 or 512 × 256 with a PS/2
-  mouse. Everything is memory-mapped; it is to take the place of the 6845 card and the IO card.
-- **[Bus driver Rev C](hardware/bus-driver/kicad/rev-c/DESIGN.md)** — the bench driver for all 36 lines, to pause,
-  step and load the machine with the CPU card in place; its firmware is still to be written.
+<div class="grid cards" markdown>
+
+-   ![Backplane Rev D, KiCad render](hardware/bus/kicad/rev-d/s5bus-d-render-top.png)
+
+    **[Backplane Rev D](hardware/bus/kicad/rev-d/notes.md)** — eight 36-pin slots, a barrel jack for a 7-15 V
+    adapter, reverse-polarity protection and a 5 V switching regulator, or screw terminals for an external 5 V supply,
+    a jumper to pick the source and a power switch.
+
+-   ![CPU Rev D, KiCad render](hardware/cpu/kicad/rev-d/cpu-rev-d-render-top.png)
+
+    **[CPU Rev D](hardware/cpu/kicad/rev-d/DESIGN.md)** — just the 1802 and its 4K boot EPROM, at 2 MHz or from an
+    external clock; a load-then-run flag, with an LED to show it, so a program toggled in runs from RAM.
+
+-   ![IO panel, KiCad render](hardware/io-panel/kicad/rev-a/io-panel-rev-a-render-top.png)
+
+    **[IO panel](hardware/io-panel/kicad/rev-a/DESIGN.md)** — the ELF-style front panel: eight toggles, eight LEDs, six
+    TIL311 hex displays (the data byte and the bus address), Q, INPUT, RUN and LOAD, a battery-backed real-time
+    clock and a serial port (a 16C550 with a DE-9 socket). The emulator already runs a program toggled in through it.
+
+-   ![Front panel, KiCad render](hardware/front-panel/kicad/rev-a/front-panel-rev-a-render-top.png)
+
+    **[Front panel](hardware/front-panel/kicad/rev-a/DESIGN.md)** — the same controls and displays on a board that
+    mounts as the front of a case, joined to the IO panel by one ribbon cable: six hex displays, bit and status LEDs,
+    toggles, and a RESET button that boots the EPROM.
+
+-   ![VIDEO-G TEXT board, KiCad render](hardware/video-g/kicad/text-1.0/video-g-text-render-top.png){ width="48%" } ![VIDEO-G GFX board, KiCad render](hardware/video-g/kicad/gfx-1.0/video-g-gfx-render-top.png){ width="48%" }
+
+    **[VIDEO-G](hardware/video-g/DESIGN.md)** — the next video card, two boards joined by a ribbon cable: TEXT, a 6845
+    text display of 64 × 25 or 64 × 32 with a PS/2 keyboard, and GFX, graphics of 512 × 200 or 512 × 256 with a PS/2
+    mouse. Everything is memory-mapped; it is to take the place of the 6845 card and the IO card.
+
+-   ![Bus driver Rev C, KiCad render](hardware/bus-driver/kicad/rev-c/busdrv-c-render-top.png)
+
+    **[Bus driver Rev C](hardware/bus-driver/kicad/rev-c/DESIGN.md)** — the bench driver for all 36 lines, to pause,
+    step and load the machine with the CPU card in place; its firmware is still to be written.
+
+</div>
 
 ## Where to start
 

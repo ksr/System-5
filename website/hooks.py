@@ -9,17 +9,21 @@ Menu: each card's section under Cards gets one item per KiCad revision (hardware
 as notes.md, or its DESIGN.md for a design in progress), named
 with what hardware/FABRICATED.md says about it (in use, made, ordered, scrap, not ordered, design only): the word
 comes from the heading of the table the board is in, except that a row saying SCRAP is "scrap" and a row whose
-note says "**In use" is "in use" (a 2026 board that is built and running, not just ordered)."""
-import glob, os, posixpath, re
+note says "**In use" is "in use" (a 2026 board that is built and running, not just ordered).
+
+Pictures (Ken, 2026-11-23): each card chapter, revision page and VIDEO-G page that shows no picture of its own gets
+one under its title: a photo of that revision when there is one, else its KiCad render, and the caption says which.
+A photo added to the revision's photos/ folder takes the render's place by itself."""
+import glob, os, posixpath, re, subprocess
 from urllib.parse import unquote
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repository this folder is in
 LINK = re.compile(r'(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\((<[^>]+>|[^)\s]+)((?:\s+"[^"]*")?)\)')
-stats = {"plain": 0, "readme": 0}
+stats = {"plain": 0, "readme": 0, "photo": 0, "render": 0}
 
 # the board names in FABRICATED.md's tables -> the card folder under hardware/
 BOARD = [("Bus driver", "bus-driver"), ("Bus", "bus"), ("CPU", "cpu"), ("Memory", "memory"),
-         ("6845 video", "video-6845"), ("IO panel", "io-panel"), ("IO", "io-1861-keyboard"), ("IDE", "ide-cf")]
+         ("6845 video", "video-6845"), ("IO panel", "io-panel"), ("Front panel", "front-panel"), ("IO", "io-1861-keyboard"), ("IDE", "ide-cf")]
 # FABRICATED.md's section headings -> the word the menu shows
 STATUS = [("Ordered 2026", "ordered"), ("Ordered", "made"), ("probably not ordered", "not ordered"),
           ("Design only", "design only")]
@@ -68,10 +72,81 @@ def on_config(config):
 # the Cards sections of mkdocs.yml -> their folder under hardware/
 CARD_OF = {"Backplane and bus": "bus", "CPU card": "cpu", "Memory card": "memory", "6845 video card": "video-6845",
            "IO card (1861 + keyboard)": "io-1861-keyboard", "IDE / CF card": "ide-cf", "Bus driver card": "bus-driver",
-           "IO panel card": "io-panel"}
+           "IO panel card": "io-panel", "Front panel": "front-panel"}
+
+
+# the card chapters with no picture of their own -> the revision they describe (the card in the machine)
+CHAPTER = {"docs/manual/bus.md": ("bus", "rev-2009"), "docs/manual/cpu-card.md": ("cpu", "rev-a"),
+           "docs/manual/io-card.md": ("io-1861-keyboard", "rev-a"), "docs/manual/ide-cf-card.md": ("ide-cf", "rev-a"),
+           "docs/manual/video-6845-card.md": ("video-6845", "rev-b"), "docs/manual/memory-card.md": ("memory", "rev-e"),
+           "docs/manual/bus-driver-card.md": ("bus-driver", "rev-b")}
+VIDEO_G = [("video-g", "text-1.0"), ("video-g", "gfx-1.0")]
+MONTHS = "January February March April May June July August September October November December".split()
+
+
+def pictured(uri):
+    """The (card, revision folder) pairs a page shows, or []."""
+    if uri in CHAPTER: return [CHAPTER[uri]]
+    if uri in ("hardware/video-g/DESIGN.md", "hardware/video-g/kicad/notes.md"): return VIDEO_G
+    m = re.fullmatch(r"hardware/([^/]+)/kicad/([^/]+)/(?:notes|DESIGN|BOM)\.md", uri)
+    return [m.groups()] if m else []
+
+
+def photo_of(card, rev):
+    """The photo that shows a revision's component side (a built board before a blank one), or None."""
+    found = [os.path.relpath(p, REPO) for tool in ("kicad", "eagle")
+             for p in sorted(glob.glob(os.path.join(REPO, "hardware", card, tool, rev, "photos", "*.jpg")))]
+    for word in ("front", "built-component", "component", "silkscreen"):
+        for p in found:
+            if word in os.path.basename(p): return p
+    return None
+
+
+def render_of(card, rev):
+    found = sorted(glob.glob(os.path.join(REPO, "hardware", card, "kicad", rev, "*-render-top.png")))
+    return os.path.relpath(found[0], REPO) if found else None
+
+
+def photo_date(path):
+    m = re.match(r"(\d{4})-(\d\d)(?:-(\d\d))?", os.path.basename(path))
+    if not m: return ""
+    y, mo, d = m.groups()
+    return ", " + " ".join(([str(int(d))] if d else []) + [MONTHS[int(mo) - 1], y])
+
+
+def picture(card, rev, markdown, here):
+    """The picture of one revision with its caption, as Markdown, or ""."""
+    name = rev
+    if card == "video-g": name = rev.split("-")[0].upper()
+    elif rev.startswith("rev-"): name = "Rev " + "-".join(w.capitalize() for w in rev[4:].split("-"))
+    src = photo_of(card, rev)
+    if src:
+        caption = "Photo: %s%s" % (name, photo_date(src))
+        stats["photo"] += 1
+    else:
+        src = render_of(card, rev)
+        if not src: return ""
+        status = fab_status().get((card, rev[4:] if rev.startswith("rev-") else rev))
+        if not status and re.search(r"\bnot (ordered|built)\b", markdown[:3000], re.I): status = "design only"
+        caption = "KiCad render: %s" % name + {
+            "design only": ", not built", "not ordered": ", not built", "ordered": ", ordered, no photo yet",
+            "made": ", made, no photo", "in use": ", built, no photo yet",
+            "scrap": ", as designed (the boards made were scrap)"}.get(status, "") + (
+            ". A part with no 3D model shows as its outline or bare pads.")
+        stats["render"] += 1
+    return '![%s](<%s>){ width="420" }\n\n*%s*\n' % (caption.split(". ")[0], posixpath.relpath(src, here or "."), caption)
+
+
+def add_pictures(markdown, uri):
+    boards = pictured(uri)
+    if not boards or re.search(r"!\[|<img", markdown): return markdown           # it has a picture of its own
+    shown = "\n".join(filter(None, (picture(c, r, markdown, posixpath.dirname(uri)) for c, r in boards)))
+    if not shown: return markdown
+    return re.sub(r"(?m)^# .*$", lambda m: m.group(0) + "\n\n" + shown, markdown, count=1)
 
 
 def on_page_markdown(markdown, page, config, files):
+    markdown = add_pictures(markdown, page.file.src_uri)
     site = {f.src_uri for f in files}
     here = posixpath.dirname(page.file.src_uri)
 
@@ -104,3 +179,14 @@ def on_page_markdown(markdown, page, config, files):
 def on_post_build(config):
     print("hooks: %d links to files not on the site made plain text (the repository is private); %d links to "
           "directories or the README go to their site page" % (stats["plain"], stats["readme"]))
+    print("hooks: %d photos and %d KiCad renders added under page titles" % (stats["photo"], stats["render"]))
+    for p in sorted(glob.glob(os.path.join(REPO, "hardware", "*", "kicad", "*", "*-render-top.png"))):
+        boards = glob.glob(os.path.join(os.path.dirname(p), "*.kicad_pcb"))
+        if boards and 0 < committed(p) < committed(boards[0]):
+            print("hooks: %s is older than its board: render it again" % os.path.relpath(p, REPO))
+
+
+def committed(path):
+    """When a file was last committed (seconds), 0 when it never was."""
+    r = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%ct", "--", path], capture_output=True, text=True)
+    return int(r.stdout.strip() or 0)

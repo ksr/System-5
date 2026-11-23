@@ -51,6 +51,8 @@ def main(argv=None):
     ap.add_argument("--mem-rev", default="D", help="--hw memory card: D (card of record), F (MEM3-F: Rev E with EEPROM sockets and its silkscreen fixed; 27C256s), "
                     "F-28C256 (a 28C256 in IC5, read-only), F-28C256-W (the CPU can write it), C, B-built (Ken's reworked board), B-drawn")
     ap.add_argument("--cpu-rev", default="A-built", help="--hw CPU card: A-built (Ken's reworked board, the default), A (as drawn), D (CPU Rev D, the 36-pin card, not built) or none (behavioural -VMA)")
+    ap.add_argument("--front", default=None, help="with --hw --cpu-rev D --panel A: fit the front panel (A) on the IO panel card's ribbon, from its netlist: "
+                    "displays, LEDs, toggles, RUN, LOAD, INPUT and a RESET button that boots the EPROM (the debugger's 'front' command)")
     ap.add_argument("--panel", default=None, help="fit the IO panel card (A): port 4 LEDs/TIL311s/toggles, INPUT on -EF1, RUN/LOAD; the 1861 comes off port 4 (with --hw: from its netlist, use with --cpu-rev D)")
     ap.add_argument("--video-rev", default="B", help="--hw 6845 card from its netlist: B (the card in the machine, the default), B-Clean, "
                     "B-Clean-Keyboard (the PS/2 keyboard on the card, key at 7802 and status at 7804: use it with the VIDEO-G HBIOS; no IO card then), or none (behavioural)")
@@ -81,6 +83,8 @@ def main(argv=None):
         except ValueError as e: ap.error("--clock: %s" % e)
         a.speed = hz / CYCLE_CLOCKS if hz else 0
 
+    front = None if not a.front or a.front.lower() == "none" else a.front.upper()
+    if front and not (a.hw and a.panel and a.panel.lower() != "none"): raise SystemExit("--front needs --hw and --panel A (it hangs on that card's ribbon)")
     vg = a.video.lower() == "g"; vk = a.video.lower() == "kbd"
     rom = VG_ROM if ((vg or vk) and a.rom == DEF_ROM) else a.rom
     kw = dict(cpu_rom=rom, rom_base=int(a.rom_base, 16), jumpers=parse_jumpers(a.jumpers), disk=a.disk, pixie_port=a.pixie_port)
@@ -91,7 +95,7 @@ def main(argv=None):
         if a.hw:
             from .hw import HWMachine
             m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev,
-                          ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev, panel_rev="A" if panel else None,
+                          ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev, panel_rev="A" if panel else None, front_rev=front,
                           videog=a.videog_rev, monitor=a.monitor, gfx=not a.no_gfx,
                           kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(),
                           mhz=2.0 if a.cpu_rev.upper() == "D" else 1.76, **kw)
@@ -108,7 +112,7 @@ def main(argv=None):
             from .hw import HWMachine
             m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev,
                           video_rev="B-Clean-Keyboard", ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev,
-                          panel_rev="A" if panel else None, kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(), **kw)
+                          panel_rev="A" if panel else None, front_rev=front, kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(), **kw)
             m.stop_on = {k for k in a.bus_stop.split(",") if k}
             print(m.describe(), file=sys.stderr)
         else:
@@ -118,7 +122,7 @@ def main(argv=None):
         from .hw import HWMachine
         m = HWMachine(mem_rev=a.mem_rev, vma_mode=a.vma, cpu_rev=None if a.cpu_rev.lower() == "none" else a.cpu_rev, video_rev=None if a.video_rev.lower() == "none" else a.video_rev,
                       ide_rev=None if a.ide_rev.lower() == "none" else a.ide_rev,
-                      io_rev=None if a.io_rev.lower() == "none" else a.io_rev, panel_rev=None if not a.panel or a.panel.lower() == "none" else a.panel,
+                      io_rev=None if a.io_rev.lower() == "none" else a.io_rev, panel_rev=None if not a.panel or a.panel.lower() == "none" else a.panel, front_rev=front,
                       kbd_flag=None if a.kbd_flag == "none" else "-" + a.kbd_flag.upper(), **kw)   # (the 6845 card Rev B-Clean-Keyboard's JP1)
         m.stop_on = {k for k in a.bus_stop.split(",") if k}
         print(m.describe(), file=sys.stderr)
