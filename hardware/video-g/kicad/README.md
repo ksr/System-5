@@ -113,7 +113,7 @@ failures, 0 warnings (124 of 124; 16 of 16). The same NOTE on TEXT's EFOC as bel
 OK.** The results below are of TEXT before that route.
 
 **`pcb-check`, the check before an order (Ken, every system, since 2026-11-06; `hardware/BUILD-RULES.md`, section 2):
-both boards as they are now, with `--tests`, 2026-11-19: GFX at elf `77257f1` (run by the pcb-check session); TEXT at
+both boards as they were before TEXT's route of 2026-11-24, with `--tests`, 2026-11-19: GFX at elf `77257f1` (run by the pcb-check session); TEXT at
 `77257f1` (the same), at `688e6ed` after its four KBD FLAG names moved 0.5 mm off JP3's outline, at `b4692e9`
 (pcb-check `bd032dd`, with its new BODIES line) after the RCA jack's body went on the fab layer, and at `b2252b7`
 (pcb-check `0b45f65`) after the DE-9's; GFX again at `b2252b7` without its tests, the board unchanged:**

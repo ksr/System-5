@@ -258,6 +258,7 @@ python3 tests/test_hw.py
 - `test_hw_videokbd.py`: the 6845 card Rev B-Clean-Keyboard: the card alone from its netlist, then the ROM, the keyboard, the panel and Elf/OS 5.1.1 on both machines (`--video kbd`).
 - `test_hw_crtcbus.py` (2026-11-24): the same card's 6845 inside a machine cycle: no bus fight at the end of a register write, nothing in a cycle with no memory access, its data sheet's times in the worst case and at random delays; the card as first drawn (R/W = -MRW, E = TPB) fails it.
 - `test_buslink_c.py`: `--buslink` speaking BUSDRV-C's protocol with CPU Rev D.
+- `test_power_up.py` (2026-11-25): the states flip-flops and latches come up in. `logic.Circuit`'s power-up itself (an undefined line raises), the front panel's power-on boot reset, and the IO panel as first drawn failing when REQ comes up as 1; then the IO panel's, CPU Rev D's, the front panel's and the bus link's own tests again with every flip-flop and latch of every card at 0, and at 1 (`HWMachine(power_up=...)`; the IO panel as drawn before the fix is `IOPANEL_REVS["A-powerup"]`).
 
 ## Files
 

@@ -21,6 +21,12 @@ was put right (as first drawn it would have loaded every byte twice); SW12 RESET
 port's settings are printed on the silkscreen. The last two sections before "Board" have it. Drawn on the
 branch `front-panel`, in `main` since 2026-11-23 (Ken: "merge everything"); not ordered.
 
+**REQ and DRIVE from a known state at power-up since 2026-11-25, and the RESET button away from INPUT since 2026-11-26
+(Ken):** D1 (a BAT85), R5 and R6 (3.3k) and U9C/U9D clear the DMA request and the toggles' drive outside LOAD mode; the
+UART's interrupt and the ROM LED moved to U23C/U23D, and U23 is a 74HCT03. SW12 RESET is in the front strip's top corner,
+above J3, about 85 mm from INPUT. Routed again; **`pcb-check --tests` at `6f4359d`: no failures, 1 warning** (the accepted
+LAYOUT one). The last two sections before "Board" have it; in `main` since 2026-11-26; not ordered.
+
 The new IO card: System-5's front panel. LEDs, switches and two TIL311 hex displays on an I/O port, a Q LED, an INPUT button
 on an EF line, and the machine's hand controls (PAUSE, LOAD) on the 36-pin bus. It replaces the 2005 IO card
 (`hardware/io-1861-keyboard/`: its keyboard moves to the video card (VIDEO-G's TEXT board), its 1861 is dropped). Started 2026-10-30 (Ken).
@@ -424,7 +430,7 @@ between the logic and the panel. Drawn on the branch `io-panel-serial`; merged i
 | U21 | MAX232, C22-C25 four 1 uF | SOUT -> T1IN, T1OUT = TX_OUT; RX_IN -> R1IN, R1OUT -> SIN; the second channel not used (T2IN and R2IN to GND) |
 | JP6 | 2 x 3 header, "TX/RX" ("TX PIN" until 2026-11-23) | the null-modem block, as the YACC1 card's JP1: shunts on 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a straight cable to a PC or a USB adapter); 3-5 and 4-6 = sends on 3, hears on 2. Both settings are drawn on the silkscreen beside the block (the last section before "Board") |
 | J2 | DE-9 socket, right-angle | pins 2 and 3 through JP6, 5 and the shell to GND, the others open. The footprint is KiCad's own for a right-angle socket with the pin pattern of the YACC1 I/O card's (built, V1.1): pins 2.77 mm apart in rows 2.84 mm apart, mounting holes 25 mm apart |
-| JP7 | 1 x 2 header, "UART INT" | fitted: the UART's INTR (through a gate of U9, open collector) pulls the bus -INT low. Open as set |
+| JP7 | 1 x 2 header, "UART INT" | fitted: the UART's INTR (through a gate of U9, open collector; U23C, open drain, since 2026-11-25) pulls the bus -INT low. Open as set |
 | C18-C21 | 0.1 uF | U20, U21, U22, X1 |
 
 What changed in the card that was there: the DS12885's CS (U13 pin 13), tied low until now, is SEL_UART; U11's second
@@ -566,10 +572,10 @@ What the card adds for it:
 |---|---|
 | J3 | the ribbon: the address and output latches' outputs, the data lines, the Q LED's sink, INPUT, the bus -RESET, -PAUSE and -DMAIN, +5V on four pins and ground on eight |
 | RN3, 10k x8 | pulls the data lines SW0-SW7 down. The front panel's toggles switch a line to +5V through 1k or leave it open |
-| U9D | ROM_LED_L = NAND(-VMA, -VMA), open drain: sinks the front panel's ROM LED while the CPU card's EPROM answers |
+| U9D | ROM_LED_L = NAND(-VMA, -VMA), open drain: sinks the front panel's ROM LED while the CPU card's EPROM answers (U23D since 2026-11-25) |
 | J1 | now takes -VMA and SC0 from the bus as well |
 
-No chip was added. U9 changed type (below), and its fourth gate is the ROM LED's.
+No chip was added. U9 changed type (below), and its fourth gate is the ROM LED's (U23D's since 2026-11-25).
 
 **The card's own toggles and the front panel's.** The card's data toggles sit between +5V and ground. If they are
 fitted and a front panel is plugged in too, the card's win and nothing is harmed (the front panel's reach the line
@@ -605,7 +611,9 @@ toggles on the bus through the write, needs it that long.
 
 U9 was a 74HC05 (six open-collector inverters, three used). It is now a **74HC03** (four open-drain NAND gates),
 all four used: INPUT's flag, the DMA request, the UART's interrupt, the ROM LED. RN1's spare resistor pulls SC0 up, so
-the gate's input is defined with no CPU card in the bus (the bus Rev D has no resistor on SC0).
+the gate's input is defined with no CPU card in the bus (the bus Rev D has no resistor on SC0). Since 2026-11-25 U9C and
+U9D are REQCLR_L and DRVL_L, and the UART's interrupt and the ROM LED are on U23C and U23D ("The power-up states of REQ
+and DRIVE", below).
 
 ### The address display in LOAD mode
 
@@ -652,7 +660,8 @@ So there are now two things named RESET on the card, and they differ:
 Ken, 2026-11-23, asked whether one of them should have another name (`BOOT` was suggested for the button): both keep
 RESET, here and on the front panel.
 
-The button is in the bottom corner of the front strip, under J3. U23 stands between the toggle column and the Q and
+The button was in the bottom corner of the front strip, under J3 (as drawn on 2026-11-23; since 2026-11-26 it is in the
+top corner, above J3: "The RESET button moved away from INPUT", below). U23 stands between the toggle column and the Q and
 PWR LEDs' resistors, which moved 3 mm towards the LEDs. U23's other two gates were spare (the UART's INTR and the ROM LED since 2026-11-25).
 
 ### The serial port's settings (as first drawn; redrawn that night, next section)

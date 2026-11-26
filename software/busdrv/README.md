@@ -122,3 +122,7 @@ python3 -m unittest test_busboard          # about three minutes
 python3 busboard.py                        # the program alone, the flag lines' jumpers set each of four ways
 python3 busboard.py survey short           # one group of faults, counted by what notices them
 ```
+
+`test_busboard.py`'s `PowerUp` (2026-11-25) runs the program from the states the cards' flip-flops and latches come up
+in: every one at 0, every one at 1, the IO panel's REQ alone, DRIVE alone, both, and unknown. Nothing is pressed before
+the program; it must run in each. The IO panel as drawn before its power-up fix fails it.

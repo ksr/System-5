@@ -120,7 +120,8 @@ New cards for it, all drawn in KiCad, none ordered yet, so the pictures are KiCa
 -   ![Bus driver Rev C, KiCad render](hardware/bus-driver/kicad/rev-c/busdrv-c-populated-render-top.png)
 
     **[Bus driver Rev C](hardware/bus-driver/kicad/rev-c/DESIGN.md)** — the bench driver for all 36 lines, to pause,
-    step and load the machine with the CPU card in place; its firmware is still to be written.
+    step and load the machine with the CPU card in place; its firmware is written and tried in the simulator, not yet
+    run on a card (`embedded/bus-driver/README.md`).
 
 </div>
 
