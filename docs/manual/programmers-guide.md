@@ -91,7 +91,7 @@ To read a sector: wait for DRDY; write the sector count (register 2) = 1, LBA 0�
 
 ### The 6845
 
-The registers and HBIOS's values are in `video-6845-card.md`. Only R14–R17 can be read back; the others are write-only. Hardware scrolling by changing R12/R13 works within 2K only (the bus sees 2K of the 4K video RAM).
+The registers and HBIOS's values are in `video-6845-card.md`. Only R14–R17 can be read back; the others are write-only. On the 6845 card Rev B-Clean-Keyboard and on VIDEO-G (neither built) none can: the 6845 is write-only, and 7800 / 7801 read as FF. No program needs to read them: HBIOS keeps the cursor in 77FE–77FF. Hardware scrolling by changing R12/R13 works within 2K only (the bus sees 2K of the 4K video RAM).
 
 ## Starting the machine
 

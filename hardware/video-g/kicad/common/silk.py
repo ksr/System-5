@@ -34,7 +34,7 @@ def court(fp):
 
 def add(b, N, P):
     s = silk270.Silk(b)
-    LABELS = getattr(P, "LABELS", {}); SPOTS = getattr(P, "SPOTS", {})
+    LABELS = getattr(P, "LABELS", {}); SPOTS = getattr(P, "SPOTS", {}); SIZES = getattr(P, "SIZES", {})
     fps = {f.GetReference(): f for f in b.GetFootprints()}
     # 1. the name line (the rule's exception, at 0 along an edge), placed first: the labels go round it. place.NAME:
     #    (name, height, cottageworker.com, height, spots), or a list of those to try in turn (a narrower layout of the
@@ -87,7 +87,7 @@ def add(b, N, P):
             text, two = (lab, None) if isinstance(lab, str) else lab
         else:
             text, two = "%s %s" % (ref, val), "%s\n%s" % (ref, val)
-        s.label(ref, text, two, spots=SPOTS.get(ref))
+        s.label(ref, text, two, sizes=SIZES.get(ref, (1.0, 0.8)), spots=SPOTS.get(ref))   # (place.SIZES: a size held)
     # 6. notes, at 270 too, wherever they fit
     for text, h, spots in getattr(P, "NOTES", []):
         s.place([(text, h), (text, 0.8)], spots)

@@ -10,6 +10,7 @@ its netlist, CPU Rev D, memory Rev D, IDE Rev A, the IO panel and VIDEO-G TEXT a
 log must also stay empty: no fight, no double drive, nothing undefined).
 
   Rom     the VIDEO-G HBIOS's v1.0.5-v1.0.8 additions: H, Q1 / Q0, D and its -- more -- key, the panel demo, @F1E0
+  Crtc    TEXT's 6845 is write-only: its reads find nothing, and a RAM probe stops there
   Cards   a program in RAM reaches every new card: ports 4, 6 and 7, VIDEO-G's registers, window and text RAM
   Panel   a program toggled in from the IO panel runs, and CPU Rev D's LOADED flag decides what a reset boots
   System  Elf/OS 5.1.1 from the card image: B, ver, free, dir, cls on 25 rows, the clock in sysinfo and date, vgdemo
@@ -20,6 +21,7 @@ import datetime, gzip, os, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
+from s5emu.machine import FLOAT                     # noqa: E402
 from s5emu.rtc import DS12885                       # noqa: E402
 from s5emu.shell import Shell                       # noqa: E402
 from s5emu.videog import VideoGMachine              # noqa: E402
@@ -165,6 +167,31 @@ PROG = bytes([
 ])
 
 
+class CrtcTests(Common):
+    """TEXT's 6845 is write-only (Ken, 2026-11-24)"""
+    def boot(self):
+        m = self.machine(); sh = Shell(m); self.until(m, sh, "test>", 4_000_000)
+        return m, sh
+
+    def test_the_6845_is_write_only(self):
+        """nothing drives a read of 7800 / 7801: the bus's pull-ups read (FF on the bus Rev D), and the registers stay"""
+        m, sh = self.boot()
+        m.write(0x7800, 14); m.write(0x7801, 0x02); m.write(0x7808, 15); m.write(0x7809, 0x7F)      # (the pairs repeat)
+        self.assertEqual((m.video.reg[14], m.video.reg[15]), (0x02, 0x7F)); before = (list(m.video.reg), m.video.sel)
+        for a in (0x7800, 0x7801, 0x7808, 0x7BF9):
+            self.assertEqual((m.peek(a), m.read(a)), (FLOAT, FLOAT), "%04X" % a)
+        self.assertEqual((list(m.video.reg), m.video.sel), before)
+        self.assertEqual(self.bus_events(m), {})
+
+    def test_a_ram_probe_stops_at_the_6845(self):
+        """the ways HBIOS and the Elf/OS kernel look for the top of RAM (write over a byte, read it back): no RAM at 7800"""
+        m, sh = self.boot(); sel = m.video.sel
+        b = m.read(0x7800); m.write(0x7800, b ^ 0xFF); self.assertNotEqual(m.read(0x7800), b ^ 0xFF)       # HBIOS (FE87)
+        m.write(0x7800, b)
+        m.write(0x7800, 0x00); self.assertNotEqual(m.read(0x7800), 0x00)                                    # the kernel (23CE)
+        m.write(0x7800, sel); self.assertEqual(self.bus_events(m), {})
+
+
 class CardTests(Common):
     def test_a_program_in_ram_reaches_every_new_card(self):
         """no EPROM fitted, so the 1802 starts at 0000 in RAM. (A new machine is at reset already; on CPU Rev D another
@@ -218,6 +245,12 @@ class SystemTests(Common):
         with gzip.open(V5_GZ) as f, open(img, "wb") as g: g.write(f.read())
         try:
             m = self.machine(disk=img); sh = Shell(m); v = m.video
+            probes = []; real = m.read                                             # every program's read of the 6845
+            def read(a):
+                b = real(a)
+                if a & 0xFC06 == 0x7800: probes.append((a, b))
+                return b
+            m.read = read
             clock = [datetime.datetime(2054, 11, 20, 9, 30, 0)]                    # 2026 in ELF/OS's years
             m.panel.rtc = DS12885(now=lambda: clock[0], start=clock[0])
             self.until(m, sh, "test>", 4_000_000)
@@ -253,15 +286,18 @@ class SystemTests(Common):
             m.kbd.press(" "); self.until(m, sh, ":")                               # a key ends it: graphics off again
             self.assertEqual(v.ctrl, 0)
             self.assertEqual(self.bus_events(m), {})
+            self.assertTrue(probes); self.assertEqual(set(probes), {(0x7800, FLOAT)})  # only the RAM probes, and nothing drove
         finally:
             os.remove(img)
 
 
 class FastRom(Fast, RomTests, unittest.TestCase): pass
+class FastCrtc(Fast, CrtcTests, unittest.TestCase): pass
 class FastCards(Fast, CardTests, unittest.TestCase): pass
 class FastPanel(Fast, PanelTests, unittest.TestCase): pass
 class FastSystem(Fast, SystemTests, unittest.TestCase): pass
 class HWRom(HW, RomTests, unittest.TestCase): pass
+class HWCrtc(HW, CrtcTests, unittest.TestCase): pass
 class HWCards(HW, CardTests, unittest.TestCase): pass
 class HWPanel(HW, PanelTests, unittest.TestCase): pass
 class HWSystem(HW, SystemTests, unittest.TestCase): pass          # (about four minutes)

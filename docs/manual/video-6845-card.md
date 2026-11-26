@@ -45,6 +45,7 @@ Within the block, A11 picks the device:
 **Video RAM.** The IDT7134 is a true dual-port RAM: the bus and the display read it at the same time with no arbitration, so there is no "snow" and no waiting for retrace (System-4's 6116 card had both). The right port's A0–A10 come from the bus; its A11 is tied low, so the bus sees 2K. Its !OE is -MRD and its R/W is -MRW.
 
 **The CRTC.** The 6845's E is TPB, its R/W is -MRW, RS is A0 and its RESET is the bus -RESET. Its data pins are on the bus. E = TPB is why the bus driver card must pulse TPB in its memory cycles.
+(On Rev B-Clean-Keyboard, drawn 2026-11-20 and not built, the 6845 is write-only: R/W is on ground and E is NOT -MRW, so 7800 / 7801 cannot be read.)
 
 ## The video side
 
@@ -96,4 +97,5 @@ Screen memory: row r, column c is at 7000 + 64 r + c.
 From `hardware/TIMING-REVIEW.md` (worked out on Rev A; the bus side is unchanged):
 - **T2:** a register write ends with R/W (= -MWR) rising while E (= TPB) is still high, at any clock speed; the HD6845 takes the register anyway, but the CRTC then drives the bus against the 1802 for about 250 ns.
 - **T3–T5:** E width and register-read margins are tight at 1.76 MHz; register reads (R14–R17) are rare.
+- Both are Rev B's. Rev B-Clean-Keyboard ends them with a write-only 6845 (E = NOT -MRW, R/W on ground).
 - Video RAM accesses are not affected: the 7134 does not use TPB.

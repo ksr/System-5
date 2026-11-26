@@ -15,12 +15,12 @@ def run(plan, *extra, jumpers=JUMPERS):
     ap_args = [plan, "--sim", "--jumpers", jumpers] + list(extra)
     a = argparse.Namespace(plan=plan, port=None, log=False, sim=True, fault=None, jumpers=jumpers, full=False, rom=None,
                            rom_base=0x8000, save_rom=None, ide_sel=2, ide_data=3, image=None, sectors=1, cf_write_lba=None,
-                           video_base=0x7000, interactive=False, keep=False, report=None, mem_rev="D")
+                           video_base=0x7000, interactive=False, keep=False, report=None, mem_rev="D", video_rev="B")
     i = 0
     while i < len(extra):
         k = extra[i].lstrip("-").replace("-", "_")
         if k == "fault": a.fault = (a.fault or []) + [extra[i + 1]]; i += 2
-        elif k in ("image", "rom", "mem_rev"): setattr(a, k, extra[i + 1]); i += 2
+        elif k in ("image", "rom", "mem_rev", "video_rev"): setattr(a, k, extra[i + 1]); i += 2
         elif k in ("cf_write_lba", "sectors"): setattr(a, k, int(extra[i + 1])); i += 2
         else: setattr(a, k, True); i += 1
     bd, bp = B.sim_driver(a); out = io.StringIO()
@@ -114,6 +114,22 @@ class Video(unittest.TestCase):
         self.assertEqual(bp.screen.reg[:16], B.HBIOS_CRTC)
         self.assertIn("SYSTEM-5 6845 VIDEO BRING-UP", "\n".join(bp.screen.lines()))
         self.assertEqual(bp.fights(), [])
+
+    def test_write_only_6845(self):
+        """Rev B-Clean-Keyboard: V5 reads no register back; the writes land (the screen comes up), and no bus fight"""
+        b, bp, out = run("video", "--video-rev", "B-Clean-Keyboard")
+        for c in ("V1", "V2", "V3", "V4", "V5"): self.assertEqual(status(b, c), "PASS", c + "\n" + out)
+        self.assertEqual(bp.screen.reg[:16], B.HBIOS_CRTC); self.assertEqual(bp.fights(), [])
+        self.assertIn("nothing drives a read of them", text(b, "V5")); self.assertNotIn("R14", text(b, "V5"))
+
+    def test_write_only_6845_needs_no_tpb(self):
+        """E = NOT -MRW: the bus driver's firmware from before 2026-10-11, with no TPB in memory cycles, writes it too"""
+        b, bp, out = run("video", "--video-rev", "B-Clean-Keyboard", "--fault", "legacy")
+        self.assertEqual(status(b, "V5"), "PASS"); self.assertEqual(bp.screen.reg[:16], B.HBIOS_CRTC)
+
+    def test_write_only_6845_under_ram(self):
+        b, bp, out = run("all", "--video-rev", "B-Clean-Keyboard", "--mem-rev", "B-built")
+        self.assertEqual(status(b, "A3"), "FAIL"); self.assertIn("RAM also answers at", text(b, "A3"))
 
     def test_old_firmware_crtc_silent(self):
         b, bp, out = run("video", "--fault", "legacy")

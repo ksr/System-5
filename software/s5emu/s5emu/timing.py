@@ -44,6 +44,10 @@ PARTS = {
     "74LS00": dict(tpd=15, src="TI SN74LS00"),
     "74LS02": dict(tpd=15, src="TI SN74LS02"),
     "74LS04": dict(tpd=15, src="TI SN74LS04"),
+    "74LS08": dict(tpd=20, src="TI SN74LS08"),
+    "74LS10": dict(tpd=15, src="TI SN74LS10"),
+    "74HCT08": dict(tpd=30, src="TI SN74HCT08 (4.5 V, 85 C)"),
+    "74LS86": dict(tpd=30, src="TI SN74LS86"),
     "74LS05": dict(tpd=28, tpd_hl=28, src="TI SN74LS05 (open collector: the low-to-high edge is the pull-up's RC)"),
     "74LS32": dict(tpd=22, src="TI SN74LS32"),
     "74LS85": dict(tpd=45, cascade=30, src="TI SN74LS85 (data -> A=B 45; A=B input -> A=B output 30)"),
@@ -57,6 +61,10 @@ PARTS = {
     "74HCT00": dict(tpd=25, src="TI SN74HCT00 (4.5 V, 85 C)"),
     "74HCT14": dict(tpd=40, src="TI SN74HCT14 (4.5 V, 85 C; Schmitt)"),
     "74HCT20": dict(tpd=30, src="TI SN74HCT20 (4.5 V, 85 C)"),
+    "74HCT138": dict(sel=45, en=45, src="TI SN74HCT138 (4.5 V, 85 C)"),
+    "74HCT32": dict(tpd=30, src="TI SN74HCT32 (4.5 V, 85 C)"),
+    "74AHCT00": dict(tpd=10, src="TI SN74AHCT00 (5 V, 85 C, 50 pF; typed in from memory, to verify)"),
+    "7416": dict(tpd=23, src="TI SN7416 (open collector: the low-to-high edge is the pull-up's RC)"),
     "74HC03": dict(tpd=31, tpd_hl=31, src="TI SN74HC03 (4.5 V, 85 C, RL = 1k; open drain: the low-to-high edge is the "
                                           "pull-up's RC; 2026-11-22, typed in from memory, to verify)"),
     "74HCT74": dict(clk_q=44, setup=31, hold=0, src="TI SN74HCT74 (4.5 V, 85 C)"),
@@ -69,8 +77,15 @@ PARTS = {
                       src="Atmel AT28C256-15 (memory Rev F's EEPROM option; typed in from memory, to verify)"),
     "2732A-30": dict(taa=300, tace=300, toe=120, tdf=100, thz=100, src="Fujitsu MBM2732A-30 (CPU boot EPROM, as fitted)"),
     "IDT7134-35": dict(taa=35, tace=35, toe=25, tdw=20, thz=20, src="IDT7134SA35 (6845 card video RAM, as fitted)"),
-    "MC6845": dict(e_high=450, tas=140, tah=10, tddr=320, tdhr=20, tdsw=195, tdhw=10,
-                   src="Motorola MC6845 / Hitachi HD6845 (HD46505RP fitted), 1 MHz grade"),
+    # the 6845: each figure the stricter of the two sheets in ../private-resources/shared/datasheets (read 2026-11-25):
+    # motorola-mc6845.pdf page 3 (the 1 MHz part only: tAS 160, PWEL 430) and the Hitachi HD6845R / HD6845S pages, page 5 =
+    # book page 141 (1 MHz: tAS 140, PWEL 400; A grade: tAS 140, PWEH 280, tDDR 220, tDSW 80, inside the 1 MHz part's; B
+    # grade, below). A read's tH is 10 on both (20 here until then). Motorola's E is high for 25 us AT MOST; the Hitachi has
+    # no such limit (hardware/TIMING-REVIEW.md, "E held high"). No sheet of Motorola's B grade is here
+    "MC6845": dict(e_high=450, e_low=430, cyc=1000, tas=160, tah=10, tddr=320, tdhr=10, tdsw=195, tdhw=10,
+                   src="Motorola MC6845 page 3 / Hitachi HD6845 book page 141, 1 MHz grade (HD46505RP fitted)"),
+    "MC68B45": dict(e_high=220, e_low=210, cyc=500, tas=70, tah=10, tddr=180, tdhr=10, tdsw=60, tdhw=10,
+                    src="Hitachi HD68B45 book page 141, 2 MHz grade"),
     "CDP1852": dict(cs_data=400, src="RCA CDP1852, VDD = 5 V (estimate: chip select to data out)"),
     "ATA-PIO0": dict(dior_min=165, setup_addr=70, dior_data=125, dior_hold=5, dw_setup=60, src="ATA PIO mode 0 (the 16 MB CF card)"),
 }
@@ -489,6 +504,123 @@ def _lat(arr, nets, extra, only=None, skip=()):
     return best
 
 
+# ---------------------------------------------------------------------------------------------- the 6845's bus interface
+CRTC_CYCLES = {                                                           # the bus edges of a cycle, in order
+    "read": ("A_hi", "TPA_rise", "MRD_fall", "TPA_fall", "A_lo", "TPB_rise", "TPB_fall", "MRD_rise"),
+    "write": ("A_hi", "TPA_rise", "TPA_fall", "A_lo", "MWR_fall", "TPB_rise", "MWR_rise", "TPB_fall", "end"),
+    "none": ("A_hi", "TPA_rise", "TPA_fall", "A_lo", "TPB_rise", "TPB_fall", "end")}
+_EDGE = dict(TPA_rise=dict(TPA=1), TPA_fall=dict(TPA=0), MRD_fall=dict(MRD=0), MRD_rise=dict(MRD=1), MWR_fall=dict(MRW=0),
+             MWR_rise=dict(MRW=1), TPB_rise=dict(TPB=1), TPB_fall=dict(TPB=0), end={})
+
+
+def crtc_trace(circuit, pins, cycle, addr):
+    """the levels at the 6845's CS, E, R/W and RS after each bus edge of a cycle (a read of another address before it):
+    [(edge, dict)]. The logic only, no delays"""
+    c = circuit; out = []
+    def edges(kind, a):
+        for e in CRTC_CYCLES[kind]:
+            c.drive(**(dict(A=a >> 8) if e == "A_hi" else dict(A=a & 255) if e == "A_lo" else _EDGE[e]))
+            v = c.settle(); yield e, {k: v.get(n) for k, n in pins.items()}
+    c.drive(A=0, TPA=0, TPB=0, MRD=1, MRW=1, VMA=0); c.settle()
+    list(edges("read", 0)); out = list(edges(cycle, addr))
+    return out
+
+
+def crtc_rows(ct, pins, T, P, base, vma=None):
+    """the 6845's bus timing from the card's gates: ct a CardTiming, pins its nets {CS, E, RW, RS}, P its grade (PARTS),
+    base the address of its registers. Which bus edge starts and ends E, and which move R/W, come from simulating the
+    logic (crtc_trace); when, from the static analysis (CardTiming.propagate).
+    -> (rows [(check, have, need, path)], info): 'equal' rows take TPB and -MWR equally late, the others each strobe at
+    its own worst (200-300 ns after its clock edge); info: the faults (text), and what the worst cases are made of"""
+    c = CPU; rows = []; info = dict(faults=[]); circ = ct.c; take = 7.5 * T - c["din_setup"]
+    ev = bus_events(T, "read", vma=vma); ev["MRD_rise"] = ("-MRD", 8 * T + c["tpa_typ"], 8 * T + 350)     # (MRD's rise: 350 max)
+    rd, v1 = ct.propagate("read", ev)
+    ew = bus_events(T, "write", vma=vma); ew["MRD_rise"] = ("-MRD", c["tpa_typ"], 350)                    # the read before it ends
+    wr, v2 = ct.propagate("write", ew); info["viol"] = v1 + v2
+    n = pins
+    def on_off(tr):
+        """(the edge that starts E, the one that ends it), the 6845 selected; R/W's changes by edge"""
+        on = off = None; last = dict(E=0, RW=None); moves = []
+        for e, v in tr:
+            act = 1 if v["CS"] == 0 and v["E"] == 1 else 0
+            if act and not last["E"]: on = e
+            if last["E"] and not act: off = e
+            if last["RW"] is not None and v["RW"] != last["RW"]: moves.append((e, v["RW"]))
+            last = dict(E=act, RW=v["RW"])
+        return on, off, moves
+    for cyc, arr, want in (("read", rd, 1), ("write", wr, 0)):
+        tr = crtc_trace(circ, pins, cyc, base + 1); on, off, moves = on_off(tr)
+        info[cyc] = (on, off, moves)
+        if cyc == "read" and on is None and n["RW"] == "GND": info["write_only"] = True; continue      # (never on the bus)
+        if on is None or off is None: info["faults"].append("%s: E never selects the 6845" % cyc); continue
+        if cyc == "read" and any(v["CS"] == 0 and v["E"] == 1 and v["RW"] != 1 for _, v in tr): info["faults"].append("a read writes the 6845")
+        er, ef = arr[n["E"]][on], arr[n["E"]][off]
+        nom = lambda e: {"TPB_rise": 6.5, "TPB_fall": 7.5, "MWR_fall": 5, "MWR_rise": 7, "TPA_fall": 2, "MRD_fall": 1.5, "MRD_rise": 8}[e] * T
+        gr, gf = er[1] - nom(on) - c["tpa_max"], ef[1] - nom(off) - c["tpa_max"]            # the gates in E's way
+        skip = ("MWR_fall", "MWR_rise", "TPB_rise", "TPB_fall", "MRD_rise")
+        s = max(_lat(arr, [n["CS"]], 0, skip=skip), _lat(arr, [n["RS"]], 0, skip=skip))
+        rows.append(("%s: CS and RS set up before E rises (tAS %d)" % (cyc, P["tas"]), er[0], s[0] + P["tas"], chain(s[1])))
+        lastrw = [m for m in moves if [e for e, _ in tr].index(m[0]) <= [e for e, _ in tr].index(on)]
+        rwnet = arr.get(n["RW"], {})
+        t_rw = rwnet[lastrw[-1][0]][1] if lastrw else max([t1 for e, (t0, t1, _) in rwnet.items() if e == "MRD_rise" and cyc == "write"], default=0)
+        rows.append(("%s: R/W set up before E rises (tAS %d)" % (cyc, P["tas"]), er[0], t_rw + P["tas"], ""))
+        rows.append(("%s: E high time, the strobes at their worst (PWEH %d)" % (cyc, P["e_high"]), ef[0] - er[1], P["e_high"], chain(er[2])))
+        rows.append(("%s: E high time, strobes equally late" % cyc, nom(off) - nom(on) - abs(gr - gf), P["e_high"], ""))
+        after = [m for m in moves if [e for e, _ in tr].index(m[0]) > [e for e, _ in tr].index(on)]
+        if after:
+            t0 = rwnet[after[0][0]][0]
+            rows.append(("%s: R/W held past E's fall (tAH %d)" % (cyc, P["tah"]), t0, ef[1] + P["tah"], "R/W moves on %s, E falls on %s" % (after[0][0], off)))
+        else:                                                                # R/W stands still until the next cycle's -MRD
+            rows.append(("%s: R/W held past E's fall (tAH %d)" % (cyc, P["tah"]), 9.5 * T, ef[1] + P["tah"], "R/W does not move in the cycle"))
+        # T - 30 past -MWR; a read's: the next high byte, taken to be no faster than the fastest strobe (its typical is 600)
+        a_hold = (7 * T + c["tpa_typ"] + T - 30) if cyc == "write" else 8 * T + c["tpa_typ"]
+        rows.append(("%s: CS and RS held past E's fall (tAH %d)" % (cyc, P["tah"]), a_hold, (ef[0] if off == "MWR_rise" else ef[1]) + (gf if off == "MWR_rise" else 0) + P["tah"], ""))
+        if cyc == "read":
+            rows.append(("read: data on the bus when the 1802 takes it (tDDR %d)" % P["tddr"], take, er[1] + P["tddr"], chain(er[2])))
+            rows.append(("read: the same, a typical 1802 (TPB 200 ns) and the gates' maxima", take, er[1] - (c["tpa_max"] - c["tpa_typ"]) + P["tddr"], ""))
+            rows.append(("read: data held past the 1802's latch point (%d; gates at 0)" % c["din_hold"], ef[0] + P["tdhr"], 7.5 * T + c["din_hold"], ""))
+        else:
+            end = min(ef[0], rwnet[after[0][0]][0]) if after else ef[0]
+            rows.append(("write: E high with R/W low, the strobes at their worst (PWEH %d)" % P["e_high"], end - er[1], P["e_high"], ""))
+            rows.append(("write: data set up before the byte is taken (tDSW %d)" % P["tdsw"], end, 2 * T + c["data_out_max"] + P["tdsw"], "the 1802's data"))
+            hold = T - 200                                                  # the 1802's data past -MWR's rise
+            if off == "MWR_rise": rows.append(("write: data held past E's fall (tDHW %d)" % P["tdhw"], hold, gf + P["tdhw"], "T - 200 past -MWR; E falls with it"))
+            else:
+                rows.append(("write: data held past E's fall, equal (tDHW %d)" % P["tdhw"], hold - T / 2, gf + P["tdhw"], "E falls on %s" % off))
+                rows.append(("write: data held past E's fall, the strobes at their worst", 7 * T + c["tpa_typ"] + hold, ef[1] + P["tdhw"], "E falls on %s" % off))
+            if any(m[1] == 1 for m in after): info["faults"].append("F1: R/W rises on %s while E is high (until %s)" % (after[0][0], off))
+    if any(v["CS"] == 0 and v["E"] == 1 for e, v in crtc_trace(circ, pins, "none", base + 1)):
+        info["faults"].append("F2: E with CS in a cycle with no memory access")
+    return rows, info
+
+
+def crtc_card(rev, mhz, cpu_rev="D", ahct00=False):
+    """(CardTiming, pins, T, vma) of a 6845 card's revision; the parts by what is fitted (their values), not their symbols.
+    ahct00: the 74HCT00 (IC17) a 74AHCT00"""
+    from .hw import NetlistVideoCard, NetlistVideoKbdCard, NetlistCPUCard
+    from .machine import Video6845, CPUCardROM, Keyboard
+    from .netlist import Part
+    T = 1000.0 / mhz; rom = CPUCardROM(); rom.loaded = True; cpu = NetlistCPUCard(rom, cpu_rev); cp = CardTiming("CPU", cpu.nl, cpu.c)
+    arr, _ = cp.propagate("read", bus_events(T, "read")); v = latest(arr, cp.sig["-VMA"])
+    vma = (min(t0 for t0, t1, tr in arr[cp.sig["-VMA"]].values()), v[0])
+    vid = NetlistVideoKbdCard(Video6845(), Keyboard(), rev) if "Keyboard" in rev else NetlistVideoCard(Video6845(), rev)
+    nl = vid.nl; d = next(x for x in vid.c.mem if x.kind == "CRTC")
+    for ref, p in list(nl.parts.items()):
+        val = "74AHCT00" if ahct00 and p.value == "74HCT00" else p.value
+        if val in PARTS and ref.startswith("IC") and val != p.lib: nl.parts[ref] = Part(ref, val, val)
+    vid.c.drive(RESET=1)
+    return CardTiming("6845 " + rev, nl, vid.c), dict(CS=d.cs, E=d.e, RW=d.rw, RS=d.rs), T, vma
+
+
+def crtc_report(rev, mhz, grade="MC6845", **kw):
+    ct, pins, T, vma = crtc_card(rev, mhz, **kw); rows, info = crtc_rows(ct, pins, T, PARTS[grade], 0x7800, vma)
+    out = ["6845 card %s at %.2f MHz, a %s: ns of margin, worst case" % (rev, mhz, grade)]
+    out += ["  %-4s %+6.0f  %s" % ("ok" if h >= nd else "FAIL", h - nd, w) for w, h, nd, _ in rows]
+    out += ["  FAIL         " + f for f in info["faults"]]
+    out.append("  E: read %s to %s, write %s to %s" % (info["read"][:2] + info["write"][:2]))
+    return "\n".join(out)
+
+
 def report(f_mhz=1.76, paths=True, cpu_rev="A-built"):
     rows, T = analyse(f_mhz, cpu_rev=cpu_rev)
     out = ["System-5 timing from the netlists at %.3f MHz (T = %.0f ns); budget and needs in ns from the cycle start "
@@ -506,5 +638,10 @@ if __name__ == "__main__":
     args = sys.argv[1:]; cpu_rev = "A-built"
     if "--cpu" in args:                                                 # python3 -m s5emu.timing --cpu D 2
         k = args.index("--cpu"); cpu_rev = args[k + 1]; del args[k:k + 2]
+    if "--crtc" in args:                                                # python3 -m s5emu.timing --crtc REV [MHz ...]
+        k = args.index("--crtc"); rev = args[k + 1]; ahct = "--ahct00" in args
+        for m in [a for a in args[k + 2:] if a != "--ahct00"] or ["1.76", "2"]:
+            for g in ("MC6845", "MC68B45"): print(crtc_report(rev, float(m), g, ahct00=ahct)); print()
+        sys.exit()
     for a in args or ["1.76"]:
         print(report(float(a), cpu_rev=cpu_rev)); print(); print(contention_report(float(a), cpu_rev=cpu_rev)); print()

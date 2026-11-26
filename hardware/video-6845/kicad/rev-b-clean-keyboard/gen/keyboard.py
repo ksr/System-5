@@ -14,6 +14,11 @@ THE MAP (block 7, SV1 as on Rev B):
   7806, 7C00-7FFF  nothing (VIDEO-G's mouse / Y register and graphics window); writes to 7802-7807 do nothing
 KEY-READY also pulls one bus flag line low: JP1 KBD FLAG picks -EF1, -EF2, -EF3 or -EF.
 
+THE 6845 IS WRITE-ONLY (Ken, 2026-11-24: "Write-only"): its R/W is on ground and its E is NOT -MRW (CRTE: IC18A, the
+spare half of the 74HCT74, as an inverter). On Rev B R/W is -MRW and E is TPB, which ends every register write in a
+read (hardware/TIMING-REVIEW.md, T2) and has the 6845 drive the bus at TPB of a cycle with no memory access
+(RELABEL below; software/s5emu/tests/test_hw_crtcbus.py). 7800 / 7801 read as nothing (FF on the bus Rev D).
+
 THE KEYBOARD SECTION is VIDEO-G TEXT's (hardware/video-g/kicad/text-1.0/gen/netlist.py), part for part and pin for pin,
 so its ATmega firmware (embedded/video-g-ps2) runs unchanged: the ATmega328P reads the PS/2 keyboard and puts each
 key's code on MD0-7; its LDDATA edge clocks the code into the key latch and sets KEY-READY; a read of 7802 puts the
@@ -23,7 +28,8 @@ its own for the whole card; this card keeps Rev B's and adds one 74HCT138), and 
                   A10 low; A1, A2 pick: Y0 the 6845's -CS, Y1 the key, Y2 status
   IC16 74HCT32    -RDKEY and -RDSTAT (the selects while -MRD is low); KRDT (-RDKEY while TPB is high)
   IC17 74HCT00    NOT TPB; RESETH = NOT -RESET (for IC22); KCLR = KRDT AND -RESET (two gates)
-  IC18 74HCT74    KEY-READY (its second half; the first is tied off)
+  IC18 74HCT74    KEY-READY (its second half); its first half is the 6845's E: -CLR on ground and -MRW on -PRE make Q
+                  high while -MRW is low, and low otherwise (no state: the flip-flop's own data sheet, both low: Q high)
   IC19 74HCT374   the key latch
   IC20 74HCT244   the status byte
   IC21 ATmega328P the keyboard controller, with Y1 16 MHz, the FTDI header J4 and the PS/2 jack J3
@@ -36,7 +42,7 @@ its own for the whole card; this card keeps Rev B's and adds one 74HCT138), and 
                   74HC05 has the same pins and does the same in this socket
 """
 OLD, NEW = "video-6845-rev-b-clean", "video-6845-rev-b-clean-keyboard"
-REV, DATE = "B-Clean-Keyboard", "2026-11-20"
+REV, DATE = "B-Clean-Keyboard", "2026-11-24"
 LIB = NEW + "-eagle"                                    # this card's own symbol and footprint library
 
 DIP = "Package_DIP:DIP-%d_W7.62mm_Socket"
@@ -48,7 +54,7 @@ PARTS = {
     "IC15": ("74HCT138", "74xx:74LS138", DIP % 16, "register select in 7800-7BFF: the 6845, the key, status"),
     "IC16": ("74HCT32", "74xx:74LS32", DIP % 14, "read enables; key-read strobe"),
     "IC17": ("74HCT00", "74xx:74LS00", DIP % 14, "NOT TPB, -RESET buffer, KEY-READY clear"),
-    "IC18": ("74HCT74", "74xx:74LS74", DIP % 14, "KEY-READY"),
+    "IC18": ("74HCT74", "74xx:74LS74", DIP % 14, "KEY-READY; the 6845's E (NOT -MRW)"),
     "IC19": ("74HCT374", "74xx:74LS374", DIP % 20, "key latch, read at 7802"),
     "IC20": ("74HCT244", "74xx:74LS244", DIP % 20, "status, read at 7804"),
     "IC21": ("ATmega328P-PU", "MCU_Microchip_ATmega:ATmega328P-P", DIP % 28, "PS/2 keyboard controller"),
@@ -86,7 +92,7 @@ PINS = {
              8: "KRDT", 12: "GND", 13: "GND", 14: "VCC", 7: "GND"},
     "IC17": {1: "TPB", 2: "TPB", 3: "TPBN", 4: "-RESET", 5: "-RESET", 6: "RESETH", 9: "KRDT", 10: "-RESET", 8: "KCLRN",
              12: "KCLRN", 13: "KCLRN", 11: "KCLR", 14: "VCC", 7: "GND"},
-    "IC18": {1: "VCC", 4: "VCC", 2: "GND", 3: "GND", 13: "KCLR", 12: "VCC", 11: "LDDATA", 10: "VCC", 9: "KREADY",
+    "IC18": {1: "GND", 4: "-MRW", 5: "CRTE", 2: "GND", 3: "GND", 13: "KCLR", 12: "VCC", 11: "LDDATA", 10: "VCC", 9: "KREADY",
              14: "VCC", 7: "GND"},
     "IC19": dict([(1, "-RDKEY"), (11, "LDDATA"), (20, "VCC"), (10, "GND")]
                  + [(d, "MD%d" % i) for i, (d, q) in enumerate(D8)] + [(q, "CPUDATA%d" % i) for i, (d, q) in enumerate(D8)]),
@@ -121,6 +127,15 @@ CUT_AT, CUT_SEGMENTS = ("IC5", "3"), 2                 # on the board the track 
 #                                                        first two pieces go (2.54 mm to the first corner under IC5 and
 #                                                        the slant after it) and the rest stays on the 6845's pin
 UPPER = ("IC5", "3")                                   # ... which stays on this pin, the NAND that makes it: -UPPER
+# pins of Rev B-Clean's own parts that leave their net for another: (reference, pin) -> (the label on the pin's wire, the
+# net it joins). The label on the sheet goes (a supply symbol for GND); on the board the last piece of Rev B's track into
+# the pin goes, and what then hangs of the old net is cut back (TIDY). The 6845's R/W and E (above)
+RELABEL = {("IC3", "22"): ("-MRW", "GND"), ("IC3", "23"): ("TPB", "CRTE")}
+# routed before Freerouting, across Rev B's copper alone (gen/route_leftovers.py --first): (reference, pin, a pad of the piece
+# of copper it must join, or None for any). The 6845's R/W to ground (walled in afterwards), and the composite video to the
+# RCA jack (Freerouting's way round, 2026-11-24, made that net 189 mm long; it was 133 and is about 125 so)
+FIRST = (("IC3", "22", ("J1", "30")), ("J2", "C1", ("IC14", "4")))
+SOON = ("CRTE", "-MRW", "TPB")                          # of what Freerouting leaves open, these nets are joined first
 J1_NEW = {"31": "-EF1", "32": "-EF2", "33": "-EF3", "34": "-DMAIN", "35": "SC0", "36": "-PAUSE"}   # the slot's names
 
 # ---- the board -------------------------------------------------------------------------------------------------------
@@ -147,7 +162,8 @@ MOVE = {"J2": (FRONT - 0.38 - 11.54, 31.2, 270),
         "LED1": (FRONT - 6.5, 99.0, 180), "R1": (FRONT - 10.9, 98.6, 270)}
 # nets tidied after routing, each named by a pad on it: track ends left touching nothing are cut back. Rev B's select
 # track (cut at IC5), its video track and the ground chain that ran through the RCA jack's old pads
-TIDY = (("IC3", "25"), ("J2", "C1"), ("J2", "S1"), ("LED1", "A"), ("LED1", "K"))   # (S1: GND; LED1 A: VCC, K: the LED's own net)
+TIDY = (("IC3", "25"), ("J2", "C1"), ("J2", "S1"), ("LED1", "A"), ("LED1", "K"), ("J1", "12"), ("J1", "14"))   # (S1: GND; LED1 A: VCC, K: the LED's own net; J1 12, 14: TPB and -MRW,
+#  which end at the 6845 no more)
 
 # reference: (x, y, rotation) of the footprint's origin: pin 1 for KiCad's parts, the middle for the Eagle capacitor
 PLACE = {

@@ -3,7 +3,8 @@
 
 The cards are the emulator's gate-level models, built from each card's KiCad netlist (software/s5emu/s5emu/hw.py):
   mem    memory Rev D (or mem_rev C / B-built), jumpers as a 16-character string (R = RAM, E = EPROM, - = empty, block 0 first)
-  video  6845 Rev B, SV1 1-2 (block 7: video RAM 7000-77FF, CRTC 7800-7FFF)
+  video  6845 Rev B, SV1 1-2 (block 7: video RAM 7000-77FF, CRTC 7800-7FFF); video_rev="B-Clean-Keyboard": that card's video
+         RAM and its write-only 6845 (7800-7BFF, A1 = A2 = 0); its keyboard section does not drive the bus here
   ide    IDE/CF Rev A, SV1 = port 2 (register select), SV2 = port 3 (data), with a CF drive on its header
          (machine.py's IDE model, optionally holding a disk image)
 
@@ -79,7 +80,7 @@ class Backplane:
     LINES = LINES30
 
     def __init__(self, cards=("mem", "video", "ide"), jumpers="RRRRRRR-EEEEEEE-", empty=(), stuck=None, drive=True,
-                 image=None, rom=None, rom_base=0x8000, addr=None, mem_rev="D", shorts=(), between=None, diodes=()):
+                 image=None, rom=None, rom_base=0x8000, addr=None, mem_rev="D", shorts=(), between=None, diodes=(), video_rev="B"):
         import random
         stuck = stuck or {}; self.cards = []; self.addr_fault = addr; self.events = []; self.context = ""
         self.shorts = [tuple(s) for s in shorts]; self.diodes = [tuple(d) for d in diodes]
@@ -100,7 +101,7 @@ class Backplane:
             if rom: self.load_rom(rom, rom_base)
             self.cards.append(BusCard("mem", m, {r: m.store[r] for r in m.store}, stuck.get("mem")))
         if "video" in cards:
-            self.screen = Video6845(); v = NetlistVideoCard(self.screen, "B"); self.video = v
+            self.screen = Video6845(); v = NetlistVideoCard(self.screen, video_rev); self.video = v
             self.cards.append(BusCard("video", v, v.store, stuck.get("video")))
         if "ide" in cards:
             self.ide = NetlistIDECard("A"); self.drive = IDE(image, sectors=2048) if drive else None

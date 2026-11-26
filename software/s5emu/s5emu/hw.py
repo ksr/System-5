@@ -34,7 +34,7 @@ from .machine import Machine, FLOAT, CPUCardROM
 from .rtc import DS12885
 from .uart import UART16550
 from .netlist import Netlist
-from .logic import Circuit, classify, X
+from .logic import Circuit, classify, powering_up, X
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 MEM_NET = "hardware/memory/kicad/rev-%s/reports/netlist.net"
@@ -94,7 +94,8 @@ VIDEO_REVS = {
         note="6845 Rev B-Clean-Keyboard (2026-11-20, not built): Rev B-Clean on the 36-pin bus with VIDEO-G TEXT's PS/2 "
              "keyboard section. The video RAM is at 7000-77FF as on Rev B. A 74HCT138, enabled by Rev B's upper-half select "
              "and A10 low, picks by A1-A2: the 6845 (7800/7801), the key latch (7802: the read clears KEY-READY at TPB) and "
-             "the status buffer (7804: bit 0 KEY-READY, bit 7 = 1); the same every 8 addresses through 7BFF. KEY-READY "
+             "the status buffer (7804: bit 0 KEY-READY, bit 7 = 1); the same every 8 addresses through 7BFF. The 6845 is "
+             "write-only (2026-11-24): R/W on ground, E = NOT -MRW. KEY-READY "
              "pulls the bus flag line JP1 picks. SV1 1-2 fitted = block 7; the key latch, the status buffer and the "
              "ATmega are played on the enables the card's gates make."),
 }
@@ -715,6 +716,11 @@ IOPANEL_REVS["A-req"] = dict(
          "input lifted and tied high), which lasts until -MWR rises, past clock 7 of the DMA cycle, where the 1802 "
          "samples it again. Kept to show what that does: two DMA IN cycles for a press.")
 
+IOPANEL_REVS["A-powerup"] = dict(
+    net=IOPANEL_REVS["A"]["net"], rework=[("lift", "U10", "1"), ("wire", "U10", "1", "U10", "8"), ("lift", "U6", "2"), ("wire", "U6", "2", "U11", "6")],
+    note="IO panel Rev A with REQ and DRIVE as they were drawn until 2026-11-25: REQ cleared by ACK alone, DRIVE not gated with "
+         "LOAD mode, so REQ up as 1 put the toggles on the bus in every memory write. Kept to show what that does.")
+
 
 def switch_contact(c, ref, a, b):
     """what closing the contact between pins a and b of switch `ref` does, read from the card's netlist. -> (net,
@@ -1148,9 +1154,15 @@ class HWMachine(Machine):
 
     def __init__(self, mem_rev="D", vma_mode="remap", cpu_rev="A-built", video_rev="B", ide_rev="A", io_rev="A", jumpers=None,
                  rom_lo=None, rom_hi=None, panel_rev=None, videog=None, monitor="ntsc", gfx=True, videog_block=7,
-                 kbd_flag="-EF", mhz=1.76, front_rev=None, panel_toggles=None, **kw):
-        """front_rev: fit the front panel (a FRONTPANEL_REVS key) on the IO panel card's ribbon; it needs panel_rev.
+                 kbd_flag="-EF", mhz=1.76, front_rev=None, panel_toggles=None, power_up=None, **kw):
+        """power_up: the state every card's flip-flops and latches come up in (0, 1, "seed N"; logic.Circuit). front_rev: fit the front panel (a FRONTPANEL_REVS key) on the IO panel card's ribbon; it needs panel_rev.
         panel_toggles: the IO panel card's own data toggles are fitted (None: yes, unless a front panel is)"""
+        with powering_up(Circuit.POWER_UP if power_up is None else power_up):
+            self._build(mem_rev, vma_mode, cpu_rev, video_rev, ide_rev, io_rev, jumpers, rom_lo, rom_hi, panel_rev, videog,
+                        monitor, gfx, videog_block, kbd_flag, mhz, front_rev, panel_toggles, kw)
+
+    def _build(self, mem_rev, vma_mode, cpu_rev, video_rev, ide_rev, io_rev, jumpers, rom_lo, rom_hi, panel_rev, videog,
+               monitor, gfx, videog_block, kbd_flag, mhz, front_rev, panel_toggles, kw):
         if vma_mode not in self.VMA_MODES: raise ValueError("vma mode: one of " + ", ".join(self.VMA_MODES))
         if videog: kw["pixie_port"] = 0; video_rev = io_rev = None       # no 6845 card and no IO card (no 1861)
         elif video_rev and VIDEO_REVS.get(video_rev, {}).get("keyboard"):
@@ -1184,7 +1196,10 @@ class HWMachine(Machine):
         self.held = False                                                # -RESET or -PAUSE low: the 1802 is not running
         self.run_mode = "run"; self.ext_pull = {}                        # {who: lines it holds low}: cards with no netlist here
         self.bus_lines = {n: 1 for n in self.LINES}
-        if self.panel or self.front: self.lines_update()
+        if self.panel or self.front:                                     # the power-on reset is a boot reset on the bus
+            if self._rev_d(): self._boot_reset()                         # (U12): the panels see it as the CPU card does
+            else: self.lines_update()
+            if self.ccard and not loaded: self.ccard.set_booted(True)   # and no EPROM fitted: still nothing to boot from
         self.log = BusLog(); self.stop_on = set(); self.fault = None
         for path in (rom_lo, rom_hi):
             if path: self.load_rom(path)
@@ -1376,10 +1391,11 @@ class HWMachine(Machine):
         """-RESET, -PAUSE and -DMAIN are open collector: a line is low while any card pulls it. Each card with a netlist
         here (CPU Rev D, the IO panel, the front panel) is told what the others hold low and asked what it holds
         itself, round and round until nothing changes (the CPU card and the front panel let -DMAIN go when -PAUSE
-        falls, so one line can move another). ext_pull: the pulls of cards played without a netlist (the bus driver).
+        falls, so one line can move another). It begins from what each holds now: begun from nothing, a line held low was
+        let go for a moment, which the IO panel's REQ, cleared outside LOAD mode, would see (2026-11-25). ext_pull: the pulls of cards played without a netlist (the bus driver).
         -> {line: 0 | 1}"""
         cards = [c for c in (self.ccard if self._rev_d() else None, self.panel, self.front) if c]
-        own = {id(c): set() for c in cards}; ext = set().union(*self.ext_pull.values())
+        own = {id(c): c.pulls() for c in cards}; ext = set().union(*self.ext_pull.values())
         for _ in range(8):
             moved = False
             for c in cards:
@@ -1468,13 +1484,16 @@ class HWMachine(Machine):
             if low is not False: self.vcard.reset()                      # the 6845 card's KEY-READY (and its ATmega)
         elif self.video_name == "video-g" and low is not False: self.video.ctrl = 0
 
+    def _boot_reset(self):
+        """CPU Rev D's own boot reset, on the bus for every card to see: SW_RST low (the switch, or U12 at power-on), and
+        let go"""
+        self.ccard.sw1(True); self.lines_update(); self.ccard.reset(); self.lines_update()
+
     def reset(self):
         """the CPU card's RESET/RUN switch to RESET and back (or the power coming up). On CPU Rev D that is a boot
         reset on the bus, which the front panel's copy of the LOADED flag follows"""
         super().reset(); self.fault = None
         if self.ccard:
-            shared = self._rev_d() and (self.panel or self.front or self.ext_pull)
-            if shared: self.ccard.sw1(True); self.lines_update()
-            self.ccard.reset()
-            if shared: self.lines_update()
+            if self._rev_d() and (self.panel or self.front or self.ext_pull): self._boot_reset()
+            else: self.ccard.reset()
         self._video_reset()

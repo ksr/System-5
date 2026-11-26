@@ -103,7 +103,9 @@ def photo_of(card, rev):
 
 
 def render_of(card, rev):
-    found = sorted(glob.glob(os.path.join(REPO, "hardware", card, "kicad", rev, "*-render-top.png")))
+    """The render with its parts drawn in (tools/render_populated.py) when there is one, else the build's own."""
+    found = sorted(glob.glob(os.path.join(REPO, "hardware", card, "kicad", rev, "*-render-top.png")),
+                   key=lambda p: (not p.endswith("-populated-render-top.png"), p))
     return os.path.relpath(found[0], REPO) if found else None
 
 
@@ -134,6 +136,12 @@ def picture(card, rev, markdown, here):
             "scrap": ", as designed (the boards made were scrap)"}.get(status, "") + (
             ". A part with no 3D model shows as its outline or bare pads.")
         stats["render"] += 1
+    back = src.replace("-render-top.png", "-render-bottom.png")
+    if src.endswith("-populated-render-top.png") and os.path.exists(os.path.join(REPO, back)):     # its back as well
+        alt = caption.split(". ")[0]
+        caption = caption.replace(". A part", "; the front, then the back. A part")
+        return '![%s, front](<%s>){ width="420" }\n\n![%s, back](<%s>){ width="420" }\n\n*%s*\n' % (
+            alt, posixpath.relpath(src, here or "."), alt, posixpath.relpath(back, here or "."), caption)
     return '![%s](<%s>){ width="420" }\n\n*%s*\n' % (caption.split(". ")[0], posixpath.relpath(src, here or "."), caption)
 
 

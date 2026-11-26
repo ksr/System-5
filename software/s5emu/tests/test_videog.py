@@ -4,7 +4,7 @@ the boot screen, the 24-row scroll and its speed, the PNG writer."""
 import os, struct, sys, unittest, zlib
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, ".."))
 from s5emu.videog import VideoGMachine
-from s5emu.machine import Machine
+from s5emu.machine import FLOAT, Machine
 VG_ROM = os.path.join(HERE, "..", "roms", "hbios-video-g.rom")
 
 
@@ -72,7 +72,13 @@ class Card(unittest.TestCase):
         self.assertEqual(len(m.video.lines()), 25)
         m.write(0x7800, 14); m.write(0x7801, 6); m.write(0x7800, 15); m.write(0x7801, 3)   # as on the 6845 card
         self.assertEqual(m.video.cursor(), (24, 3))
-        m.write(0x7800, 14); self.assertEqual(m.read(0x7801), 6)                          # R14 reads back
+        self.assertEqual((m.video.reg[14], m.video.reg[15]), (6, 3))
+
+    def test_the_6845_is_write_only(self):
+        """7800 / 7801 read as FF whatever was written, in every pair that repeats, and a read changes nothing"""
+        m = bare(); m.write(0x7800, 14); m.write(0x7801, 0x2A); before = (list(m.video.reg), m.video.sel)
+        for a in (0x7800, 0x7801, 0x7808, 0x7BF9): self.assertEqual(m.read(a), FLOAT, "%04X" % a)
+        self.assertEqual((list(m.video.reg), m.video.sel, m.video.reg[14]), before + (0x2A,))
 
     def test_no_gfx_no_control_register(self):
         m = bare(gfx=False); m.write(self.CTRL, 0x0F)

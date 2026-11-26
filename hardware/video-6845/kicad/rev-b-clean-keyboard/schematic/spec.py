@@ -7,7 +7,7 @@ PROJ = "video-6845-rev-b-clean-keyboard-schematic"
 TITLE = "System-5 6845 video card Rev B-Clean-Keyboard"
 SUBTITLE = "Text from BYTE May 1979 (video RAM at 7000, 6845 at 7800 / 7801, composite out) with a PS/2 keyboard: key at 7802, status at 7804"
 THEORY = "Theory: docs/manual/video-6845-card.md; BYTE comparison: hardware/video-6845/BYTE-COMPARISON.md"
-DATE = "2026-11-20"
+DATE = "2026-11-24"
 REV = "B-Clean-Keyboard"
 BUSREF = "J1"
 SYMBOLS = {"IC8": "74xx:74LS161"}        # the 74LS163 pinout; KiCad's 74LS163 symbol hides VCC (an ERC complaint)
@@ -30,12 +30,13 @@ SHEETS = [
      "IC2 latches A8-A15 while TPA is high. IC4 compares A12-A15 with SV1 (1-2: block 7) and matches only while -VMA is low\n"
      "(IC6F): BLOCK. Within the block A11 picks: A11 = 0 the video RAM's bus port (~VRAM_CE), A11 = 1 the registers (-UPPER,\n"
      "which was Rev B's 6845 select). IC15, enabled by -UPPER and A10 low, picks by A1-A2: Y0 the 6845 (-CRTCCS: 7800 address\n"
-     "register, 7801 data; E = TPB, R/W = -MRW, RS = A0), Y1 the key (7802), Y2 status (7804); the same every 8 addresses to 7BFF."),
+     "register, 7801 data, write-only: E = NOT -MRW, CRTE; R/W on ground; RS = A0), Y1 the key (7802), Y2 status (7804); the same every 8 addresses to 7BFF."),
     ("vram", "VRAM+CRTC", "DUAL-PORT VIDEO RAM AND THE 6845",
      ["IC1", "IC3"], None,
      "The IDT7134's right port is the bus (A0-A10; its A11R is tied low, so the bus sees 2K), its left port the display:\n"
      "the 6845's refresh address MA0-MA11 (VADDR) reads a character onto VDATA0-7 with no arbitration and no snow.\n"
-     "The 6845 also gives the row address (VROWS), HSYNC, VSYNC, display enable (DE) and the cursor."),
+     "The 6845 also gives the row address (VROWS), HSYNC, VSYNC, display enable (DE) and the cursor. It is write-only: R/W on ground,\n"
+     "E = CRTE (IC18A), high while -MRW is low, so it never drives the bus."),
     ("clock", "Clocks", "DOT CLOCK AND CHARACTER CLOCK (DIVIDE BY 6)",
      ["Q1", ("IC6", 1), ("IC6", 2), ("IC6", 3), "R2", "R3", "IC8", ("IC5", 3)], None,
      "Q1 (9 MHz in BYTE) and three 74LS04 gates oscillate: DOTCLOCK. IC8 (74LS163: a synchronous clear) counts 0-5 and is\n"
@@ -52,7 +53,7 @@ SHEETS = [
      "IC16: -RDKEY and -RDSTAT are the decoder's selects while -MRD is low; KRDT is -RDKEY while TPB is high. IC19, the key latch,\n"
      "drives D0-D7 while -RDKEY is low; IC20 puts the status on them while -RDSTAT is low: bit 0 KEY-READY, 2 VSYNC, 3 DE, 7 = 1.\n"
      "The ATmega's LDDATA edge loads IC19 and sets KEY-READY (IC18B); KCLR (IC17: KRDT, or -RESET) clears it: a read of the key,\n"
-     "at TPB. IC22 (7416, open collector) pulls the bus flag line JP1 picks (-EF1, -EF2, -EF3 or -EF) low while KEY-READY, and\n"
+     "at TPB. IC18A is the 6845's E: -CLR on ground, -MRW on -PRE: Q = NOT -MRW. IC22 (7416, open collector) pulls the bus flag line JP1 picks (-EF1, -EF2, -EF3 or -EF) low while KEY-READY, and\n"
      "the ATmega's reset (MRST) low while RESETH; R11 pulls -EF up."),
     ("kbdmcu", "Keyboard", "PS/2 KEYBOARD CONTROLLER (VIDEO-G TEXT'S, FIRMWARE embedded/video-g-ps2)",
      ["IC21", "Y1", "C25", "C26", "R7", "C24", "J3", "J4", "F1", "R8", "R9"], None,

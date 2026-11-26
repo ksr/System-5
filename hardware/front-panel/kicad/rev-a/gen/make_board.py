@@ -8,7 +8,7 @@ netlist.
   * across the top: the four ADDRESS displays, the two DATA displays, then the six status LEDs (PWR, Q, PAUSE, RESET,
     ROM, START FROM RAM), each with its label under it and its 1k under that
   * below the displays: the eight bit LEDs, BIT 7 on the left, each over its data toggle; then RUN/RESET and LOAD, and
-    the INPUT and RESET push-buttons at the right. Toggles 0.5 in apart. A data toggle is up for a 1; RUN and LOAD
+    the INPUT push-button at the right (the RESET button at the top right, beside START FROM RAM: Ken, 2026-11-26). Toggles 0.5 in apart. A data toggle is up for a 1; RUN and LOAD
     are up for RUN and for LOAD
   * the logic in a row under the toggles: C2, U7-U10 (each with its 0.1 uF at its pin 14 end), RN1 (the bit LEDs'
     resistors), RN2 (the toggles' 1k to +5V), and the RESET button's R7 / C1 by the button
@@ -47,10 +47,13 @@ r.SetLayer(pcbnew.Edge_Cuts); r.SetWidth(MM(0.1)); b.Add(r)
 P = 12.7                                                # the toggles' pitch
 XL = 32.1                                               # BIT 7's column
 BITX = [XL + P * (7 - k) for k in range(8)]             # BIT k's column: BIT 7 at the left
-RUNX, LOADX, INX, RSTX = BITX[0] + 16.0, BITX[0] + 16.0 + P, BITX[0] + 32.0 + P, BITX[0] + 32.0 + 2 * P
+RUNX, LOADX, INX = BITX[0] + 16.0, BITX[0] + 16.0 + P, BITX[0] + 32.0 + P
 DISPX = [XL, XL + P, XL + 2 * P, XL + 3 * P, 90.0, 90.0 + P]             # U1-U4 the address, U5 / U6 the data
 STATX = [126.0 + 11.0 * k for k in range(6)]            # the status LEDs
 YDISP, YSTAT, YSRES, YLED, YSW, YROW = Y(18.0), Y(12.0), Y(25.0), Y(39.0), Y(53.0), Y(75.5)
+# the RESET button at the top right, beside START FROM RAM, away from INPUT (Ken, 2026-11-26: "it will be too easy to hit
+# when pushing input button, move it to the top right beside start from ram led"); 2 mm below the status row, clear of H2
+RSTX, RSTY = 190.0, YSTAT + 2.0
 PLACE = {}
 for (ref, _, _), x in zip(N.DISPLAYS, DISPX): PLACE[ref] = (x, YDISP, 0)                 # origin at the display's centre
 for k in range(8):
@@ -59,7 +62,7 @@ for k in range(8):
 PLACE["SW9"] = (RUNX, YSW, 0)                           # RUN/RESET: lever up = pin 1's end = -RESET let go = RUN
 PLACE["SW10"] = (LOADX, YSW, 180)                       # LOAD: lever up = pin 3's end = -PAUSE grounded = LOAD
 PLACE["SW11"] = (INX - 3.25, YSW - 2.25, 0)             # the push-buttons: origin at pin 1, the button's centre on the row
-PLACE["SW12"] = (RSTX - 3.25, YSW - 2.25, 0)
+PLACE["SW12"] = (RSTX - 3.25, RSTY - 2.25, 0)
 for k, (ref, label, sink) in enumerate(N.STATUS):
     PLACE[ref] = (STATX[k] - 1.27, YSTAT, 0)
     PLACE["R%d" % (k + 1)] = (STATX[k] - 3.81, YSRES, 0)
@@ -155,8 +158,8 @@ for k in range(8):
     lab([("1", 0.9)], [(BITX[k], YSW - 8.0), (BITX[k] + 3.0, YSW - 8.0)]); lab([("0", 0.9)], [(BITX[k], YSW + 8.0), (BITX[k] + 3.0, YSW + 8.0)])
 for x, up, down in ((RUNX, "RUN", "RESET"), (LOADX, "LOAD", "OFF")):
     lab([(up, 1.1), (up, 0.9)], [(x, YSW - 8.3 - 0.2 * j) for j in range(8)]); lab([(down, 1.1), (down, 0.9)], [(x, YSW + 8.3 + 0.2 * j) for j in range(8)])
-for x, name in ((INX, "INPUT"), (RSTX, "RESET")):
-    lab([(name, 1.1), (name, 0.9)], [(x, YSW + 6.0 + 0.2 * j) for j in range(10)])
+for x, y, name in ((INX, YSW, "INPUT"), (RSTX, RSTY, "RESET")):
+    lab([(name, 1.1), (name, 0.9)], [(x, y + 6.0 + 0.2 * j) for j in range(10)])
 # 5. J1, on the back: its name there (mirrored, as the back's silkscreen is read) and on the front beside its pins
 (ax, ay), (bx, by) = pad_at("J1", "1"), pad_at("J1", "50")
 sk.put("J1 IO PANEL (ON THE BACK)", bx + 3.0, (ay + by) / 2, 1.0, 0, "left")

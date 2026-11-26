@@ -3,7 +3,8 @@
 
 As the software sees it (DESIGN.md sections 2 and 3): memory-mapped, no I/O ports (Ken, 2026-11-17)
   7000-77FF   text RAM (the IDT7134's bus port, 2K); row r, column c at 7000 + 64r + c
-  7800        write: the 6845's address register        7801  the 6845's data register (reads R14-R17)
+  7800        write: the 6845's address register        7801  write: its data register (write-only since
+              2026-11-24: a read of 7800 or 7801 finds nothing, FF)
   7802        read: the key (ASCII; reading it clears KEY-READY); EF3 = a key waits (the bus -EF: the TEXT board's
               JP3 KBD FLAG as set; it can pick -EF1, -EF2 or -EF3 instead, which this model does not follow)
   7804        read: status: 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR (1 = IBM 5151, 512 x 256),
@@ -68,8 +69,7 @@ class VideoG:
             return self.pages[self.cpage()][self.yreg * 64 + (a & 0x3F)]
         if self.REGS <= a < self.WIN:                             # the registers (A10 = 0), chosen by A1-A2
             r = (a >> 1) & 3
-            if r == 0:                                            # the 6845: 7801 reads R14-R17
-                return (self.reg[self.sel] if self.sel in (14, 15, 16, 17) else 0) if a & 1 else FLOAT
+            if r == 0: return FLOAT                               # the 6845 is write-only: nothing drives the bus
             if r == 1: return self.m.kbd.read()                   # 7802: the key (the read clears KEY-READY)
             if r == 2: return self.status()                       # 7804
             if not self.gfx: return FLOAT                         # 7806: the mouse byte (GFX)

@@ -10,6 +10,7 @@
 #     make_board.py       Rev B-Clean's board, longer and with the six new bus pins: Rev B's copper kept and locked
 #                         (but the 6845's select, cut, and one track's corner moved from under pin 31), the new parts
 #                         placed, nothing routed
+#     route_leftovers.py --first   the 6845's R/W to ground and the composite video, across Rev B's copper alone; locked
 #     route.py            Freerouting adds the keyboard section's connections on the same two layers
 #     route_leftovers.py  a maze router joins the few long connections Freerouting leaves open
 #     silk.py             the silkscreen
@@ -38,6 +39,7 @@ $CLI sch export pdf -o "$P-schematic.pdf" "$P.kicad_sch" 2>&1 | q
 echo "== $P: footprints, the board from Rev B-Clean's, routing"
 $PYK "$G/footprints.py" 2>&1 | q | tail -3
 $PYK "$G/make_board.py" 2>&1 | q
+$PYK "$G/route_leftovers.py" --first 2>&1 | q
 $PYK "$G/route.py" dsn 2>&1 | q | tail -1
 rm -f "$P.ses"
 java -jar "$FR" -de "$P.dsn" -do "$P.ses" -mt 1 -mp 20 > logs/freerouting.log 2>&1 || true

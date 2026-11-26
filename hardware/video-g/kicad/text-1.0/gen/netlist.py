@@ -1,4 +1,4 @@
-# Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-01 (memory-mapped 2026-11-17)
+# Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-01 (memory-mapped 2026-11-17, the 6845 write-only 2026-11-24)
 """netlist.py - VIDEO-G 1.0 TEXT: THE single source of the board's circuit.
 
 make_schematic.py and make_board.py read this module; nothing else defines the circuit. Design:
@@ -10,11 +10,11 @@ System-5's: everything memory-mapped in the card's block, no I/O ports (Ken, 202
     -> BOARDSEL; A11 = 0 -> the IDT7134 text RAM (7000-77FF); A11 = 1 -> UPPER (7800-7FFF), in which A10 = 1 -> WSEL,
     the GFX window (7C00-7FFF), and A10 = 0 -> the registers (7800-7BFF), decoded from A1-A2 (each pair repeating):
         IC5  the 6845's -CS at 7800/7801 (RS = A0)
-        IC6  read enables while -MRD is low: 7800 the 6845, 7802 key (IC9), 7804 status (IC8), 7806 mouse (GFX)
-        IC7  write strobes while -MRW is low and TPB high (C = NOT TPB): 7800 the 6845, 7804 control, 7806 Y (GFX)
-    The 6845: E = NAND(-RDCRTC, -WRCRTC) (IC21C), the whole -MRD time on a read (the 1802 wants the data held up to
-    200 ns past 7.5 T, so E ends with -MRD) and TPB within -MRW on a write; R/-W comes from IC24A, set while -MRD is
-    low and cleared while -MRW is low, so it keeps its level between cycles and never changes while E is high
+        IC6  read enables while -MRD is low: 7802 key (IC9), 7804 status (IC8), 7806 mouse (GFX); 7800 nothing
+        IC7  write strobes, the whole -MRW time: 7800 the 6845, 7804 control, 7806 Y (GFX)
+    The 6845 is write-only (Ken, 2026-11-24: "write-only for row 1"): R/-W on ground, E = NOT -WRCRTC (IC21C), the whole
+    of -MRW (5 T to 7 T). Until then E was TPB within -MRW on a write, too short when the strobes' delays differ, and the
+    6845 could be read; DESIGN.md section 4 has why and the ways that were weighed
   * display: 12 MHz, IC15 counts 8-15 (8 dots), QC clocks the 6845; IDT7134 left port -> 7-bit code latch IC11 ->
     28C64 IC12 (A0-A2 = RA0-RA2) -> shifter IC13; IC14 delays reverse/cursor and DE two characters; the combine:
     dot = (text AND TEXT-ON) OR GDOT, or the XOR of the two when XORM; 7416 to the RCA composite and the DE-9.
@@ -34,15 +34,15 @@ import ribbon
 CARD = "VIDEO-G 1.0 TEXT"
 PROJ = "video-g-text"
 REV = "1.0"
-DATE = "2026-11-18"
+DATE = "2026-11-24"
 SUBTITLE = "64 x 25 / 64 x 32 text, memory-mapped at 7000-7FFF, PS/2 keyboard; with the GFX board: 512 x 200 / 512 x 256 graphics"
 FLAG_NETS = ("PS2VCC",)
 SCH_NOTES = [
     "VIDEO-G 1.0 TEXT (hardware/video-g/DESIGN.md): the System-5 text card of VIDEO-G; works alone, or with the GFX board on the J6 ribbon.",
     "Memory-mapped, no I/O ports (2026-11-17). Block jumper SV1: 1-2 only = block 7. 7000-77FF text RAM (IDT7134); 7C00-7FFF the GFX window (WSEL).",
     "Registers (7800-7BFF, pairs repeating): 7800/7801 the 6845 (RS = A0); 7802 key (+ a bus flag line while KEY-READY: JP3 picks -EF1, -EF2, -EF3 or -EF); 7804 status / control (GFX); 7806 mouse / Y (GFX).",
-    "Status: 0 KEY-READY 1 MOUSE-READY 2 VSYNC 3 DE 4 MONITOR 5 GFX-PRESENT, 7-6 = 10. Reads while -MRD is low; writes while -MRW is low during TPB.",
-    "6845: E = the -MRD time on a read, TPB within -MRW on a write; R/-W from IC24A, set by -MRD and cleared by -MRW, steady while E is high.",
+    "Status: 0 KEY-READY 1 MOUSE-READY 2 VSYNC 3 DE 4 MONITOR 5 GFX-PRESENT, 7-6 = 10. Reads while -MRD is low; writes while -MRW is low.",
+    "6845: write-only (2026-11-24): R/-W on ground, E = the whole -MRW time of a write to 7800/7801 (IC7, IC21C); a read of 7800/7801 finds nothing.",
 ]
 
 DIP = {n: "Package_DIP:DIP-%d_W7.62mm_Socket" % n for n in (14, 16, 20, 28)}
@@ -59,10 +59,10 @@ PARTS = {
     "IC1":  ("74HCT373", "74xx:74LS373", DIP[20], "A8-A15 latch, transparent while TPA is high"),
     "IC2":  ("74LS85", "74xx:74LS85", DIP[16], "block decode: A12-A15 = BLOCK jumper, enabled by VMA"),
     "IC3":  ("IDT7134", LOC + ":IDT7134", DIPW[48], "text RAM, dual port: bus 7000-77FF on the right, 6845 on the left"),
-    "IC4":  ("HD68B45SP", "GPU:MC6845", DIPW[40], "CRTC at 7800 (address register) and 7801 (data)"),
+    "IC4":  ("HD68B45SP", "GPU:MC6845", DIPW[40], "CRTC at 7800 (address register) and 7801 (data), write-only"),
     "IC5":  ("74HCT138", "74xx:74LS138", DIP[16], "the 6845's -CS: 7800/7801 (A1-A2)"),
-    "IC6":  ("74HCT138", "74xx:74LS138", DIP[16], "read enables, 7800-7806, while -MRD is low"),
-    "IC7":  ("74HCT138", "74xx:74LS138", DIP[16], "write strobes, 7800-7806, while -MRW is low and TPB high"),
+    "IC6":  ("74HCT138", "74xx:74LS138", DIP[16], "read enables, 7802-7806, while -MRD is low"),
+    "IC7":  ("74HCT138", "74xx:74LS138", DIP[16], "write strobes, 7800-7806, while -MRW is low"),
     "IC8":  ("74LS244", "74xx:74LS244", DIP[20], "status, read at 7804"),
     "IC9":  ("74HCT374", "74xx:74LS374", DIP[20], "key latch, read at 7802"),
     "IC10": ("ATmega328P-PU", "MCU_Microchip_ATmega:ATmega328P-P", DIP[28], "PS/2 keyboard controller"),
@@ -79,7 +79,7 @@ PARTS = {
     "IC21": ("74LS10", "74xx:74LS10", DIP[14], "XOR term, video NAND, 6845 E"),
     "IC22": ("74LS86", "74xx:74LS86", DIP[14], "cursor/reverse XORs, the GFX -WE phase"),
     "IC23": ("7416", "74xx:74LS05", DIP[14], "open collector: video, syncs, -EF, ATmega reset"),
-    "IC24": ("74HCT74", "74xx:74LS74", DIP[14], "the 6845's R/-W latch, KEY-READY"),
+    "IC24": ("74HCT74", "74xx:74LS74", DIP[14], "KEY-READY (its other half is spare)"),
     "Y1":   ("12MHz", "Device:Crystal", "Crystal:Crystal_HC49-U_Vertical", "dot clock"),
     "Y2":   ("16MHz", "Device:Crystal", "Crystal:Crystal_HC49-U_Vertical", "ATmega clock"),
     "J2":   ("RCA", LOC + ":RCA", LOC + ":RCA", "composite video"),
@@ -195,25 +195,25 @@ for i in range(8):
 # ---- 6845 IC4 at 7800/7801 ------------------------------------------------------------------------------------------
 c("-RESET", "IC4.2"); c("GND", "IC4.3")                                    # LPSTB low
 c("DE", "IC4.18"); c("CURSOR", "IC4.19"); c("CRTCCLK", "IC4.21")
-c("CRTCRW", "IC4.22"); c("CRTCE", "IC4.23"); c("A0", "IC4.24"); c("-CRTCCS", "IC4.25")
+c("GND", "IC4.22"); c("CRTCE", "IC4.23"); c("A0", "IC4.24"); c("-CRTCCS", "IC4.25")
 for i in range(8):
     c("D%d" % i, "IC4.%d" % (33 - i))
 c("RA2", "IC4.36"); c("RA1", "IC4.37"); c("RA0", "IC4.38"); c("HSYNC", "IC4.39"); c("VSYNC", "IC4.40")
 c("GND", "IC18.9", "IC18.10")                                              # IC18C spare
-c("-RDCRTC", "IC21.9"); c("-WRCRTC", "IC21.10"); c("+5V", "IC21.11"); c("CRTCE", "IC21.8")   # IC21C: E
+c("-WRCRTC", "IC21.10"); c("+5V", "IC21.9", "IC21.11"); c("CRTCE", "IC21.8")   # IC21C: E = NOT -WRCRTC; R/-W low: write-only
 
-# ---- register decode IC5/IC6/IC7 (A1-A2 within 7800-7BFF), the 6845's R/-W latch (IC24A) ----------------------------
+# ---- register decode IC5/IC6/IC7 (A1-A2 within 7800-7BFF) -----------------------------------------------------------
 for ref in ("IC5", "IC6", "IC7"):                                          # G1 = UPPER, -G2A = A10: 7800-7BFF
     c("A1", ref + ".1"); c("A2", ref + ".2"); c("A10", ref + ".4"); c("UPPER", ref + ".6")
 c("GND", "IC5.3", "IC5.5", "IC6.3"); c("-CRTCCS", "IC5.15")                # IC5: the 6845's -CS, 7800/7801
 c("-MRD", "IC6.5")                                                         # IC6: reads while -MRD is low
-c("-RDCRTC", "IC6.15"); c("-RDKEY", "IC6.14"); c("-RDSTAT", "IC6.13"); c("-RDMOUSE", "IC6.12")
-c("TPBN", "IC7.3"); c("-MRW", "IC7.5")                                     # IC7: writes while -MRW low, TPB high
+c("-RDKEY", "IC6.14"); c("-RDSTAT", "IC6.13"); c("-RDMOUSE", "IC6.12")
+c("GND", "IC7.3"); c("-MRW", "IC7.5")                                      # IC7: writes while -MRW is low
 c("-WRCRTC", "IC7.15"); c("-WRCTL", "IC7.13"); c("-WRY", "IC7.12")
 c("GND", "IC16.11")                                                        # IC16E spare
 c("GND", "IC17.1"); c("TPB", "IC17.3"); c("TPBN", "IC17.4")                # IC17A spare; IC17B: NOT TPB
-c("-MRW", "IC24.1"); c("-MRD", "IC24.4"); c("GND", "IC24.2", "IC24.3")     # IC24A: -PRE = -MRD sets R/-W (read),
-c("CRTCRW", "IC24.5")                                                      # -CLR = -MRW clears it (write)
+c("+5V", "IC24.1", "IC24.4"); c("GND", "IC24.2", "IC24.3")                 # IC24A spare (the 6845's R/-W latch until
+#                                                                            2026-11-24): its clear and preset off, D and CLK low
 
 # ---- status IC8 (INP 4) ----------------------------------------------------------------------------------------------
 c("-RDSTAT", "IC8.1", "IC8.19")
@@ -295,8 +295,8 @@ for pin, sig in ribbon.PINS.items():
 # ---- pins left open (a no-connect flag each) -------------------------------------------------------------------------
 NO_CONNECT = {
     "J1": [i + 1 for i, n in enumerate(POS) if n in UNUSED], "IC2": [5, 7], "IC4": [16, 17, 34, 35], "IC5": [14, 13, 12, 11, 10, 9, 7],
-    "IC6": [11, 10, 9, 7], "IC7": [14, 11, 10, 9, 7], "IC11": [19], "IC12": [1, 26], "IC14": [3, 6, 11, 14],
-    "IC15": [11], "IC16": [10], "IC17": [2, 10, 12], "IC18": [8], "IC22": [8], "IC24": [6, 8],
+    "IC6": [15, 11, 10, 9, 7], "IC7": [14, 11, 10, 9, 7], "IC11": [19], "IC12": [1, 26], "IC14": [3, 6, 11, 14],
+    "IC15": [11], "IC16": [10], "IC17": [2, 10, 12], "IC18": [8], "IC22": [8], "IC24": [5, 6, 8],
     "IC10": [5, 11, 13, 17, 18, 19, 21],
     "J3": [3, 4, 5, 6], "J4": [2, 6], "J5": [3],
 }
@@ -305,7 +305,7 @@ NO_CONNECT = {r: [str(p) for p in ps] for r, ps in NO_CONNECT.items()}
 # ---- what to buy: the parts whose exact type matters (BOM.md) -------------------------------------------------------
 BUY = {
     "IC3": "IDT7134SA or LA, 55-90 ns, DIP-48 (600 mil); the 6845 card's chip also fits",
-    "IC4": "HD68B45SP (Hitachi) or MC68B45P (Motorola): the 2 MHz grade is needed, for the write E pulse (284 ns at 1.76 MHz, DESIGN.md section 4); the 6845 card's 1 MHz HD6845 is too slow for it",
+    "IC4": "HD68B45SP (Hitachi) or MC68B45P (Motorola), the 2 MHz grade; since the 6845 is write-only (E = the whole -MRW) the bus timing of a 1 MHz part, such as the 6845 card's HD6845, is enough as well (DESIGN.md section 4)",
     "IC10": "ATmega328P-PU with the Arduino Uno bootloader burned (ISP) before fitting",
     "IC12": "AT28C64B-15PU (Microchip), burned on the T48 with firmware/video-g-chargen/video-g-chargen.bin",
     "IC15": "74F163A or 74ALS163B (V2.0 review R3-1: CHARCLOCK set-up to the 166's SH/-LD); keep a spare",

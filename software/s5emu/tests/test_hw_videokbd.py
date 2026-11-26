@@ -4,8 +4,8 @@ TEXT's PS/2 keyboard section on the 36-pin bus, the key at 7802 and the status a
 emulator hardware and instruction with this -keyboard version".
 
   Card     the card alone from its netlist (hw.NetlistVideoKbdCard), cycle by cycle through its gates: what answers at
-           each address, the key and KEY-READY, the flag line JP1 picks, the 6845 and the text RAM where Rev B has
-           them. Rev B-Clean's own netlist is tried here too: on the bus it must be Rev B.
+           each address, the key and KEY-READY, the flag line JP1 picks, the text RAM where Rev B has it, the 6845
+           there too but write-only (Ken, 2026-11-24). What the 6845 sees inside a cycle: test_hw_crtcbus.py. Rev B-Clean's own netlist is tried here too: on the bus it must be Rev B.
 
 Then the whole machine with this card, on both emulators, each test on a machine a `machine()` method makes (as
 tests/test_newset.py does for VIDEO-G, whose ROM, panel and helper tests are used again here):
@@ -66,7 +66,7 @@ class Card(unittest.TestCase):
         c, v, k = card()
         who = lambda a, mrd, mrw: sorted((ref, kind, op) for ref, kind, op, _ in c.decode(a, 0, mrd, mrw)[0])
         ram_r, ram_w = [("IC1", "DPRAM", "r")], [("IC1", "DPRAM", "w")]
-        crtc_r, crtc_w = [("IC3", "CRTC", "r")], [("IC3", "CRTC", "w")]
+        crtc_r, crtc_w = [], [("IC3", "CRTC", "w")]                     # write-only: its read drives nothing
         key = [("IC18", "READY", "c"), ("IC19", "KEY", "r")]; status = [("IC20", "STATUS", "r")]
         for a in (0x7000, 0x7123, 0x77FF):                              # the text RAM, all 2K of it
             self.assertEqual((who(a, 0, 1), who(a, 1, 0)), (ram_r, ram_w), "%04X" % a)
@@ -157,8 +157,9 @@ class Card(unittest.TestCase):
         self.assertEqual(write(c, 0x7801, 0x12), ["6845 IC3"])
         self.assertEqual(write(c, 0x7800, 15), ["6845 IC3"]); write(c, 0x7801, 0x34)
         self.assertEqual((v.reg[14], v.reg[15]), (0x12, 0x34))
-        self.assertEqual(read(c, 0x7801), 0x34)                         # R14 / R15 read back
-        write(c, 0x7808, 14); self.assertEqual(read(c, 0x7809), 0x12)   # the pair again, 8 further on
+        write(c, 0x7808, 14); write(c, 0x7809, 0x2A); self.assertEqual(v.reg[14], 0x2A)       # the pair again, 8 further on
+        for a in (0x7800, 0x7801, 0x7808, 0x7BF9): self.assertIsNone(read(c, a), "%04X" % a)  # write-only: nothing drives
+        self.assertEqual((v.sel, v.reg[14], v.reg[15]), (14, 0x2A, 0x34))                     # and a read changes nothing
         for a, b in ((0x7000, 0x48), (0x7001, 0x49), (0x763F, 0x21), (0x77FF, 0x7E)):
             self.assertEqual(write(c, a, b), ["6845 IC1"]); self.assertEqual(read(c, a), b)
         self.assertEqual(v.vram[0], 0x48); self.assertEqual(v.vram[0x7FF], 0x7E)
@@ -232,9 +233,24 @@ class KbdTests(Common):
         m, sh = self.boot()
         m.write(0x7800, 14); m.write(0x7801, 0x02); m.write(0x7808, 15); m.write(0x7809, 0x7F)
         self.assertEqual((m.video.reg[14], m.video.reg[15]), (0x02, 0x7F))
-        self.assertEqual(m.peek(0x7801), 0x7F)                          # R15 reads back; R14 through the next pair
-        m.write(0x7BF8, 14); self.assertEqual(m.peek(0x7BF9), 0x02)
+        m.write(0x7BF8, 14); m.write(0x7BF9, 0x01); self.assertEqual(m.video.reg[14], 0x01)
         self.assertEqual(self.bus_events(m), {})
+
+    def test_the_6845_is_write_only(self):
+        """nothing drives a read of 7800 / 7801: the bus's pull-ups read (FF on the bus Rev D), and the registers stay"""
+        m, sh = self.boot(); before = (list(m.video.reg), m.video.sel)
+        for a in (0x7800, 0x7801, 0x7808, 0x7BF9):
+            self.assertEqual((m.peek(a), m.read(a)), (FLOAT, FLOAT), "%04X" % a)
+        self.assertEqual((list(m.video.reg), m.video.sel), before)
+        self.assertEqual(self.bus_events(m), {})
+
+    def test_a_ram_probe_stops_at_the_6845(self):
+        """the ways HBIOS and the Elf/OS kernel look for the top of RAM (write over a byte, read it back): no RAM at 7800"""
+        m, sh = self.boot(); sel = m.video.sel
+        b = m.read(0x7800); m.write(0x7800, b ^ 0xFF); self.assertNotEqual(m.read(0x7800), b ^ 0xFF)       # HBIOS (FE87)
+        m.write(0x7800, b)
+        m.write(0x7800, 0x00); self.assertNotEqual(m.read(0x7800), 0x00)                                    # the kernel (23CE)
+        m.write(0x7800, sel); self.assertEqual(self.bus_events(m), {})
 
 
 @unittest.skipUnless(os.path.exists(V5_GZ), "the Elf/OS v5 image is in the private-resources repository, not here")
@@ -244,6 +260,12 @@ class SystemTests(Common):
         with gzip.open(V5_GZ) as f, open(img, "wb") as g: g.write(f.read())
         try:
             m = self.machine(disk=img); sh = Shell(m); v = m.video
+            probes = []; real = m.read                                             # every program's read of the 6845
+            def read(a):
+                b = real(a)
+                if a & 0xFC06 == 0x7800: probes.append((a, b))
+                return b
+            m.read = read
             clock = [datetime.datetime(2054, 11, 20, 9, 30, 0)]                    # 2026 in ELF/OS's years
             m.panel.rtc = DS12885(now=lambda: clock[0], start=clock[0])
             self.until(m, sh, PROMPT, 4_000_000)
@@ -267,6 +289,7 @@ class SystemTests(Common):
             m.kbd.press("vgdemo\n"); self.until(m, sh, ":")
             self.assertIn("vgdemo needs the VIDEO-G card with its GFX board", screen(m))
             self.assertEqual(self.bus_events(m), {})
+            self.assertTrue(probes); self.assertEqual(set(probes), {(0x7800, FLOAT)})  # only the RAM probes, and nothing drove
         finally:
             os.remove(img)
 
@@ -286,7 +309,7 @@ class HWFlag(HW, Common, unittest.TestCase):
         self.assertIn("6845 card B-Clean-Keyboard", text); self.assertIn("the 6845 card has the keyboard", text)
         sh = Shell(m); self.until(m, sh, PROMPT, 4_000_000)
         rows = {l.split()[0]: l for l in m.bus_map().splitlines()}
-        self.assertIn("6845 IC1", rows["7000"]); self.assertIn("6845 IC3", rows["7800"])
+        self.assertIn("6845 IC1", rows["7000"]); self.assertIn("nothing", rows["7800"])      # (write-only)
 
 
 class FastRom(Fast, RomTests, unittest.TestCase): pass

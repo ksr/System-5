@@ -8,8 +8,8 @@ GFX J4 pin n), the bus lines both boards take from the backplane, and the suppli
   Through the cards' own gates (logic.py), in every memory cycle that can reach the card
     TEXT  IC1 the A8-A15 latch (TPA); IC2 + SV1 the block compare with -VMA (IC16D) -> BOARDSEL; IC17C / IC20D the text
           RAM's -CE; IC18D UPPER (7800-7FFF); IC19D WSEL (the window); IC5, IC6, IC7 the three register decoders; IC21C
-          the 6845's E; IC24A its R/-W latch; IC17B NOT TPB; IC20C / IC19B the KEY-READY clear; IC24B KEY-READY; IC23D
-          and JP3, KEY-READY onto a bus flag line; IC16F, IC20B, IC22D the character clock, QC OR RCO and the -WE phase
+          the 6845's E (the whole -MRW time: it is write-only, R/-W on ground, since 2026-11-24); IC17B NOT TPB; IC20C /
+          IC19B the KEY-READY clear; IC24B KEY-READY; IC23D and JP3, KEY-READY onto a bus flag line; IC16F, IC20B, IC22D the character clock, QC OR RCO and the -WE phase
           that go down the ribbon
     GFX   IC14 NMUX, MEMRD, MEMWR, NOT TPB; IC16A GWR (a window write); IC17B the read latch's output enable; IC13A WRQ,
           IC17A -WE, IC16B the RAM's -OE (the write slot); IC2-IC5 the RAM's address multiplexers; IC18A / IC16C the
@@ -65,9 +65,10 @@ G = "GFX."                                               # the GFX board's parts
 VIDEOG_REVS = {
     "1.0": dict(text="hardware/video-g/kicad/text-1.0/reports/netlist.net",
                 gfx="hardware/video-g/kicad/gfx-1.0/reports/netlist.net",
-                note="VIDEO-G 1.0 (2026-11-01, memory-mapped 2026-11-17, TEXT on the 36-pin connector 2026-11-18; not "
+                note="VIDEO-G 1.0 (2026-11-01, memory-mapped 2026-11-17, TEXT on the 36-pin connector 2026-11-18, its 6845 "
+                     "write-only 2026-11-24; not "
                      "built; hardware/video-g/DESIGN.md): TEXT decodes everything in the card's 4K block (SV1; 7 = "
-                     "7000): the IDT7134 text RAM at x000-x7FF, the registers at x800-xBFF (the 6845 at x800/x801, the "
+                     "7000): the IDT7134 text RAM at x000-x7FF, the registers at x800-xBFF (the 6845 at x800/x801, write-only, the "
                      "key at x802, status / control at x804, mouse / Y at x806, each pair repeating) and the graphics "
                      "window at xC00-xFFF; GFX holds the control and Y registers, the 62256 and the mouse latch, on "
                      "strobes TEXT sends down the 40-pin ribbon."),
@@ -79,7 +80,7 @@ SERIES = ("R11", "R12", "R13")                           # 33 ohm in the ribbon'
 
 # the parts this module plays, and why the netlist check may let their outputs into the bus path
 PLAYED_TEXT = {
-    "IC4": "the HD68B45: read and written on its own pins (CS, E, R/-W, RS); its registers and counters are the behavioural model's",
+    "IC4": "the HD68B45: written (never read: R/-W is on ground) on its own pins (CS, E, R/-W, RS); its registers and counters are the behavioural model's",
     "IC8": "the 74LS244 status buffer: it puts the levels on its inputs on D0-D7 while its enables, from IC6, are low",
     "IC9": "the 74HCT374 key latch: it drives D0-D7 while its OE, from IC6, is low; the ATmega loads it",
     "IC10": "the keyboard ATmega328P: it loads IC9 and sets KEY-READY with LDDATA when a key waits and KEY-READY is low",
@@ -150,6 +151,7 @@ class NetlistVideoG:
         spec = VIDEOG_REVS[rev]; self.rev, self.note, self.v = rev, spec["note"], video
         self.gfx = video.gfx if gfx is None else gfx; self.block, self.kbd_flag = block & 15, kbd_flag
         nl = self.nl = Netlist(os.path.join(root, spec["text"]))
+        for op, *args in spec.get("rework", []): getattr(nl, op)(*args)      # (a modified TEXT: netlist.py's lift, wire ...)
         for bit, a, b in BLOCK_SHUNTS:
             if not (self.block >> bit) & 1: nl.jumper("SV1", a, "SV1", b)
         if kbd_flag: nl.jumper("JP3", FLAG_SHUNTS[kbd_flag][0], "JP3", FLAG_SHUNTS[kbd_flag][1])
@@ -490,8 +492,8 @@ class NetlistVideoG:
         self._atmegas(); out = []; faults = list(p.faults); v = self.v; lo = a & 0xFF
         for ref, recipe in p.drive:
             if ref == "IC3": b = self._spread(ref, v.vram[self._number(recipe, lo) % len(v.vram)])
-            elif ref == "IC4":                                   # R14-R17 read back; the other registers read 0; the
-                rs = self._number(recipe, lo)                    # address register is not readable (taken as FF)
+            elif ref == "IC4":                                   # (as first drawn: the card's 6845 is write-only, so this
+                rs = self._number(recipe, lo)                    # is for other wirings) R14-R17 read back, the others 0
                 b = self._spread(ref, (v.reg[v.sel] if v.sel in (14, 15, 16, 17) else 0) if rs else FLOAT)
             elif ref == "IC8":
                 b, bad = self.status_byte()

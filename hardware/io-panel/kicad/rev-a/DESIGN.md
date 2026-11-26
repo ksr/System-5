@@ -11,6 +11,10 @@ Ken's word ("ok if check is clean i will want to merge into main for this card a
 --tests` showed no failures and 0 warnings at `eebc2ed`. "Programming the card" below is the software's view of the
 whole card; "The serial port" further down is the circuit and the layout. Not ordered yet.
 
+**RUN/RESET turned and the serial port's labels drawn anew, the night of 2026-11-23 (Ken):** up is RUN, as on the front
+panel; JP6's two settings are pictures on the silkscreen. "RUN/RESET turned, and the serial port's settings as
+pictures" below.
+
 **A header for a front panel since 2026-11-22, and a RESET button of its own since 2026-11-23 (Ken):** the card is
 8.00 x 4.00 in, with a 50-pin header (J3) at the front edge for the ribbon to `hardware/front-panel`; its DMA request
 was put right (as first drawn it would have loaded every byte twice); SW12 RESET boots the EPROM, and the serial
@@ -418,7 +422,7 @@ between the logic and the panel. Drawn on the branch `io-panel-serial`; merged i
 | X1 | 1.8432 MHz oscillator, half-size (8-pin DIP) can | to XIN; XOUT open. Divisor 12 = 9600 baud, 3 = 38400 |
 | U22 | 74HCT573 | the select latch: LE = RTC_AS; D0, D1, D2 -> UA0-UA2 (the UART's A0-A2), D7 -> SEL_UART; four latches spare |
 | U21 | MAX232, C22-C25 four 1 uF | SOUT -> T1IN, T1OUT = TX_OUT; RX_IN -> R1IN, R1OUT -> SIN; the second channel not used (T2IN and R2IN to GND) |
-| JP6 | 2 x 3 header, "TX PIN" | the null-modem block, as the YACC1 card's JP1: shunts on 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a straight cable to a PC or a USB adapter); 3-5 and 4-6 = sends on 3, hears on 2. The silkscreen's 2 and 3 stand over the two positions |
+| JP6 | 2 x 3 header, "TX/RX" ("TX PIN" until 2026-11-23) | the null-modem block, as the YACC1 card's JP1: shunts on 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a straight cable to a PC or a USB adapter); 3-5 and 4-6 = sends on 3, hears on 2. Both settings are drawn on the silkscreen beside the block (the last section before "Board") |
 | J2 | DE-9 socket, right-angle | pins 2 and 3 through JP6, 5 and the shell to GND, the others open. The footprint is KiCad's own for a right-angle socket with the pin pattern of the YACC1 I/O card's (built, V1.1): pins 2.77 mm apart in rows 2.84 mm apart, mounting holes 25 mm apart |
 | JP7 | 1 x 2 header, "UART INT" | fitted: the UART's INTR (through a gate of U9, open collector) pulls the bus -INT low. Open as set |
 | C18-C21 | 0.1 uF | U20, U21, U22, X1 |
@@ -624,7 +628,7 @@ to reach the CPU card's switch. **SW12 RESET** is a push-button for a boot reset
 |---|---|
 | SW12 | pressed, it puts +5V on BTN_H |
 | R4, 10k | holds BTN_H low otherwise |
-| U23A (74HC03, open drain) | pulls -RESET low while BTN_H is high and -PAUSE is high |
+| U23A (74HCT03 since 2026-11-25, a 74HC03 until then; open drain) | pulls -RESET low while BTN_H is high and -PAUSE is high |
 | U23B | pulls -DMAIN low on the same condition |
 | C26 | U23's 0.1 uF |
 
@@ -649,9 +653,9 @@ Ken, 2026-11-23, asked whether one of them should have another name (`BOOT` was 
 RESET, here and on the front panel.
 
 The button is in the bottom corner of the front strip, under J3. U23 stands between the toggle column and the Q and
-PWR LEDs' resistors, which moved 3 mm towards the LEDs. U23's other two gates are spare.
+PWR LEDs' resistors, which moved 3 mm towards the LEDs. U23's other two gates were spare (the UART's INTR and the ROM LED since 2026-11-25).
 
-### The serial port's settings
+### The serial port's settings (as first drawn; redrawn that night, next section)
 
 Ken, 2026-11-23: "can you add more detail to silkscreen for IO card settings for serial port."
 
@@ -675,7 +679,7 @@ under RN3, between the UART and the toggles:
 | DIVISOR 12 | the divisor latch value for 9600 baud with the 1.8432 MHz can (3 is 38400) |
 | JP7 FITTED | a shunt puts the UART's interrupt on the bus -INT |
 
-JP4 keeps its short title, `JP4 RTC`: `JP4 RTC + UART` has no room beside the block.
+JP4 kept its short title, `JP4 RTC`, for want of room on one line; since that night it is `JP4 RTC` / `+ UART`, on two.
 
 ### What else moved on the silkscreen
 
@@ -729,6 +733,127 @@ to the level the switch's other pin gives it. Before that the model set the net 
 wired to the wrong rail passed every test; the pcb-check session showed it by running this card's tests on damaged
 copies of its netlist (SW12 between ground and BTN_H was not caught). It is caught now, by the card's two reset
 tests and by `IOPanel.test_the_switches_are_played_as_the_netlist_wires_them`.
+
+## RUN/RESET turned, and the serial port's settings as pictures (Ken, the night of 2026-11-23)
+
+Two points Ken had noted that day for this Mac ("log i will change on other machine"), both on his word that night
+("1 yes, 2 yes as suggested").
+
+**RUN/RESET: up is RUN.** The card's toggle had RESET at the front-edge end (up with the card standing) and RUN toward
+the bus; the front panel's is up for RUN, the ELF's way, and LOAD and the data toggles agree on both boards (up is LOAD,
+up is 1). SW10 is turned end for end (`gen/make_board.py`: rotation 270 where the other nine have 90). The M9040P's
+origin is its middle pin, so the body stayed where it was and pins 1 and 3 changed places. The netlist, the emulator and
+the tests are unchanged (pin 1 = -RESET, pin 2 = ground: the labels and the model read the pads).
+
+**The serial port's labels.** Each setting stands at its own jumper now:
+
+| Where | What it says |
+|---|---|
+| JP6 `TX/RX`, the 2 x 3 block by the DE-9 | its two settings as pictures, the way the block stands with the card in the bus: the block's outline, its six pins, the two shunts outlined where they go. Shunts on the upper two rows (3-5, 4-6): `PIN 2=RX` / `PIN 3=TX`. On the lower two (1-3, 2-4): `PIN 2=TX` / `PIN 3=RX`. The pins are the DE-9's, and TX is what the card sends |
+| J2 `RS-232` | its name alone |
+| JP4 `RTC` / `+ UART` | the port pair, the clock's and the UART's |
+| JP7 `UART INT` / `FIT = -INT` | a shunt puts the UART's interrupt on -INT |
+| the note under RN3 | four lines at 1.0 mm (seven at 0.8 mm before): `SERIAL PORT (16C550)` / `REG N: OUT 6 = 80+N,` / `THEN PORT 7 (JP4: 6+7)` / `DIVISOR 12 = 9600 BAUD` |
+
+Ken's words on the block, in order: "for serial port, i believe the 2x3 decides if de9 connector 2 is rx or tx and de3
+connector 3 is tx or rx (null modem function) I would like that clearer on silk screen"; of a first version in words
+("UP PIN 2=RX 3=TX"), "the problem is it is not clear where jumpers go for each more (null modem or not null modem)
+there is no need to show the words null modem but it should be clear how to confgure the jumoers"; of the pictures,
+"much better so both sys5 and yacc1 io card pls"; and of the DE-9's pins numbered at the connector, "we don't need pin
+2,3 5 it is cluttering" (they are gone). The YACC1 I/O card V1.2 has the same pictures (its JP1).
+
+`shunts()` in `gen/make_board.py` draws the pictures, placed like any label: the build stops if one has no room.
+`tools/kicad/silkdiff.py` against the board before: 15 texts changed: the labels
+of the table, `RUN` and `RESET` (exchanged), and `C18 0.1uF`, 2.0 mm along.
+
+### Built and checked
+
+`gen/route.py` seed 1 (5 leaves two +5V links open; 0, 2, 3, 4 not judged): 91 parts, 3093 track segments, 147 vias.
+preorder_check --layers 2 PASS (ERC 0, DRC 0 errors and 0 warnings, parity 0, 140/140; the redrawn schematic in the book,
+JP4's and JP6's values `RTC + UART` and `TX/RX`). A full build took about 70 minutes (Freerouting's optimization 59).
+
+**`pcb-check --tests` on that board, before its commit** (2026-11-24, 00:20 to 00:23, pcb-check `ac554f4`): **no failures**; the LAYOUT
+warning Ken accepted on 2026-11-23 (J2, the DE-9, on the side edge) and COMMITTED, which goes with the commit; the card's
+emulator tests pass. `make qa-quick`: OK. Nothing of it has run on hardware.
+
+## The power-up states of REQ and DRIVE (Ken, 2026-11-25: "fix both power-up faults in one new route")
+
+Ken's answer, through the Product Manager, to a fault the bus Rev D test found (`software/busdrv/busboard.py`).
+
+**The fault.** A 74HCT74 comes up in either state, and nothing put REQ (U10A) or DRIVE (U11A) in a known one. REQ's clear
+was ACK_L alone, and ACK is held clear while INPUT is up. REQ up as 1 kept DRIVE set whenever -MRD was high, so the '244
+put the toggles on D0-D7 in **every memory write**, against the 1802; -DMAIN was low whenever SC0 was high, and a press of
+INPUT in LOAD mode made no DMA cycle. The same happened with a request still pending as LOAD was turned off. DRIVE up as 1
+put the toggles against the 00 the 1802 drives in RESET, until the first -MRD.
+
+**The change.**
+
+    REQCLR_L    low outside LOAD mode: NAND(LOAD_L, LOAD_L), U9C, open drain
+                low while ACK is set: D1, a Schottky, its cathode on ACK_L (U10B), its anode on REQCLR_L; R5 3.3k to +5V
+                U10A's -CLR
+    DRVL_L      NAND(DRIVE, LOAD_H), U9D, open drain; R6 3.3k to +5V
+                U6A's input, in place of DRIVE_L: a DMA puts the toggles on the bus in LOAD mode alone
+
+U9C and U9D were the UART's INTR and the ROM LED, which went to U23C and U23D, the two spare gates of the same type: the new
+gates stand beside U10, U11 and U6, and J3 and the UART are nearer U23. One diode and two resistors more: 94 parts. No
+other net changed. **U23 is a 74HCT03** (Ken, 2026-11-25: "Yes, with the HCT03"), U9 a 74HC03 as before: a 16C550's INTR is
+only promised at 2.4 V high (TL16C550C, PC16550D), and a 74HC03 needs 3.15 V where a 74HCT03 needs 2.0 V. TI's CD74HCT03
+sheet (SCHS414) has the 74HC03's pins, open-drain outputs, VIH 2.0 V and VIL 0.8 V at 4.5 to 5.5 V, VOL 0.33 V at 4 mA (to
+85 degrees C), input 10 pF, input rise at most 500 ns at 4.5 V. Its other inputs (BTN_H, -PAUSE, -VMA) are 0 and +5V.
+
+**D1's drop, and the resistor** (BAT85 / BAT85S in a DO-35; Vishay BAT85S, document 85513 Rev. 2.2: at most 240 mV at
+0.1 mA, 320 mV at 1 mA, 400 mV at 10 mA, at 25 degrees C). R5 is 3.3k: (5.25 - 0.5 V) / 3.3k = 1.44 mA, where the diode drops at
+most 0.335 V (between its 1 and 10 mA figures). ACK_L is at most 0.33 V at 4 mA (TI SN74HCT74, SCLS169G, at 4.5 V, to 85 degrees
+C; 0.1 V at 20 uA), so REQCLR_L is at most 0.33 + 0.335 = **0.665 V against the 74HCT74's 0.8 V: 0.135 V to spare**; about 0.09 V
+with the diode at 0 degrees C (its drop then some 2 mV a degree more: from memory, not the sheet). U9C alone: 0.33 V at 4 mA
+(TI SN74HC03, SCLS077F). High: the HC03's output leaks at most 5 uA and the HCT inputs 1 uA, so 3.3k keeps it at +5V. Rise: about
+45 pF (the HC03's output, the diode's 10 pF, the input's 10 pF at most, the track: an estimate) makes 0.15 us, **0.33 us from 10
+to 90 %, against the 500 ns the HCT74's sheet allows**. The choice (2026-11-25, 4.7k first): at 4.7k the low has 0.15 V to spare
+and the rise 0.035 us (0.465 us; with 60 pF it would be over the limit); at 3.3k 0.135 V and 0.17 us (0.44 us at 60 pF). R6 is
+3.3k too. A clear needs only to be gone before the next INPUT edge (setup 0 ns), and U4's Schmitt and C1 keep those
+milliseconds apart.
+
+**What it does not change:** power up with LOAD already on. REQ and CPU Rev D's DMA_ARMED then have no state (the panel
+sees LOAD mode at once), so INPUT may load nothing, or the toggles' byte may be written by itself; LOAD off and on mends it.
+The manual says to power up with LOAD off (`docs/manual/bus.md`).
+
+**In the emulator:** `software/s5emu/s5emu/logic.py` has a diode onto a pulled-up net (`WiredDiode`), and
+`software/busdrv/test_busboard.py` (`PowerUp`) runs the five cards and the program on the bus Rev D's netlist from every
+flip-flop and latch at 0, at 1, REQ alone, DRIVE alone, both, and unknown: no bus fight in the reset, and the program runs.
+The same test on the card as it was drawn (its two old connections put back) fails from each of the four states with one
+of them at 1.
+
+**Layout:** D1 between U9 and U10, R5 between U10 and U11, R6 between U3 and U9, upright in the gaps of the
+middle row. The labels of U3, U9, U10, U13, C11 and C12 moved (U13's to its bus side, C12's in two lines beside it, so that each
+line stands by its own part); no other part or label did.
+
+### Built and checked
+
+`gen/route.py` seed 1 (3 leaves one +5V link open, at C10; the others not judged), routed as placed on 2026-11-25: 94 parts, 3132
+track segments, 146 vias, two layers. preorder_check --layers 2 PASS (ERC 0, DRC 0 errors and 0 warnings, 0 unconnected, parity
+0, 142/142; the redrawn schematic in the book). A full build took 79 minutes (Freerouting's optimization 75).
+
+`tools/kicad/silkdiff.py` against the card before (`84f1bd1`): 181 texts then, 184 now. New: `D1
+BAT85`, `R5 3.3k`, `R6 3.3k`; `U23 74HCT03` in place of `U23 74HC03`; `C12 0.1uF` on two lines; moved: `C11 0.1uF`, `U3 74HCT244`,
+`U9 74HC03`, `U10 74HCT74`, `U13 DS12885+`.
+
+**`pcb-check` at `57dce4a`** (2026-11-25, pcb-check `fe2c0b3`, without `--tests`): **no failures, 1 warning**, LAYOUT, the one Ken
+accepted on 2026-11-23 (J2, the DE-9, on the side edge). COPPER 142 nets, no shorts or opens; INDEPENDENT the same by its own
+method; DAMAGE 13 of 13. The card's tests on this board are QA's to run. Nothing of it has run on hardware; not ordered.
+
+## The RESET button moved away from INPUT (Ken, 2026-11-26: "Yes, move it too")
+
+As on the front panel the same day: SW12 RESET stood beside SW9 INPUT in the front strip's bottom corner (as drawn),
+too easy to hit when pressing INPUT. It is now in that strip's top corner, above J3, the button centred at
+(206.85, 18.0), about 85 mm from INPUT; with the card standing connector down both are on the front edge, INPUT at its
+right end, RESET at its left. Its RESET label at 270 beside it. R4 (BTN_H's 10k) and U23 stay where they were (Ken's
+"Yes, route it" with R4 there); no circuit change. Silkscreen (`silkdiff.py`): 184 texts, three moved: RESET with its
+button, `J3 FRONT PANEL` from the header's pin 1 end to its pin 50 end, `R4 10k` 7.4 mm. Routed again, seed 1 as
+before (12:52 to 13:48, Freerouting single-threaded and niced beside other work): 3321 track segments, 145 vias; ERC 0,
+DRC 0 errors and 0 warnings, nothing unconnected, parity 0, netlist 142 of 142; `tools/preorder_check.py` PASS.
+**`pcb-check --tests` at `6f4359d` (pcb-check `4e5bf24`): no failures, 1 warning**, the accepted LAYOUT one (J2, the
+DE-9 on the side edge; the moved button is not named); the copper rebuilt by two methods, which agree; 13 of 13
+faults planted in copies of the zip noticed; the card's tests (IOPanel, the front panel, power-up) pass.
 
 ## Board (2026-10-30): `gen/make_board.py`
 

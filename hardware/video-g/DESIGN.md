@@ -3,6 +3,7 @@
 The next System-5 video card (Ken, 2026-11-01): 64-column text plus a one-bit graphics layer, a PS/2 keyboard and
 mouse, on **two boards** joined by a short ribbon. It replaces the 6845 card (Rev B) and the IO card (its keyboard; the
 1861 comes out). Status: **both boards drawn, reworked to the memory map and routed (2026-11-17), not ordered**;
+**TEXT's 6845 is write-only since 2026-11-24** (Ken; sections 4 and 9) and TEXT was routed again;
 both pass `pcb-check`, Ken's check before an order on every system since 2026-11-06 (TEXT no failures, 0 warnings;
 GFX the same since it got its own power LED that evening; [`kicad/README.md`](kicad/README.md#before-ordering),
 "Before ordering"). KiCad masters in `kicad/text-1.0` and `kicad/gfx-1.0`, generated from each board's `gen/netlist.py`
@@ -49,9 +50,9 @@ changed except the CPU EPROM's video driver (section 8).
 | 1, 30 | +5V, GND | yes | yes |
 | 2-9 | D0-D7 | text RAM, 6845, key latch, status | window reads/writes, Y register, control register, mouse byte |
 | 11 | TPA | high-address latch | - |
-| 12 | TPB | write strobes, 6845 E (writes), KEY-READY clear | MOUSE-READY clear |
-| 13 | -MRD | text RAM, read enables, 6845 E (reads) and R/-W | window reads |
-| 14 | -MRW | text RAM, write strobes, 6845 R/-W | window writes |
+| 12 | TPB | KEY-READY clear | MOUSE-READY clear |
+| 13 | -MRD | text RAM, read enables | window reads |
+| 14 | -MRW | text RAM, write strobes, 6845 E | window writes |
 | 15-22 | A0-A7 | high byte (latched), A0-A10 | A0-A5 |
 | 24, 28, 29 | N2, N1, N0 | not used: no I/O ports (2026-11-17) | - |
 | 25 | -EF | KEY-READY, open collector, when JP3 KBD FLAG picks it (as set; or -EF1, -EF2, -EF3 on the 36-pin connector, 2026-11-18) | - |
@@ -112,7 +113,7 @@ writes while -MRW is low, as for any memory.
 |---|---|---|---|
 | 7000-77FF | text RAM (the IDT7134's bus port, 2K, as on the 6845 card): row r, column c at 7000 + 64r + c | the same | TEXT |
 | 7800 | - | **6845 address register** | TEXT |
-| 7801 | **6845 data** (R14-R17) | **6845 data** | TEXT |
+| 7801 | - (write-only since 2026-11-24: 7800 and 7801 read FF) | **6845 data** | TEXT |
 | 7802 | **key** (ASCII; the read clears KEY-READY at TPB) | - | TEXT |
 | 7804 | **status**: 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR (1 = MDA), 5 GFX-PRESENT (1 = GFX fitted), 7..6 = 10 (card ID) | **control**: 0 TEXT-OFF, 1 GFX-ON, 2 XOR, 3 DPAGE, 4 CPAGE, 5 MOUSE-ON, 7..6 spare; cleared by -RESET = text on, graphics and mouse off | TEXT reads, GFX writes (decoded on TEXT) |
 | 7806 | **mouse byte** (3-byte PS/2 packets; the read clears MOUSE-READY at TPB) | **Y register**: the pixel line seen at 7C00-7C3F | GFX (decoded on TEXT) |
@@ -145,22 +146,57 @@ A11 = 1: **UPPER** (7800-7FFF); with A10 = 1, **WSEL** to GFX (the window); with
 A1-A2 by three 74HCT138 (G1 = UPPER, -G2A = A10):
 
 - **IC5**, the address alone: Y0 = the 6845's -CS (7800/7801); RS = A0.
-- **IC6**, the read enables, -G2B = -MRD: 7800 the 6845, 7802 the key latch, 7804 the status buffer, 7806 the mouse
-  latch (-RDMOUSE to GFX). They last the whole -MRD time, to the end of the cycle: the 1802 latches read data at 7.5 T
+- **IC6**, the read enables, -G2B = -MRD: 7802 the key latch, 7804 the status buffer, 7806 the mouse
+  latch (-RDMOUSE to GFX); its output for 7800 is open (the 6845 is write-only). They last the whole -MRD time, to the end of the cycle: the 1802 latches read data at 7.5 T
   and wants it held up to 200 ns after (`software/s5emu/s5emu/timing.py`, `din_hold`).
-- **IC7**, the write strobes, -G2B = -MRW and C = NOT TPB: low while -MRW is low and TPB is high (6.5 T to 7 T), so a
+- **IC7**, the write strobes, -G2B = -MRW: low while -MRW is low (5 T to 7 T), so a
   register latches on the strobe's rise at 7 T, with the 1802's data valid; 7800 the 6845, 7804 the control register
   (-WRCTL to GFX), 7806 the Y register (-WRY to GFX). (Qualified by -MRW, a strobe never fires in a cycle that only
-  puts an address on the bus.)
+  puts an address on the bus.) To 2026-11-24 its C input was NOT TPB, which cut the strobes to 6.5 T - 7 T: the registers
+  on GFX take the byte on the rise, which has not moved, so the longer low time changes nothing for them.
 - **Side effects of a read** (clearing KEY-READY / MOUSE-READY) happen at TPB of the read: by then -MRD is final.
 
-**The 6845 at 7800/7801.** -CS from IC5, **RS = A0**, **E = NAND(-RDCRTC, -WRCRTC)**: the whole -MRD time on a read
-(the 6845 drives its data until the cycle ends) and TPB within -MRW on a write (6.5 T to 7 T: 284 ns at 1.76 MHz,
-250 ns at 2 MHz, against the HD68B45's 220 ns, so the B grade is needed). **R/-W comes from a 74HCT74 half used as a
-latch**: -PRE = -MRD sets it (read), -CLR = -MRW clears it (write), and it keeps its level between cycles. So R/-W is
-already high when a read's E rises (the instruction fetch before every read is a read too) and stays high after E
-falls when -MRD rises at the end; on a write it falls at 5 T, 1.5 T before E, and stays low after E falls at 7 T. It
-never changes while E is high, which also ends the 6845 card's timing finding T2.
+**The 6845 at 7800/7801: write-only** (Ken, 2026-11-24: "write-only for row 1"). -CS from IC5, **RS = A0**, **R/-W on
+ground, E = NOT -WRCRTC** (IC21C): the whole of -MRW, 5 T to 7 T, and in no other cycle. So E is 2 T long, R/-W, -CS and RS
+stand still from long before it to long after, and the 6845 never drives the bus. What its registers hold cannot be read
+back: no program of ours reads them (the VIDEO-G HBIOS and GBASIC only write). **Why:** as first drawn E was TPB within -MRW
+on a write, 6.5 T to 7 T, 284 ns at 1.76 MHz and 250 ns at 2 MHz on paper against the HD68B45's 220; but the two strobes are
+two outputs of the 1802, each 200 to 300 ns after its own clock edge, and with one late and the other early E is **109 ns at
+1.76 MHz and 75 at 2**, so a write could fail on a slow corner (found 2026-11-24). And the 6845 was read for the whole -MRD
+time, which section 10's findings 1 and 2 are about. The margins, in ns, worst case, each strobe on its own
+(`python3 -m s5emu.timing_videog`, from the netlist; tests `software/s5emu/tests/test_hw_videogbus.py`):
+
+| A write to 7800/7801 | as first drawn, 1.76 / 2 MHz | now, 1.76 / 2 MHz |
+|---|---|---|
+| E high time (PWEH 220) | **-111 / -145** | +756 / +620 |
+| R/-W, set up before E rises | +638 / +536 | +2971 / +2630 |
+| CS, RS set up before E rises | +2008 / +1735 | +1155 / +985 |
+| CS, RS held past E's fall | +468 / +400 | +468 / +400 |
+| data set up, held | +2531 / +2190, +298 / +230 | the same |
+| a 1 MHz part (an HD6845: PWEH 450) | fails | passes, least +298 / +230 |
+
+So the HD68B45SP stays on the order list, but the 1 MHz part the 6845 card has is enough for the bus too. The 6845's figures are
+the two data sheets' in `../private-resources/shared/datasheets/` (read 2026-11-25). **E can be held high:** Motorola's 1 MHz sheet
+allows 25 us, Hitachi's (the HD68B45SP's) has no limit; a pause in a register write, stepping and the bus driver hold it longer
+(`hardware/TIMING-REVIEW.md`, "E held high").
+
+**The ways to keep reads that were weighed** (2026-11-24; `timing_videog.CANDIDATES`, each a changed netlist; the study is
+`software/s5emu/tests/test_videog_candidates.py`). None of those that read at 7801 passed everything:
+
+| | E on a write | Read half | |
+|---|---|---|---|
+| **write-only (chosen)** | passes | none: FF at 7800/7801 | 3 pins |
+| as first drawn | E too short (-111 / -145) | RS moves under E, -CS set up -151 / -232 | - |
+| G: TPB off IC7 alone | R/-W falls as E rises (-214) | as first drawn | 1 pin |
+| F: E after R/-W (IC7.3 on R/-W) | R/-W -214 | as first drawn | 1 pin |
+| L: R/-W clocked low by TPA's fall, set by -MRD | passes | as first drawn; -214 also after a non-memory cycle | 4 pins |
+| Lv: R/-W cleared while TPA is high, set by -MRD | passes | R/-W -214 in every read | 3 pins |
+| T: L, E on reads = TPB | passes | data -12 / -80 late for the 1802 | 5 pins |
+| K: Lv, the reads wait for A3, -CS still | passes | RS set up -245 at 7801; 7901 only RS held -220 | 6 pins |
+| KO: K, RS = A0 OR R/-W | passes | 7801 passes; short E runts in other reads, and the bus driver's reads race | 13 pins |
+| A: R/-W = A9 (writes at A9 = 0), -CS still | passes | at 7B01 only RS held -220 | 8 pins |
+| AT: A, a read's E ends at TPB's fall | passes | at 7B01 +10, fails if a strobe can be as fast as 150 ns | about 20 pins |
+| AO: A, RS = A0 OR A9 | passes | **7A00/7A01/7B01 pass, every order of cycles**, but the read moves off 7801 | 16 pins |
 
 **Text RAM: the IDT7134** (4K x 8 dual port, as on the 6845 card and V2.0; kept by Ken on 2026-11-01 after weighing
 an ordinary 62256 shared in slots, which needed six more chips and a bigger card). The bus on the right port (A0-A10,
@@ -188,7 +224,7 @@ V2.0); FTDI header for its bootloader. PS/2 jack (Mini-DIN-6, MD-60SM) on the fr
 
 **Chips (24, `kicad/text-1.0/BOM.md`):** IDT7134, HD68B45, AT28C64B, ATmega328P, 74HCT373, 74LS85, 3 x 74HCT138,
 74LS244 (status), 74HCT374 (key), 74LS374 (code), 74LS166, 74LS175, 74F163A, 2 x 74LS04, 74HCT08, 74LS08, 74LS32,
-74LS10, 74LS86, 7416, 74HCT74. CMOS-input (HCT) parts wherever a chip listens to the 1802's address lines.
+74LS10, 74LS86, 7416, 74HCT74 (half of it spare). CMOS-input (HCT) parts wherever a chip listens to the 1802's address lines.
 **Board: 188 x 96 mm** (section 1); 188 x 106.6 mm since 2026-11-18, with the 36-pin connector (section 9).
 
 ## 5. GFX board
@@ -264,10 +300,9 @@ With GFX absent, TEXT's RN2/RN3 hold TEXT-ON high and GDOT, XOR, MOUSE-READY, GF
 ## 7. Timing to check before drawing
 
 - The register cycles against the 1802's Figure 4 at 1.76 MHz and 2 MHz (section 4): the read enables and the
-  6845's read E hold the data to the end of -MRD (the 1802 wants 200 ns past 7.5 T); the write strobes rise at 7 T with
-  the data valid; the 6845's write E is TPB within -MRW (284 ns at 1.76 MHz, 250 ns at 2 MHz, against the HD68B45's
-  220 ns); R/-W steady while E is high (the latch). In `s5emu.timing` once it models these boards' netlists.
-- The 6845's read E lasts the whole -MRD time, up to 3.7 us at 1.76 MHz (within its 10 us cycle limit).
+  other read enables hold the data to the end of -MRD (the 1802 wants 200 ns past 7.5 T); the write strobes rise at 7 T
+  with the data valid; the 6845's write E is the whole of -MRW since 2026-11-24 (section 4: checked from the netlist by
+  `s5emu.timing_videog`, and `tests/test_hw_videogbus.py`).
 - The slot logic: V2.0's review findings (V2-4, V2-5, R3-1: a 74F163 / 74ALS163 for IC28) carry over; the ribbon adds
   about 5 ns to MA/RA and the clocks, which `tests/video/v20_timing.py` margins absorb - to recheck with the System-5
   numbers.
@@ -353,6 +388,13 @@ Found while doing that, 2026-11-18, and put right on both boards (silkscreen onl
 The character ROM image: `firmware/video-g-chargen/video-g-chargen.bin` (System-5's own 6845-card font, 128 characters
 with lower case, centred in the 8-dot cells; a wider 8 x 8 font can replace it later).
 
+Settled 2026-11-24 (Ken: "write-only for row 1", after the study of the ways to keep reads in section 4):
+- **The 6845 is write-only**: R/-W to ground (IC4.22), the read enable off E (IC21.9 to +5V, so IC6's output for 7800 is
+  open), TPB off the write strobes (IC7.3 to ground), and IC24A, the R/-W latch, spare (clear and preset to +5V, D and clock
+  to ground, as the front panel's spare half). E is the whole -MRW time. Nothing else on either board changed; TEXT was
+  routed again. What it costs: R14-R17 cannot be read back, so the 64 x 32 mode's cursor, which was to live in them, needs
+  another place (`firmware/hbios/video-g/README.md`). Section 10's findings 1 and 2 about the 6845 go with it.
+
 ## 10. Found by the netlist model (2026-11-20)
 
 `software/s5emu/s5emu/hwvideog.py` runs both boards from their netlists (`python3 -m s5emu --hw --video g`), each
@@ -360,21 +402,20 @@ memory cycle in the 1802's own order: -MRD falls at 1.5 T, while A0-A7 still car
 low byte comes at 2.5 T. The decode is right at every address (the map of section 3, every BLOCK setting, TEXT alone,
 both READY flip-flops, -RESET; Elf/OS v5 boots on the all-netlist machine with no bus event), and the multiplexers and
 the write slot do what section 5 says, to its own limit (a whole -WE from every counter phase with -MRW low for 11 dot
-clocks, 917 ns, and not with 10). Three things show that these notes did not say. Nothing is changed for them: the
-boards are as they were, and `tests/test_hw_videog.py` records each as found.
+clocks, 917 ns, and not with 10). Three things showed that these notes did not say. `tests/test_hw_videog.py` records what is left
+of them as found. (Since 2026-11-24, when the 6845 became write-only: finding 2 is gone, finding 1 is gone for the 6845 and
+stays for the key latch, finding 3 stays.)
 
-1. **The 6845 is enabled in the high-byte time of the other registers' reads.** IC5 and IC6 take A1 and A2 from the
+1. **The 6845 was enabled in the high-byte time of the other registers' reads** (gone for the 6845; the key latch still is,
+   at 7Axx and 7Bxx). IC5 and IC6 take A1 and A2 from the
    bus lines, so from 1.5 T to 2.5 T a read at 78xx or 79xx decodes as 7800/7801 (A9 and A10 are 0 there): -RDCRTC is
-   low, E is high and the 6845 is on the bus, whatever register the low byte then names. At 7Axx and 7Bxx (A9 = 1) it
+   low, E was high and the 6845 was on the bus, whatever register the low byte then named. At 7Axx and 7Bxx (A9 = 1) it
    is the key latch. Nothing else drives then, the 1802 does not look, and KEY-READY is not cleared (that waits for
-   TPB). So every read of 7802, 7804 or 7806 first gives the 6845 a whole read of its address register (E high for
-   about a clock), and at 2.5 T the bus passes from the 6845 to the key latch or the status buffer in one step: the
-   6845's data hold against the other part's enable time, a few tens of nanoseconds for `s5emu.timing` to weigh.
-2. **A read of 7801 moves RS while E is high.** For the same reason E rises with A8 on RS, and A0 arrives a clock
-   later: RS goes from 0 to 1 under a high E, so the 6845's address set-up to E (tAS) is not met (7900 the other way;
-   7800 and 7901 keep RS still). Writes are right: their E is TPB's. No System-5 program reads 7801 today (the
-   VIDEO-G HBIOS and GBASIC only write the 6845); a read of R14-R17 would rest on the chip following a late RS.
-   Both go away if the read enables (or the 6845's read E) wait for the low address byte.
+   TPB). So every read of 7802, 7804 or 7806 first gave the 6845 a whole read of its address register (E high for
+   about a clock), and at 2.5 T the bus passed from the 6845 to the key latch or the status buffer in one step.
+2. **A read of 7801 moved RS while E was high** (gone: nothing is read there). For the same reason E rose with A8 on RS, and A0 arrived a
+   clock later: RS went from 0 to 1 under a high E, so the 6845's address set-up to E (tAS) was not met (7900 the other way;
+   7800 and 7901 kept RS still). No System-5 program read 7801 (the VIDEO-G HBIOS and GBASIC only write the 6845).
 3. **A window write can get a second, cut-short -WE.** A write that begins just before a character boundary has its
    whole -WE in the first slot and still has -MRW low when the next slot's count 9 comes: -WE falls again and -MRW's
    rise ends it (GWR is in the -WE gate). The same byte goes to the same cell, address and data still held, so

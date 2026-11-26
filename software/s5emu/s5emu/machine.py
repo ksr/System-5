@@ -105,7 +105,7 @@ class Video6845:
 
 class Video6845Kbd(Video6845):
     """the 6845 card Rev B-Clean-Keyboard as the software sees it (hardware/video-6845/kicad/rev-b-clean-keyboard): Rev
-    B's text RAM at 7000-77FF; in 7800-7BFF, by A1-A2, the 6845 (7800 / 7801), the key (7802: the read takes the next
+    B's text RAM at 7000-77FF; in 7800-7BFF, by A1-A2, the 6845 (7800 / 7801, write-only: a read finds nothing), the key (7802: the read takes the next
     key into the latch and clears KEY-READY) and the status (7804: bit 0 KEY-READY, bit 7 = 1; VSYNC and DE, bits 2
     and 3, are not counted and read 0, as in the netlist model, hw.NetlistVideoKbdCard); the same every 8 addresses.
     Nothing at 7806 or in 7C00-7FFF, and nothing takes a write to the key or the status."""
@@ -118,7 +118,7 @@ class Video6845Kbd(Video6845):
         if self.BASE <= a < self.BASE + self.SIZE: return self.vram[a - self.BASE]
         if self.REGS <= a < self.REGS_END:
             r = (a >> 1) & 3
-            if r == 0: return (self.reg[self.sel] if self.sel in (14, 15, 16, 17) else 0) if a & 1 else FLOAT
+            if r == 0: return None                      # the 6845's R/W is on ground (2026-11-24): it never drives the bus
             if r == 1:                                  # the key latch keeps its byte until the ATmega loads the next
                 if self.kbd.queue: self.latch = self.kbd.queue.pop(0)
                 return self.latch

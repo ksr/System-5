@@ -562,6 +562,7 @@ class Bringup:
 
     def s_vid_crtc(self, st):
         ar, dr = self.a.video_base + 0x800, self.a.video_base + 0x801
+        if getattr(self.a, "video_rev", "B") != "B": return self.s_vid_crtc_wo(st, ar, dr)
         def setreg(r, v, at=None): self.wr(at or ar, r); self.wr(dr, v)
         def getreg(r, at=None, rd=None): self.wr(at or ar, r); return self.rd(rd or dr)
         bad = []
@@ -588,6 +589,26 @@ class Bringup:
             g = getreg(14, at=ar + 0x7FE, rd=dr + 0x400) & 0x3F
             if g == 0x07: st.info("and it repeats through %04X-%04X, as drawn (RS = A0)" % (ar, ar + 0x7FF))
             else: st.warn("no repeat at %04X/%04X (read %02X): RS or the A11 decode differs from the drawing" % (ar + 0x7FE, dr + 0x400, g))
+
+    def s_vid_crtc_wo(self, st, ar, dr):
+        """the 6845 of Rev B-Clean-Keyboard is write-only (R/W on ground, E = NOT -MRW): nothing is read back from it. What can
+        be seen from the bus: nothing drives a read of its addresses, whatever was written there. That the writes land
+        shows on the screen (V6)"""
+        bad = []
+        for a in (ar, dr, ar + 8, dr + 0x3F8):                # (the pair repeats every 8 addresses through xBFF)
+            for v in (0x0E, 0xF1, 0x00, 0xFF):
+                self.wr(a, v); g = self.rd(a)
+                if g != 0xFF: bad.append((a, v, g))
+        if bad:
+            a, v, g = bad[0]
+            st.fail("wrote %02X to %04X and read %02X (%d of 16 reads were not FF)" % (v, a, g, len(bad)),
+                    "Nothing should drive a read of the 6845's addresses on this card. A read that gives back what was written: RAM "
+                    "also answers at %04X, so another card decodes this block (the memory card's block-%X jumper must be open). "
+                    "Anything else, on the bus Rev D: the 6845's R/W (pin 22) is not on ground, or its E (pin 23, from IC18 pin 5) "
+                    "is high in a read. The 2009 backplane has no data pull-ups: an undriven read there can be any value." % (a, self.a.video_base >> 12))
+        else:
+            st.info("the 6845 is write-only on this card: %04X / %04X written, nothing drives a read of them (FF)" % (ar, dr))
+            st.info("whether its registers took the writes is seen on the screen: V6")
 
     def s_vid_screen(self, st):
         ar, dr, base = self.a.video_base + 0x800, self.a.video_base + 0x801, self.a.video_base
@@ -1029,7 +1050,7 @@ def sim_driver(a):
     from fwsim import FwCard
     rev_c = a.plan in ("bus36", "load") or getattr(a, "busdrv", "B") == "C"
     cards = tuple(c for c in (getattr(a, "cards", None) or "").split(",") if c) or SIM_CARDS[a.plan]
-    kw = dict(cards=cards, jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev); fw = {}
+    kw = dict(cards=cards, jumpers=a.jumpers, image=a.image, mem_rev=a.mem_rev, video_rev=getattr(a, "video_rev", "B")); fw = {}
     if rev_c: kw["cpu"] = a.plan == "load"
     for f in a.fault or []:
         k, *rest = f.split(":")
@@ -1087,6 +1108,8 @@ def main(argv=None):
     ap.add_argument("--image", help="cf: compare the sectors read with this disk image; --sim: the CF card holds it")
     ap.add_argument("--sectors", type=int, default=1, help="cf: how many sectors to read from LBA 0 (default 1)")
     ap.add_argument("--cf-write-lba", type=int, help="cf: write test on this LBA (its contents are saved and put back)")
+    ap.add_argument("--video-rev", default="B", choices=("B", "B-Clean-Keyboard"), help="the 6845 card: B (the built one, its 6845 read "
+                    "back in V5) or B-Clean-Keyboard (a write-only 6845: V5 reads nothing back). Default B")
     ap.add_argument("--video-base", type=hexaddr, default=0x7000, help="6845 card block (SV1), default 7000")
     ap.add_argument("--interactive", action="store_true", help="ask about the checks by eye (LEDs, the monitor)")
     ap.add_argument("--keep", action="store_true", help="stay bus master at the end (the test screen stays either way)")

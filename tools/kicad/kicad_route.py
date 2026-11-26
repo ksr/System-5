@@ -25,6 +25,8 @@ broken), kill it after ~20 min if the optimizer hangs, and never call --help (it
 """
 import os, sys, re, glob, shutil, zipfile, subprocess
 import pcbnew
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models"))
+import fit_ps2     # PS/2 sockets fitted in the render
 
 CLI = "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli"
 
@@ -255,8 +257,9 @@ def finish(brd):
             if f.endswith(".drl") and not re.search(r'^(G0[01])?[XY]-?[\d.]', open(f).read(), re.M):
                 continue                                # an empty NPTH (or PTH) file: no hits (X..Y..) and no slots (G00/G01)
             z.write(f, os.path.basename(f))
-    _run(CLI, "pcb", "render", "--side", "top", "--quality", "high", "--floor", "-w", "1800", "-h", "1200",
-         "-o", os.path.join(d, name + "-render-top.png"), brd)
+    with fit_ps2.fitted(brd) as drawn:
+        _run(CLI, "pcb", "render", "--side", "top", "--quality", "high", "--floor", "-w", "1800", "-h", "1200",
+             "-o", os.path.join(d, name + "-render-top.png"), drawn)
     placement(brd)
     print("finish: %d gerber/drill files -> gerbers/ + %s, render, placement" % (len(os.listdir(ger)),
                                                                                  os.path.basename(zipf)))

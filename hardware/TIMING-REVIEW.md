@@ -34,7 +34,8 @@ The review assumes **1.76 MHz** (a 3.52 MHz crystal ÷ 2, usual for an 1861 syst
 
 **The parts.** `PARTS` in the script lists each part's maximum delays (5 V, 25 °C) and the datasheet they come from.
 They were typed in from the manufacturers' published figures, not read from copies in the repo.
-They should be checked once those datasheets are added to `../private-resources/elf/reference/datasheets/`: TI SN74LS series, CD4050B, CD4042B, CY62256, AT27C256, MBM2732A, IDT7134, MC6845/HD6845, CDP1852.
+They should be checked once those datasheets are added to `../private-resources/elf/reference/datasheets/`: TI SN74LS series, CD4050B, CD4042B, CY62256, AT27C256, MBM2732A, IDT7134, CDP1852.
+**The 6845's are checked (2026-11-25)** against two sheets in `../private-resources/shared/datasheets/`: Motorola's MC6845 (page 3; the 1 MHz part only) and Hitachi's HD6845R / HD6845S with the A and B grades (PDF page 5, book page 141). Each figure in `PARTS` is the stricter of the two. Three were wrong: a 1 MHz part's tAS is 160 ns on Motorola's sheet (140 was Hitachi's), a read's data hold is 10 ns on both (not 20), and the HD68B45's tDDR is 180 (not 150). No check changed its result. No sheet of Motorola's A or B grade is here.
 
 ## Findings at 1.76 MHz
 
@@ -44,7 +45,7 @@ They should be checked once those datasheets are added to `../private-resources/
 | T2 | 6845 | 6845 R/W (= -MWR) goes high **while E (= TPB) is still high** | **−394 ns**, at any clock speed | same | Medium (works today; check) |
 | T3 | 6845 | E high time (= TPB width) vs the 6845's 450 ns minimum | +18 ns | +118 ns | Low |
 | T4 | 6845 | Register read: data setup before the 1802 latches it | **−77 ns** | +23 ns | Low (CRTC reads are rare) |
-| T5 | 6845 | Register read: data held after the 1802 latches it (E = TPB gates it) | +20 ns | more | Low (unspecified minimum) |
+| T5 | 6845 | Register read: data held after the 1802 latches it (E = TPB gates it) | +10 ns | more | Low (unspecified minimum) |
 | T6 | IDE | INP 3 into RAM: drive data still there when the RAM's WE rises | +49 ns | more | Low (fails worst case from about 2.2 MHz) |
 | — | all | Memory reads and writes, the 4042 and 373 latches, -VMA, CS/RS setup, DIOR, the keyboard port | ≥ 194 ns, mostly > 2 µs | | OK |
 
@@ -77,14 +78,15 @@ Two things follow:
 - **The write itself.** If the HD6845 took write data on E's fall, writes would be lost. The card works (HBIOS sets up the CRTC), so the fitted HD46505 evidently takes the register while R/W is low, before R/W rises.
 - **Contention.** Once R/W is high with CS and E active, the 6845 drives the data bus, while the 1802 keeps driving its write data until T − 200 ns after MWR ends. Both drive the bus for about 250 ns on every CRTC write. It is short and the drivers are weak (NMOS against CMOS), so it is unlikely to damage anything, but it is a real fight.
 
-**Check:** a scope on the 6845's E, R/W and a data line during a CRTC write.
+**Check:** a scope on the 6845's E, R/W and a data line during a CRTC write. (Seen on the real bus, 2026-10-31: `hardware/cpu/eagle/rev-a/bringup/README.md`.)
 **Fix in a new revision:** gate R/W so it cannot rise before E falls, for example by latching -MWR at TPB's rising edge or by qualifying E with -MWR for writes.
+**Fixed on Rev B-Clean-Keyboard (2026-11-24, not built):** its 6845 is write-only, R/W on ground and E = NOT -MWR, the whole strobe. See [below](#rev-b-clean-keyboards-6845-2026-11-24). Rev B (in the machine) and Rev B-Clean keep T2-T5.
 
 ### T3-T5: the 6845's margins (Low)
 
 - **T3.** E = TPB is one clock wide, less the skew between its two edges: 468-568 ns against a 450 ns minimum. It passes at 1.76 MHz and fails above about 1.9 MHz.
 - **T4.** E rises at 6.5 T plus up to 300 ns; the 6845 may take 320 ns more to drive its data; the 1802 latches at 7.5 T, with 25 ns setup. In the worst case that is 77 ns late; with a typical TPB (200 ns) it is 23 ns early. (The first version of this review used the typical TPB and reported +23; the netlist analysis takes the worst case.)
-- **T5.** The 6845 stops driving 20 ns after E falls. The 1802 can need its input held 200 ns past its latch point, and TPB's fall delay (typical 200 ns) has no specified minimum. This holds only on typical timing.
+- **T5.** The 6845 may stop driving 10 ns after E falls. The 1802 can need its input held 200 ns past its latch point, and TPB's fall delay (typical 200 ns) has no specified minimum. This holds only on typical timing.
 
 These concern CRTC register **reads** (cursor position, R14/R15), which HBIOS rarely does.
 Video RAM at 7000-77FF is not affected: the IDT7134 is enabled by the address decode and -MRD, not by TPB.
@@ -122,7 +124,7 @@ in (`timing.py` PARTS). Compared with Rev A as built at 2 MHz and at 1.76 MHz:
 | **T3: 6845 E (= TPB) high time, 450 ns min** | +18 marginal | -50 FAILS | **-50 FAILS** |
 | T4: 6845 register read data | -77 | -145 | -145 (worst case; +23 typical at 1.76) |
 | T2: 6845 R/W during E | -394 | -360 | -360 (structural; works on the HD6845) |
-| T5: 6845 read hold | +20 marginal | +20 | +20 |
+| T5: 6845 read hold | +10 marginal | +10 | +10 |
 | **T6: INP 3 into RAM, drive data held** | +49 | +15 marginal | **+15 marginal** |
 
 - **The CPU card itself is clean at 2 MHz**: T1 is gone, and every CPU-card path has hundreds of ns to spare.
@@ -131,7 +133,8 @@ in (`timing.py` PARTS). Compared with Rev A as built at 2 MHz and at 1.76 MHz:
   equivalent HD46505 grade, have a much shorter minimum E high time: to check against their data sheets), or run the CPU
   Rev D at 1.79 MHz with a 3.579545 MHz oscillator (X1 is a socketed DIP-8 can: no board change).
 - **Decided (Ken, 2026-10-30): keep 2 MHz** and fit a faster CRTC grade on the video card that runs with it (VIDEO-G
-  takes an HD68B45); its timing goes into `timing.py` once the part is chosen.
+  takes an HD68B45); its timing goes into `timing.py` once the part is chosen. (Since 2026-11-24 VIDEO-G TEXT's 6845 is
+  write-only and any grade will do at 2 MHz: below.)
 - **T6 is down to 15 ns** worst case at 2 MHz (the IDE card ends DIOR at TPB's fall, memory D's WE is -MWR through a
   CD4050B). Typical timing and bus capacitance add margin; a later IDE or memory revision could hold DIOR longer.
 - **Memory Rev F's 28C256 (2026-11-18):** with a 28C256 in IC5 that the CPU can write (JP1 3-5 and 4-6), its !WE is
@@ -143,6 +146,82 @@ in (`timing.py` PARTS). Compared with Rev A as built at 2 MHz and at 1.76 MHz:
   ~110-170 ns worst case (Rev A at 2 MHz, R13 not counted: 7-62 ns), because the HCT decode (74HCT373 → 74HCT20 →
   74HCT00 × 2) is slower than Rev A's LS chain; the worst path is the boot flip-flop's own cycle. Like C1/C2, noise only:
   the data is latched about 3 µs later. 74AHCT/74ACT parts (pin-compatible, faster) would shorten it if wanted.
+
+## Rev B-Clean-Keyboard's 6845 (2026-11-24)
+
+`hardware/video-6845/kicad/rev-b-clean-keyboard`: R/W on ground, E = NOT -MWR through IC18A (74HCT74), CS from the address
+decode. Ken: "Write-only", after a comparison of the ways to end T2. The 1802 holds the address from 2.5 T and the data from
+2 T to T - 200 ns past -MWR's end, so E can be the whole of -MWR, 2 T, and need not be cut to the half clock that TPB and
+-MWR share (which is what makes the strobes' skew and a fast 6845 matter: VIDEO-G TEXT's E was that half clock until it was made
+write-only the same day, below).
+
+`python3 -m s5emu.timing --crtc B-Clean-Keyboard 1.76 2` prints it from the netlist; tests: `software/s5emu/tests/test_hw_crtcbus.py`.
+Margins in ns, worst case (TPB and -MWR each 200-300 ns late on their own, the gates 0 to their maximum):
+
+| | 1 MHz 6845, 1.76 MHz | 1 MHz 6845, 2 MHz | HD68B45, 2 MHz |
+|---|---|---|---|
+| E high time (T3) | +542 | +406 | +636 |
+| R/W held past E's fall (T2) | +1066 | +896 | +896 |
+| data set up before E falls | +2396 | +2055 | +2190 |
+| data held past E's fall | +314 | +246 | +246 |
+| CS, RS set up before E rises | +1065 | +895 | +985 |
+| CS, RS held past E's fall | +484 | +416 | +416 |
+| register reads (T4, T5) | none | none | none |
+
+The 1 MHz column is the first 6845 on a System-5 card that holds at 2 MHz with any grade.
+
+## VIDEO-G TEXT's 6845 (2026-11-24)
+
+`hardware/video-g/kicad/text-1.0`, not built. As first drawn a register write had E = TPB within -MRW, 6.5 T to 7 T, and the
+6845 could be read; with each strobe late or early on its own, E is as short as 109 ns at 1.76 MHz and 75 at 2, against the
+HD68B45's 220. Now it is write-only, as Rev B-Clean-Keyboard's: R/W on ground, E = the whole of -MRW (Ken: "write-only for
+row 1"). Margins in ns, worst case, from the netlist (`python3 -m s5emu.timing_videog`; tests `test_hw_videogbus.py`):
+
+| A register write | HD68B45, 1.76 MHz | HD68B45, 2 MHz | 1 MHz part, 2 MHz |
+|---|---|---|---|
+| E high time | +756 (was -111) | +620 (was -145) | +390 |
+| R/W set up before E rises | +2971 | +2630 | +2540 |
+| R/W held past E's fall | +4744 | +4130 | +4130 |
+| CS, RS set up before E rises | +1155 | +985 | +895 |
+| CS, RS held past E's fall | +468 | +400 | +400 |
+| data set up, held | +2531, +298 | +2190, +230 | +2055, +230 |
+| register reads | none | none | none |
+
+The ways to keep the reads that were weighed, and why none was taken, are in `hardware/video-g/DESIGN.md` section 4. T2 is
+Rev B's and Rev B-Clean's alone.
+
+## E held high: PAUSE, stepping and the bus driver (2026-11-25)
+
+By reading and reasoning: nothing here was run or measured. **Motorola's sheet (the 1 MHz MC6845, page 3) allows E high for
+25 us at most; Hitachi's (HD6845R / HD6845S, every grade) has no maximum.** On VIDEO-G TEXT and Rev B-Clean-Keyboard E is the
+whole of -MRW, so whatever holds -MRW low holds E high. (The 1802 has it low 2 T a write: 1.1 us at 1.76 MHz.)
+
+| What | -MRW low | Longer than 25 us, with the 6845 selected? |
+|---|---|---|
+| PAUSE (the IO or front panel's LOAD switch with RUN on; BUSDRV-C `MODE:2#` or `-PAUSE:1#`) | as long as the pause | **yes**, if it lands in the 2 clocks of a write to 7800 / 7801. The 1802 stops at the next falling clock edge, anywhere in a cycle (data sheet, page 20), and CPU Rev D passes -PAUSE to WAIT as it comes. A machine waiting at its prompt makes no such write unless the program does |
+| Stepping (`CLK:n#` on either bus driver: at least two I2C reads an edge) | milliseconds | **yes**, in every register write stepped through |
+| A slow clock (BUSDRV-C `CLKHZ`) | 2 T | **yes**, below 80 kHz |
+| The bus driver as master (`WRMEM`, `WRBLK`) | three I2C writes, over 200 us at 400 kHz | **yes, in every register write**, the bring-up plans' too |
+| `-MRW:1#` by hand, as master | until `-MRW:0#` | only with -VMA low and a register's address latched |
+| The short finder (`WALK`) | about 1 ms | not selected: it drives one line, and -VMA is pulled high |
+| LOAD mode (panel, `DMA`, `LOADBLK`) | 2 T, or as stepped (`LOADBLK` steps the clock) | only if the load runs on from 0000 to 7800 |
+
+On TEXT E rises only in a write to the registers. On Rev B-Clean-Keyboard it rises in **every** write on the bus, its -CS high
+in all but the registers' own; so there the first four rows hold E high in any memory write too, with the 6845 not selected.
+
+**What follows.** With a Hitachi part, nothing. With a Motorola, a limit of its sheet is broken, and the sheet does not say what
+happens. What can: the register being written takes a wrong byte, since that access is all that E times (the picture's counters
+run from CLK). It does not reach the bus: with R/W on ground the 6845 never drives it. Writing the registers again puts it right,
+and a reset does that (HBIOS sets them up). In a pause the 1802 is a static part, its address and data stand still,
+so when it runs on the write ends as usual; a pause that ends in RESET or LOAD cuts the write off, with no set-up or hold promised.
+
+**It is not new, and one chip has done it:** on Rev B E is TPB, high for a clock in every cycle, so PAUSE and stepping hold it just
+so. On 2026-10-31 BUSDRV-B wrote and read back R14 / R15 of the built Rev B card's HD46505RP with E high for at least one I2C
+write (some 70 us) on a write and longer on a read, and its test screen came up (`hardware/video-6845/eagle/rev-b/bringup/`). That
+is one Hitachi chip, and says nothing of a Motorola.
+
+**So: a Hitachi part** (HD68B45SP on TEXT as its silkscreen says; an HD6845 on Rev B-Clean-Keyboard) has no such limit, and no board
+changes. (The HD46505RP in the machine is taken to be the HD6845R under its earlier name: from memory, its own sheet is not here.) With a Motorola part fitted, write the registers again after a pause, a step or the bus driver.
 
 ## Start-of-cycle contention (checked 2026-10-07)
 

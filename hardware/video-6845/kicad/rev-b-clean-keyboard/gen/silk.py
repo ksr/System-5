@@ -15,6 +15,8 @@ but the name line, at angle 0 along the top or bottom edge as drawn (up the side
   * JP1 KBD FLAG: -EF1 -EF2 -EF3 -EF at its four pairs (one shunt picks the flag line the keyboard pulls low)
   * the keyboard chips IC15-IC21 with their jobs, J3 (PS/2 keyboard), J4 (FTDI: GND and DTR at its ends), the 16 MHz
     crystal Y1, the fuse, and every new resistor and capacitor with its value
+  * the chips' real length (BODY below): the Eagle DIL footprints draw a 14-pin chip 1.33 mm past its end pins; a real one
+    is 19.3 mm long, 2 mm past them, and hid part of IC5's label (Ken, 2026-11-24). No text goes where a fitted chip is
   * the name line: "System-5 6845 video  Rev B-Clean-Keyboard  2026" with cottageworker.com
 
 Nothing on a copper layer changes."""
@@ -36,7 +38,7 @@ JOB = {"IC1": "VIDEO RAM", "IC2": "A8-A15 LATCH", "IC3": "CRTC", "IC4": "BLOCK S
        "IC6": "OSC/INVERT", "IC7": "CHAR BIT 6", "IC8": "CHAR CLK /6", "IC9": "CURSOR/DE",
        "IC10": "CHAR LATCH", "IC11": "DOT SHIFT", "IC12": "CHAR ROM", "IC13": "VIDEO XOR", "IC14": "VIDEO/SYNC OUT",
        # the keyboard section
-       "IC15": "KBD DECODE", "IC16": "KBD STROBES", "IC17": "TPB/RESET INV", "IC18": "KEY READY", "IC19": "KEY LATCH",
+       "IC15": "KBD DECODE", "IC16": "KBD STROBES", "IC17": "TPB/RESET INV", "IC18": "KEY RDY/CRTC E", "IC19": "KEY LATCH",
        "IC20": "STATUS", "IC21": "PS/2 KEYBOARD", "IC22": "FLAG/RESET OC"}
 
 b = pcbnew.LoadBoard(PCB)
@@ -47,6 +49,13 @@ for t in old:                                           # (collected first: remo
 eb = b.GetBoardEdgesBoundingBox(); EDGE = (T(eb.GetLeft()), T(eb.GetTop()), T(eb.GetRight()), T(eb.GetBottom()))
 STRIPS = [(EDGE[0], EDGE[1], EDGE[0] + 76.2, EDGE[1] + 3.81), (EDGE[0], EDGE[3] - 3.81, EDGE[0] + 76.2, EDGE[3])]
 s = silk270.Silk(b, no_silk=STRIPS)                     # hides the parts' own fields, moves their own texts to F.Fab
+# how far a fitted chip's body runs past the centres of its end pins, mm: 14 pins 19.3 mm long; for the long chips the JEDEC
+# maxima (24 pins 1.29 in, the 2732; 40 pins 2.07 in, the 6845; 48 pins 2.45 in, the IDT7134; 20 pins 1.06 in; 28 pins 1.45 in)
+BODY = {14: 2.0, 16: 0.95, 20: 2.03, 24: 2.41, 28: 1.91, 40: 2.16, 48: 1.91}
+for f in b.GetFootprints():
+    if f.GetReference().startswith("IC"):
+        n = len(list(f.Pads())); l_, t_, r_, b_ = s.pads(f.GetReference()); p_ = BODY[n]
+        s.blocks.append((l_ - p_, t_, r_ + p_, b_) if r_ - l_ > b_ - t_ else (l_, t_ - p_, r_, b_ + p_))
 value = lambda ref: b.FindFootprintByReference(ref).GetValue()
 pad = lambda ref, n: next((T(p.GetPosition().x), T(p.GetPosition().y)) for p in b.FindFootprintByReference(ref).Pads() if p.GetNumber() == n)
 placed = {}

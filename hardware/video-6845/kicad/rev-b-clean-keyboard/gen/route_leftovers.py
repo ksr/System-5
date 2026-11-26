@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Author: Claude (Anthropic) for Ken Rother's System-5 project, 2026-11-20
-"""route_leftovers.py [BOARD.kicad_pcb] - join the nets Freerouting leaves in pieces, on the same two layers.
+"""route_leftovers.py [--first] [BOARD.kicad_pcb] - join the nets Freerouting leaves in pieces, on the same two layers.
 Run with KiCad's Python after gen/route.py import (gen/build.sh does). DRC is the judge afterwards.
 
 Freerouting adds this card's keyboard section to Rev B's copper, which is locked. It leaves a few long connections
@@ -22,6 +22,10 @@ pad; here both ends of an open connection are whole pieces of a net, so this one
   * last, on the nets it joined and on keyboard.TIDY's: a track end that now touches nothing is cut back to the last place something joins
     the track, and a track left hanging by one end goes. That is for Rev B's select track, cut at IC5 pin 3
     (gen/make_board.py): the new decoder's track joins it part way along, and the piece beyond the join is taken off
+
+--first, before Freerouting: only keyboard.FIRST's connections, while nothing but Rev B's copper is in their way; their tracks
+are locked, so Freerouting keeps them. Afterwards, what is left open is joined in the order keyboard.SOON, then by name: left
+to the names alone the 6845's E came out 306 mm long with 16 vias (2026-11-24, seed 2); in this order it is 97.
 """
 import heapq, math, os, sys, time
 from array import array
@@ -32,7 +36,9 @@ import kicad_route
 HERE = os.path.dirname(os.path.abspath(__file__)); DEST = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import keyboard as K
-PCB = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(DEST, K.NEW + ".kicad_pcb")
+_ARGS = [a for a in sys.argv[1:] if a != "--first"]
+FIRST = "--first" in sys.argv
+PCB = os.path.abspath(_ARGS[0]) if _ARGS else os.environ.get("ROUTE_PCB") or os.path.join(DEST, K.NEW + ".kicad_pcb")
 G = 0.127; CLR = 0.2; SLACK = 0.09; VIA_D = 0.8; VIA_DRILL = 0.4; HOLE_GAP = 0.254; EDGE = 0.5
 WIDTH = {"VCC": 0.5, "GND": 0.5}; W_DEFAULT = 0.254
 STEP, DIAG, VIA_COST = 10, 14, 400
@@ -82,7 +88,7 @@ class Seg:
 
 class Via:
     def __init__(self, t):
-        self.net = t.GetNetname(); self.x, self.y = mm(t.GetPosition().x), mm(t.GetPosition().y)
+        self.t = t; self.net = t.GetNetname(); self.x, self.y = mm(t.GetPosition().x), mm(t.GetPosition().y)
         self.r = mm(t.GetWidth(pcbnew.F_Cu)) / 2; self.hole = mm(t.GetDrillValue()) / 2
 
 
@@ -300,7 +306,8 @@ def lay(b, g, net, w, path):
 
 
 def trim(net, pads, segs, vias):
-    """cut back the net's track ends that touch nothing -> (tracks shortened, the uuids of tracks to take off)"""
+    """cut back the net's track ends that touch nothing, and a via left with no pad and copper on one layer only -> (tracks
+    shortened, the uuids of tracks and vias to take off)"""
     mine = lambda: [s for s in segs if s.net == net and not getattr(s, "gone", False)]
     np_, nv = [p for p in pads if p.net == net], [v for v in vias if v.net == net]
     short = 0; gone = []
@@ -328,6 +335,10 @@ def trim(net, pads, segs, vias):
                 s.ax, s.ay = x1, y1; s.t.SetStart(pcbnew.VECTOR2I(FM(x1), FM(y1))); short += 1; changed = True
             if not ends[1] and (1 - hi) * L > 0.01:
                 s.bx, s.by = x2, y2; s.t.SetEnd(pcbnew.VECTOR2I(FM(x2), FM(y2))); short += 1; changed = True
+        for v in list(nv):                                               # (the -MRW via by the 6845's old R/W track, 2026-11-24)
+            on = {o.layer for o in mine() if seg_dist(v.x, v.y, o.ax, o.ay, o.bx, o.by) <= max(o.hw, v.r) + 0.005}
+            if len(on) < 2 and not any(p.dist(v.x, v.y) <= 0.005 for p in np_):
+                nv.remove(v); gone.append(v.t.m_Uuid.AsString()); changed = True
     return short, gone
 
 
@@ -337,7 +348,31 @@ except TypeError:
     _via_width_by_layer = False
 
 
+def first():
+    """keyboard.FIRST's connections, in its order: (reference, pin, a pad of the piece to join, or None for any)"""
+    b = pcbnew.LoadBoard(PCB); pads, segs, vias = load(b); w = W_DEFAULT
+    g = Grid(b, pads, segs, vias, next(p for p in pads if p.ref == "J1" and p.num == "1"))
+    for it in pads + segs + vias: g.add(it, [w])
+    for z in [z for f in b.GetFootprints() for z in f.Zones() if z.GetIsRuleArea()]:
+        bb = z.GetBoundingBox(); grow = VIA_D / 2 + SLACK
+        g.keep_out((mm(bb.GetLeft()) - grow, mm(bb.GetTop()) - grow, mm(bb.GetRight()) + grow, mm(bb.GetBottom()) + grow),
+                   z.GetDoNotAllowTracks(), z.GetDoNotAllowVias(), [Lr for Lr, lay_ in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu)) if z.IsOnLayer(lay_)])
+    bad = 0
+    for ref, num, to in K.FIRST:
+        net = next(p.net for p in pads if (p.ref, p.num) == (ref, num)); pc = pieces(net, pads, segs, vias)
+        has = lambda p, r: any(isinstance(i, Pad) and (i.ref, i.num) == r for i in p)
+        src = next(p for p in pc if has(p, (ref, num))); dst = [p for p in pc if p is not src and (to is None or has(p, to))]
+        cells = g.cells_of(src); path, pops = search(g, net, w, cells, set().union(*[g.cells_of(p) for p in dst]) - cells)
+        if not path: print("  first: %s.%s (%s) NO WAY" % (ref, num, net)); bad += 1; continue
+        new = lay(b, g, net, w, path)
+        for it in new: (segs if isinstance(it, Seg) else vias).append(it); g.add(it, [w])
+        print("  first: %s.%s (%s): %.1f mm, %d vias" % (ref, num, net.split("/")[-1], sum(math.hypot(s.bx - s.ax, s.by - s.ay) for s in new if isinstance(s, Seg)), sum(isinstance(s, Via) for s in new)))
+    for t in b.GetTracks(): t.SetLocked(True)
+    pcbnew.SaveBoard(PCB, b); sys.stdout.flush(); os._exit(1 if bad else 0)
+
+
 def main():
+    if FIRST: first()
     t0 = time.time()
     b = pcbnew.LoadBoard(PCB); pads, segs, vias = load(b)
     nets = sorted({p.net for p in pads if p.net and not p.net.startswith("unconnected-")})
@@ -357,11 +392,12 @@ def main():
                        z.GetDoNotAllowTracks(), z.GetDoNotAllowVias(), [Lr for Lr, lay_ in ((0, pcbnew.F_Cu), (1, pcbnew.B_Cu)) if z.IsOnLayer(lay_)])
         print("  the grid: %d x %d cells of %.3f mm, %d pads, %d tracks, %d vias, %d keep-out areas (%.0f s)" % (g.nx, g.ny, G, len(pads), len(segs), len(vias), len(areas), time.time() - t0))
     left = 0; added = 0
-    for net in sorted(todo, key=lambda n: (n.split("/")[-1] in WIDTH, n)):       # the signals first, then the supplies
+    soon = {n: k for k, n in enumerate(K.SOON)}
+    for net in sorted(todo, key=lambda n: (n.split("/")[-1] in WIDTH, soon.get(n.split("/")[-1], 99), n)):       # the signals first, then the supplies
         w = WIDTH.get(net.split("/")[-1], W_DEFAULT)
         while True:
-            pc = pieces(net, pads, segs, vias)
-            if len(pc) < 2: break
+            pc = [p for p in pieces(net, pads, segs, vias) if any(isinstance(i, Pad) for i in p)]
+            if len(pc) < 2: break                                        # (a piece with no pad is an old track's end: trimmed below)
             pc.sort(key=lambda p: sum(isinstance(i, Pad) for i in p) * 1000 + len(p))
             src = g.cells_of(pc[0]); dst = set()
             for other in pc[1:]: dst |= g.cells_of(other)
@@ -382,7 +418,7 @@ def main():
     pcbnew.SaveBoard(PCB, b)
     if gone:                                              # off the file's text (pcbnew loses its place when items are removed)
         forms = kicad_route.top_forms(open(PCB).read())
-        keep = [f for f in forms if not (f.startswith("(segment") and any(u in f for u in gone))]
+        keep = [f for f in forms if not (f.startswith(("(segment", "(via")) and any(u in f for u in gone))]
         assert len(forms) - len(keep) == len(gone), (len(forms) - len(keep), len(gone))
         open(PCB, "w").write("(kicad_pcb\n\t" + "\n\t".join(keep) + "\n)\n")
     print("route_leftovers: %d tracks and vias added; %d track ends cut back and %d hanging tracks taken off; %d nets still open (%.0f s)"

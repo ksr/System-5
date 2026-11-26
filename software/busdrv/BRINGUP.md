@@ -43,6 +43,7 @@ Add `--report results.md` to keep a record of a run, and `--log` to see every co
 | Memory | Rev D | `--mem-rev C` or `B-built` |
 | IDE/CF | SV1 = port 2 (register select), SV2 = port 3 (data) | `--ide-sel`, `--ide-data` |
 | 6845 | SV1 1-2: block 7 (video RAM 7000–77FF, CRTC 7800–7FFF) | `--video-base` |
+| 6845 | Rev B, the card in the machine | `--video-rev B-Clean-Keyboard` (its 6845 is write-only: V5 reads no register back) |
 
 The memory plan works out what each block should hold from the card's netlist, for its revision and these jumpers: the same gate-level decode the emulator runs.
 On the reworked Rev B the jumpers do not decide the map. Its rework puts the chip selects on the 74LS32 bank gates, so RAM fills 0000–7FFF and the EPROM fills 8000–FFFF.
@@ -79,6 +80,7 @@ On the reworked Rev B the jumpers do not decide the map. Its rework puts the chi
 | V1 decode | The card answers in its block and nowhere else | SV1, the 74LS85 compare (IC4) on the latched A12–A15 (74LS373, IC2, on TPA), -VMA |
 | V2–V4 video RAM | Data lines, address lines A0–A10, all 2K | The IDT7134's right port |
 | V5 CRTC | R14/R15 (the cursor registers, the ones a 6845 reads back) written and read, switching registers each time; then the repeat through 7800–7FFF (RS = A0) | FF: the CRTC never answers (E = TPB: old firmware; CS, R/W = -MRW, -RESET). R14 reading R15's value: RAM also answers there |
+| V5 with `--video-rev B-Clean-Keyboard` | Its 6845 is write-only (R/W on ground), so R14/R15 are not read back: bytes are written to 7800 / 7801 (and their repeats) and nothing may drive a read of them (FF on the bus Rev D). That the writes land is seen on the screen, V6 | A read that is what was written: RAM also answers there. Anything else not FF: R/W (pin 22) not on ground, or E (pin 23, IC18 pin 5) high in a read |
 | V6 screen | HBIOS v1.0.4's CRTC table (BYTE's 16 × 64), then a test screen: border, title, the character set with lower case (Rev B), reverse video, digits, the cursor on the bottom row | You check the monitor. A rolling picture: the crystal (the table assumes 9 MHz and ÷6). Wrong characters: the character EPROM |
 
 ### all

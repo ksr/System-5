@@ -106,3 +106,19 @@ About 45 machine cycles a second.
   `bringup.py`) cannot tell the CPU card is there.
 - To restore the card: put IC8 pin 3 back in its socket. (Restored 2026-11-01; since then a jumper on the CPU card selects
   IC8 pin 3's clock: the crystal oscillator IC7, or SPARE1 for stepping. Set it to SPARE1 before running `cputrace.py`.)
+
+## The bus Rev D's own netlist, with cards and a program on it
+
+`busboard.py` plugs five cards (CPU Rev D, memory Rev E, the 6845 card Rev B-Clean-Keyboard, the IO panel, IDE/CF) into
+the backplane as its KiCad netlist has it (`hardware/bus/kicad/rev-d/reports/netlist.net`), connector pin by socket pin, and
+runs `bus_program.asm` on a pin-level 1802 through it. Every machine cycle is compared with the instruction-level
+machine's. Faults planted in a copy of the board's netlist show that a wrong, open, swapped or shorted connection, or a
+pull resistor missing or misplaced, is noticed; the head of `test_busboard.py` says what cannot be. The program notices an
+open flag line with the jumper setting that uses it in that slot; the fault tests try all four settings, and the board at
+rest shows it too.
+
+```
+python3 -m unittest test_busboard          # about three minutes
+python3 busboard.py                        # the program alone, the flag lines' jumpers set each of four ways
+python3 busboard.py survey short           # one group of faults, counted by what notices them
+```

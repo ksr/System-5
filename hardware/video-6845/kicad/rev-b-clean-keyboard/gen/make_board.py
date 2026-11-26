@@ -11,10 +11,12 @@ Freerouting add the new connections, with every Rev B track locked.
   2b. the RCA jack J2 to the front edge, under the PS/2 jack (keyboard.MOVE)
   3. the 6845's -CS (IC3 pin 25) cut from Rev B's select at IC5 pin 3, which drove it and now drives -UPPER: the
      first two pieces of the track go, the rest stays on the 6845's pin as -CRTCCS, for the new decoder to drive
+  3a. the 6845's R/W and E (IC3 pins 22, 23) cut from -MRW and TPB (keyboard.RELABEL): the last piece of each track, at
+     the pin, goes
   3b. Rev B's A2 track, which ran through where the new pin 31 is, turned in between pins 31 and 32
   4. the new parts, each where keyboard.PLACE puts it, linked to its schematic symbol
   5. every pad on the net the schematic gives it; the old nets whose names changed there take the new names. Checked:
-     no pad of Rev B-Clean's changes net but the 6845's pin 25, every net of the schematic is one net here, and no
+     no pad of Rev B-Clean's changes net but the 6845's pin 25, its 22 and 23, every net of the schematic is one net here, and no
      new pad sits on Rev B's copper
 """
 import os, re, sys
@@ -131,6 +133,18 @@ def main():
     pad3.SetNet(crtc)
     print("the 6845's -CS cut from Rev B's select at IC5 pin 3: %d pieces removed, %d tracks and vias kept on IC3 pin 25, "
           "their free end at (%.2f, %.2f)" % (len(gone), len(kept), T(pos.x), T(pos.y)))
+
+    # 3a. the 6845's R/W and E: each pin's own piece of track goes (there is one) and the pin takes its new net; the tracks
+    #     before it, which then end in nothing, are cut back after the routing (keyboard.TIDY)
+    for (r_, n_), (_, new_) in sorted(K.RELABEL.items()):
+        pd = b.FindFootprintByReference(r_).FindPadByNumber(n_); old_ = pd.GetNetname()
+        hit = [tr for tr in b.GetTracks() if tr.GetNetname() == old_ and tr.Type() != pcbnew.PCB_VIA_T
+               and (at(tr.GetStart(), pd.GetPosition()) or at(tr.GetEnd(), pd.GetPosition()))]
+        assert len(hit) == 1, "%s.%s: %d pieces of track on the pin" % (r_, n_, len(hit))
+        s_, e_ = cp(hit[0].GetStart()), cp(hit[0].GetEnd()); gone.add(hit[0].m_Uuid.AsString())
+        pd.SetNet(net(sch[(r_, n_)]))
+        print("%s pin %s cut from %s: the piece (%.2f, %.2f)-(%.2f, %.2f) removed; now on %s" % (
+            r_, n_, old_.split("/")[-1], T(s_.x), T(s_.y), T(e_.x), T(e_.y), sch[(r_, n_)].split("/")[-1]))
 
     # 3b. Rev B's A2 track runs up the card-edge side of J1's pad row and turns in past the +5V end, through where
     #     pin 31 (-EF1) now is. Its turn is moved to pass between pins 31 and 32: the upright run 1.91 mm longer, a new

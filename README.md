@@ -63,6 +63,7 @@ the same name but different content, the website version is kept in a
 
 - `software/gbasic/` — **GBASIC**, an integer BASIC for ELF/OS with VIDEO-G graphics (1802 assembly, 2026-11-01): the source, the built program, its language reference (`README.md`) and tests in the emulator.
 
+- `tools/render_populated.py` — a KiCad render of a board with its parts drawn in, for the website's pictures (the board file is only read)
 - `tools/asm1802.py` — a Python 1802 assembler (rcasm syntax, short-branch page check, relaxing jumps, macros); builds GBASIC and the VIDEO-G HBIOS.
 
 - `software/busdrv/` — `s5busdrv.py`, the host tool for the bus driver card (peek/poke/dump, hex load with verify, memtest, I/O, bus watch); firmware in `embedded/bus-driver/`.

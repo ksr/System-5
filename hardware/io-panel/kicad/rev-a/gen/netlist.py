@@ -21,7 +21,8 @@ Blocks:
             goes. The latches keep the bus to HCT inputs: the 1802 drives A0-A7 straight from its pins on CPU Rev D,
             too weakly for the TIL311s' TTL inputs.
   input     INP n: U3 74HCT244 puts the eight switches on D0-D7 while OE244_L is low:
-            OE244_L = NAND(-MRD, ANY_H) with ANY_H = NAND(PORTIN_L, DRIVE_L) = the IN port or this card's DMA (U6). DRIVE
+            OE244_L = NAND(-MRD, ANY_H) with ANY_H = NAND(PORTIN_L, DRVL_L) = the IN port or this card's DMA (U6);
+            DRVL_L = NAND(DRIVE, LOAD_H) (U9D, open drain, R6), so a DMA drives only in LOAD mode. DRIVE
             (U11A) is preset by REQ and cleared by -MRD low, so in a DMA IN the switches stay on the bus until -MRD falls
             in the next cycle, past the memory card's write (its WE is -MWR through a CD4050B, up to 140 ns late).
             -MRD is high in an INP and in a DMA IN cycle, low in IDLE and in every memory read, so the switches never
@@ -41,6 +42,10 @@ Blocks:
             cycle a press and did not show it.) ACK (U10B) is clocked by -MRW rising (the DMA IN write has ended)
             with D = REQ; its !Q clears REQ, which is over well before SC0 rises again. ACK is held clear while the
             button is up (!CLR = INPUT_H), so a held button loads one byte. RN1 holds SC0 high with no CPU card.
+            REQ's clear is REQCLR_L (Ken, 2026-11-25: "fix both power-up faults in one new route"): low while ACK is set
+            (D1, a Schottky, its cathode on ACK_L) and outside LOAD mode (U9C, open drain, NAND(LOAD_L, LOAD_L)), with R5.
+            Until then ACK_L alone cleared REQ, which had no state at power-up: up as 1 it set DRIVE in every write
+            cycle, and the toggles fought the 1802 for the bus. DRIVE's LOAD gate (U9D) does the same for DRIVE up as 1.
   Q         the Q LED (LED9) sinks into U5B = NAND(Q, 1, 1), push-pull: on while Q is high (it was U9, open collector,
             which pcb-check took for an output with no pull-up; the LED and its resistor were its load, and the
             check knows an LED only by the word LED in its value, as the pcb-check session found on 2026-11-22).
@@ -51,7 +56,7 @@ Blocks:
             is tools/s5panel.py. On it: ADR15-ADR0 and OUT7-OUT0 (the displays and bit LEDs), SW7-SW0 (the data
             toggles), LED_Q_K (the Q LED), ROM_LED_L, INPUT_RC (the INPUT button), and the bus lines -RESET, -PAUSE
             and -DMAIN themselves (RUN, LOAD, the RESET button, the mode LEDs), with +5V and ground.
-            ROM_LED_L = NAND(-VMA, -VMA) (U9D, open drain): low while the CPU card's EPROM answers (-VMA high), to
+            ROM_LED_L = NAND(-VMA, -VMA) (U23D, open drain): low while the CPU card's EPROM answers (-VMA high), to
             sink the front panel's ROM LED. RN3 (10k x8) pulls SW0-SW7 down: the front panel's toggles switch each
             line to +5V through 1k and leave it open otherwise, and the '244's inputs do not float with neither
             the card's own toggles nor a front panel fitted. This card's own toggles are SPDT between +5V and
@@ -59,7 +64,7 @@ Blocks:
             leaves SW1-SW8 out. RUN, LOAD and INPUT on the two boards work together (either pulls its line low).
   RESET     SW12 (Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not installed"): a
             push-button for a boot reset, as the front panel's. Pressed, it puts +5V on BTN_H (R4 holds it low
-            otherwise), and U23 (74HC03, open drain) pulls -RESET (U23A) and -DMAIN (U23B) low together: the CPU card
+            otherwise), and U23 (74HCT03, open drain) pulls -RESET (U23A) and -DMAIN (U23B) low together: the CPU card
             clears LOADED, so the machine starts in the EPROM when the button is let go (docs/manual/bus.md). Both
             gates take the bus line -PAUSE as their other input, so the button does nothing while -PAUSE is low: in
             LOAD mode a low -DMAIN would be a DMA request. No debounce: a bouncing boot reset is a boot reset, and
@@ -93,7 +98,7 @@ Blocks:
             by -MWR (bus -MRW) going low, which happens only in an INP's cycle (clock 5 to 7, the 1802 writing the
             byte to memory), and held clear whenever RTC_RD is low; with both low !Q is high, so a memory write
             elsewhere does nothing. -RD is low from clock 5 of an INP of the data port to the end of that cycle.
-            MR = RESET_H. INTR, inverted by a spare gate of U9 (open collector; RN1 pulls it up), reaches -INT
+            MR = RESET_H. INTR, inverted by U23C (open drain; RN1 pulls it up), reaches -INT
             through JP7 (off).
   pull-ups  none on the bus lines (the CPU card and the bus Rev D have them); the SPDT toggles drive the bits both ways.
 """
@@ -136,6 +141,8 @@ CHIPS = {
     "74HCT00": (DIP14, _p("1:I0:I 2:I1:I 3:O:O 4:I0:I 5:I1:I 6:O:O 7:GND:P 8:O:O 9:I0:I 10:I1:I 11:O:O 12:I0:I 13:I1:I 14:VCC:P")),
     # 74HC03: quad 2-input NAND with open-drain outputs (the 74HC00's pins); U9 was a 74HC05 until 2026-11-22
     "74HC03": (DIP14, _p("1:I0:I 2:I1:I 3:O:OC 4:I0:I 5:I1:I 6:O:OC 7:GND:P 8:O:OC 9:I0:I 10:I1:I 11:O:OC 12:I0:I 13:I1:I 14:VCC:P")),
+    # 74HCT03: the 74HC03 with TTL input levels (VIH 2.0 V, against 3.15 V at 4.5 V), the same pins (TI CD74HCT03, SCHS414)
+    "74HCT03": (DIP14, _p("1:I0:I 2:I1:I 3:O:OC 4:I0:I 5:I1:I 6:O:OC 7:GND:P 8:O:OC 9:I0:I 10:I1:I 11:O:OC 12:I0:I 13:I1:I 14:VCC:P")),
     "74HCT74": (DIP14, _p("1:CLR:I 2:D:I 3:CLK:I 4:PRE:I 5:Q:O 6:~{Q}:O 7:GND:P 8:~{Q}:O 9:Q:O 10:PRE:I 11:CLK:I 12:D:I 13:CLR:I 14:VCC:P")),
     # DS12885 RTC, 24-pin PDIP (Maxim datasheet Rev 3, 2/07, pin description, read on 2026-11-18 from two copies):
     # 12 and 16 are both GND on the PDIP; 22 is the only N.C.; RCLR has an internal pull-up (no external one)
@@ -173,16 +180,21 @@ chip("U5", "74HCT10", "74HCT10", {1: "POUT_H", 2: "MRD_H", 13: "TPB", 12: "OUTCL
      3: "Q", 4: "+5V", 5: "+5V", 6: "LED_Q_K",                  # B: the Q LED, push-pull (NAND(Q, 1, 1) sinks it while Q is high)
      9: "RTC_RD", 10: "RTC_RD", 11: "RTC_RD", 8: "RTC_RD_L",   # C: the RTC's read strobe DS, low through an INP of its data port
      7: "GND", 14: "+5V"})
-chip("U6", "74HCT00", "74HCT00", {1: "PORTIN_L", 2: "DRIVE_L", 3: "ANY_H", 4: "-MRD", 5: "ANY_H", 6: "OE244_L",
+chip("U6", "74HCT00", "74HCT00", {1: "PORTIN_L", 2: "DRVL_L", 3: "ANY_H", 4: "-MRD", 5: "ANY_H", 6: "OE244_L",
      9: "RESET_H", 10: "PAUSE_H", 8: "LOAD_L", 12: "MRD_H", 13: "TPB", 11: "OSTB_L",       # D: OSTB_L, TPB of a read
      7: "GND", 14: "+5V"})
 chip("U9", "74HC03", "74HC03", {1: "INPUT_H", 2: "INPUT_H", 3: "EFOUT",      # A: INPUT's flag
      4: "REQ", 5: "SC0", 6: "-DMAIN",                                          # B: the DMA request, until the DMA cycle starts
-     9: "UART_INT", 10: "UART_INT", 8: "UIRQ_L",                               # C: the UART's INTR
-     12: "-VMA", 13: "-VMA", 11: "ROM_LED_L", 7: "GND", 14: "+5V"})            # D: the front panel's ROM LED
-chip("U10", "74HCT74", "74HCT74", {1: "ACK_L", 2: "LOAD_H", 3: "INPUT_H", 4: "+5V", 5: "REQ", 6: "REQ_L",    # A: REQ
+     9: "LOAD_L", 10: "LOAD_L", 8: "REQCLR_L",                                 # C: REQ cleared outside LOAD mode
+     12: "DRIVE", 13: "LOAD_H", 11: "DRVL_L", 7: "GND", 14: "+5V"})            # D: DRIVE, in LOAD mode alone
+# (2026-11-25: until then C and D were the UART's INTR and the ROM LED, now U23's C and D, its spares: the two new
+# gates belong beside U10, U11 and U6, and J3 and the UART are nearer U23)
+PARTS["D1"] = ("Device:D_Schottky", "BAT85", "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal", {1: "ACK_L", 2: "REQCLR_L"})   # 1 K, 2 A
+PARTS["R5"] = ("Device:R", "3.3k", R, {1: "+5V", 2: "REQCLR_L"})
+PARTS["R6"] = ("Device:R", "3.3k", R, {1: "+5V", 2: "DRVL_L"})
+chip("U10", "74HCT74", "74HCT74", {1: "REQCLR_L", 2: "LOAD_H", 3: "INPUT_H", 4: "+5V", 5: "REQ", 6: "REQ_L",    # A: REQ
      13: "INPUT_H", 12: "REQ", 11: "-MRW", 10: "+5V", 9: None, 8: "ACK_L", 7: "GND", 14: "+5V"})             # B: ACK
-chip("U11", "74HCT74", "74HCT74", {4: "REQ_L", 1: "-MRD", 2: "GND", 3: "GND", 5: None, 6: "DRIVE_L",   # A: DRIVE
+chip("U11", "74HCT74", "74HCT74", {4: "REQ_L", 1: "-MRD", 2: "GND", 3: "GND", 5: "DRIVE", 6: None,   # A: DRIVE
      # B: the UART's read strobe (2026-11-20): preset by -MWR low, cleared while RTC_RD is low; !Q = UART_RD_L
      13: "RTC_RD", 12: "GND", 11: "GND", 10: "-MRW", 9: None, 8: "UART_RD_L", 7: "GND", 14: "+5V"})
 chip("U7", "TIL311", "TIL311", {1: "+5V", 3: "OUT4", 2: "OUT5", 13: "OUT6", 12: "OUT7", 5: "GND", 8: "GND",
@@ -225,9 +237,11 @@ PARTS["RN3"] = ("Device:R_Network08", "10k", "Resistor_THT:R_Array_SIP9",
 # the card's own RESET button (Ken, 2026-11-23): a boot reset, -RESET and -DMAIN low together, unless -PAUSE is low
 PARTS["SW12"] = ("Switch:SW_Push", "RESET", "Button_Switch_THT:SW_PUSH_6mm", {1: "+5V", 2: "BTN_H"})
 PARTS["R4"] = ("Device:R", "10k", R, {1: "BTN_H", 2: "GND"})
-chip("U23", "74HC03", "74HC03", {1: "BTN_H", 2: "-PAUSE", 3: "-RESET",          # A: -RESET
+chip("U23", "74HCT03", "74HCT03", {1: "BTN_H", 2: "-PAUSE", 3: "-RESET",          # A: -RESET
      4: "BTN_H", 5: "-PAUSE", 6: "-DMAIN",                                      # B: -DMAIN, with it
-     9: "GND", 10: "GND", 8: None, 12: "GND", 13: "GND", 11: None, 7: "GND", 14: "+5V"})   # C, D: spare
+     9: "UART_INT", 10: "UART_INT", 8: "UIRQ_L",                                # C: the UART's INTR (2.4 V high is all a
+     #                                          16C550's sheet promises: a 74HCT03 for it, Ken, 2026-11-25)
+     12: "-VMA", 13: "-VMA", 11: "ROM_LED_L", 7: "GND", 14: "+5V"})             # D: the front panel's ROM LED
 PARTS["C26"] = ("Device:C", "0.1uF", "s5io:C025-050X050", {1: "+5V", 2: "GND"})   # U23's (C22-C25 are the MAX232's)
 # the real-time clock (Ken, 2026-11-18): a DS12885+ with its crystal and a CR2032 that can be replaced
 chip("U13", "DS12885", "DS12885+", {1: "GND", 2: "RTC_X1", 3: "RTC_X2", 4: "D0", 5: "D1", 6: "D2", 7: "D3", 8: "D4", 9: "D5",
@@ -245,7 +259,7 @@ chip("U12", "74HCT02", "74HCT02", {2: "RTCA_L", 3: "OSTB_L", 1: "RTC_AS",       
      5: "RTCD_L", 6: "OSTB_L", 4: "RTC_WR",                                          # B: an OUT to the data port
      8: "RTC_WR", 9: "RTC_WR", 10: "RTC_WR_L",                                       # C: R/W, low in its TPB
      11: "RTCD_L", 12: "MRD_H", 13: "RTC_RD", 7: "GND", 14: "+5V"})                  # D: an INP of the data port
-PARTS["JP4"] = ("Connector_Generic:Conn_02x07_Odd_Even", "RTC", HDR % 7,             # the RTC's port pair: one jumper in
+PARTS["JP4"] = ("Connector_Generic:Conn_02x07_Odd_Even", "RTC + UART", HDR % 7,             # the RTC's port pair: one jumper in
                 {p: (("Y2_L", "Y4_L", "Y6_L", "Y3_L", "Y5_L", "Y7_L", "RTC_IRQ")[(p - 1) // 2] if p % 2   # rows 1-3 (address
                      else "RTCA_L" if p <= 6 else "RTCD_L" if p <= 12 else "-INT")                   # 2, 4, 6), one in 4-6
                  for p in range(1, 15)})                                             # (data 3, 5, 7), set to 6 and 7;
@@ -292,7 +306,7 @@ PARTS["C24"] = ("Device:C_Polarized", "1uF", CPOL, {1: "VPLUS", 2: "+5V"})      
 PARTS["C25"] = ("Device:C_Polarized", "1uF", CPOL, {1: "GND", 2: "VMINUS"})     # V- (about -9 V): GND is its + side
 # the null-modem block, as the YACC1 I/O card's JP1: 1-3 and 2-4 = the card sends on DE-9 pin 2 and hears on 3 (a
 # straight cable to a PC); 3-5 and 4-6 = sends on 3, hears on 2
-PARTS["JP6"] = ("Connector_Generic:Conn_02x03_Odd_Even", "TX PIN", HDR % 3,
+PARTS["JP6"] = ("Connector_Generic:Conn_02x03_Odd_Even", "TX/RX", HDR % 3,
                 {1: "RX_IN", 2: "TX_OUT", 3: "DE9_3", 4: "DE9_2", 5: "TX_OUT", 6: "RX_IN"})
 # the DE-9 socket: KiCad's own footprint for a right-angle socket with the pin pattern of the YACC1 I/O card's (built,
 # V1.1): pins 2.77 mm apart in rows 2.84 mm apart, the mounting holes 25 mm apart and level with the middle of the

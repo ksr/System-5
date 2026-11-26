@@ -83,7 +83,7 @@ the parts' drawn outlines: KiCad lists components, images and pins in a differen
 and Freerouting's result follows that order and even the outlines (adding two courtyards turned a complete route into
 one that stalled), so one build of TEXT left VMA open where the build before had routed everything. Now the same
 `gen/` files give the same board. `ROUTE_SEED` in `gen/place.py` shuffles the order reproducibly when one leaves a
-net open: TEXT uses 7 (seeds 0-10 tried: nine routed every net, 7 soonest). GFX uses 0, the sorted order: rebuilt
+net open: TEXT used 7 to 2026-11-24 (seeds 0-10 tried in 2026-11-17's form: nine routed every net, 7 soonest), 0 since. GFX uses 0, the sorted order: rebuilt
 the evening of 2026-11-17 with its power LED, it routed every net at once (1697 track segments, 97 vias). The ordering
 code is `tools/kicad/dsn_order.py` since then, shared with CPU Rev D (`route.py` gives the same input as before).
 
@@ -93,10 +93,24 @@ full build of TEXT takes about an hour and a quarter). The silkscreen work after
 gives Freerouting the same input, byte for byte but for the file's own path, and the same silkscreen to the micrometre
 (checked in a copy of the tree).
 
+**TEXT was routed again on 2026-11-24**, with its 6845 write-only (`DESIGN.md`, section 4: seven pins moved, no part and no
+silkscreen text changed): seed 0, 2483 track segments and 152 vias. Freerouting routed every net in 4 minutes and then
+shortened the tracks for 70; the leftover router had nothing to do; DRC 0 errors and 0 warnings. (Seed 7 routed every net too, but
+the track the leftover router made beside J1's pins broke the 0.20 mm clearance in six places.) The 83 parts stand where they
+stood, and of the 133 silkscreen texts one moved: `C22 100n`, 0.5 mm, at its size (`place.SPOTS`, `SIZES`; Ken: "move the C22
+label clear of IC22"). A 14-pin chip is 19.3 mm long, 0.65 mm past each end of the socket the placer goes by, and the label's
+end had been 0.15 mm under it; it is 0.35 mm clear now. Silkscreen only: copper, masks, outline and drills as routed.
+
 After a build: `python3 common/bom.py <board>` and, for the book, `python3 tools/kicad/sch/gen_schematic.py <board>/schematic` and
 `python3 tools/kicad/sch/make_book.py`.
 
 ## Before ordering
+
+**The latest result, of both boards as they are now (TEXT routed again with its 6845 write-only, 2026-11-24): QA's
+run of 2026-11-25 at elf `38fc4d0`, `pcb-check --tests`: TEXT no failures, 0 warnings (netlist 160 of 160; the copper
+rebuilt from the gerbers by two methods, which agree; 16 of 16 faults planted in copies of the zip noticed); GFX no
+failures, 0 warnings (124 of 124; 16 of 16). The same NOTE on TEXT's EFOC as below. `tools/qa.py full` at `38fc4d0`:
+OK.** The results below are of TEXT before that route.
 
 **`pcb-check`, the check before an order (Ken, every system, since 2026-11-06; `hardware/BUILD-RULES.md`, section 2):
 both boards as they are now, with `--tests`, 2026-11-19: GFX at elf `77257f1` (run by the pcb-check session); TEXT at

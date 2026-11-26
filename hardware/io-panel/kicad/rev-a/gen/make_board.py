@@ -12,8 +12,8 @@
     drawn, so the ribbon's lines leave in the order the displays and toggles stand; RN3, the data lines' pull-downs,
     upright between the UART and the toggle column, its pins in the toggles' order
   * the card's own RESET button SW12 (Ken, 2026-11-23: "the IO card also needs a reset in case front panel is not
-    installed") in the bottom corner of the front strip, under J3; its 74HC03 (U23) upright between the toggle
-    column and the Q and PWR LEDs' resistors, which moved 3 mm towards the LEDs for it; R4 beside the PWR LED
+    installed") in the top corner of the front strip, above J3 (since 2026-11-26: away from INPUT); its 74HCT03
+    (U23) upright between the toggle column and the Q and PWR LEDs' resistors, which moved 3 mm towards the LEDs for it; R4 beside the PWR LED
   * the serial port (2026-11-20) in a strip between the logic and the panel, which moved out with the front edge: the
     DE-9 socket J2 at the top edge as drawn, facing off the board (the left side with the card standing in the bus,
     seen from the parts side), the MAX232 and the null-modem block JP6 behind it, the 16C550 below them with its
@@ -68,15 +68,19 @@ for k in range(8):                                     # BIT 7 at the top, as on
     PLACE["SW%d" % (k + 1)] = (TX, ty, 90)                                       # toggles: 9 mm pitch (bodies 8.6 mm)
     PLACE["LED%d" % (k + 1)] = (BLX - 1.27, ty, 0)     # its LED level with it (Ken, 2026-11-18): above it when standing;
                                                        # pads across the strip, so the displays' labels fit between LEDs
-PLACE.update({"SW10": (TX, 20.0 + 9.0 * 8, 90), "SW11": (TX, 20.0 + 9.0 * 9, 90),
+# RUN/RESET is turned end for end (270; Ken, 2026-11-23): up is RUN, as on the front panel (and up is LOAD and 1). The
+# M9040P's origin is its middle pin, so its body stays on the 9 mm pitch and only pins 1 and 3 change places
+PLACE.update({"SW10": (TX, 20.0 + 9.0 * 8, 270), "SW11": (TX, 20.0 + 9.0 * 9, 90),
               "SW9": (XF - 12.7, 102.8, 0),            # INPUT in the bottom corner of the panel
               # the front panel's header, upright in the new strip (its body 9 mm of the 12.7), centred on the card's
               # height: pin 1 (and the odd row) on the panel's side, at the top; RN3 with pin 1 (ground) at the bottom,
               # so that SW7 ... SW0 stand in the toggles' order, BIT 7 at the top
               "J3": (XF + 5.08, CY - 30.48, 0), "RN3": (142.0, 80.0, 90),
-              # the card's own RESET (2026-11-23): the button in the strip's bottom corner, under J3; its two gates
-              # (U23) upright between the toggles and R2 / R3, its capacitor under it; R4 upright beside the PWR LED
-              "SW12": (XF + 3.1, 102.0, 0), "U23": (168.4, 88.5, 0), "C26": (172.2, 107.6, 0), "R4": (198.0, 108.1, 90),
+              # the card's own RESET (2026-11-23): its two gates (U23) upright between the toggles and R2 / R3, its
+              # capacitor under it; R4 upright beside the PWR LED. The button itself in the strip's TOP corner, above J3,
+              # the far end of the front edge from INPUT (Ken, 2026-11-26: "Yes, move it too": it was beside INPUT, too
+              # easy to hit when pressing INPUT); its origin at pin 1, the button's centre at (XF + 6.35, 18.0)
+              "SW12": (XF + 6.35 - 3.25, 18.0 - 2.25, 0), "U23": (168.4, 88.5, 0), "C26": (172.2, 107.6, 0), "R4": (198.0, 108.1, 90),
               "LED9": (LX, LEDY + LEDP * 8 - 1.27, 90), "R2": (RX, LEDY + LEDP * 8, 0),
               "LED10": (LX, LEDY + LEDP * 9 - 1.27, 90), "R3": (RX, LEDY + LEDP * 9, 0)})
 # the TIL311s turned -90 (Ken, 2026-11-17): with the card in the cage, bus edge down, each digit stands upright, its bottom
@@ -95,6 +99,9 @@ PLACE.update({                                         # the logic, between the 
     # between the rows: the pull-ups and INPUT's RC; C2 and the RTC's battery (flat: 6 mm tall) under the middle row
     "RN1": (26.0, 45.0, 0), "R1": (51.5, 45.0, 0), "C1": (64.0, 45.0, 0), "C2": (53.6, 79.0, 0),
     "BT1": (61.65, 86.9, 0),
+    # REQ's clear and DRIVE's gate (2026-11-25), upright in the gaps of the middle row: D1 between U9 and U10, R5
+    # between U10 and U11, R6 between U3 and U9, each label in line with its part, below it as drawn
+    "D1": (66.8, 64.0, 90), "R5": (80.3, 64.0, 90), "R6": (51.8, 64.0, 90),
     # the jumper blocks near the bottom edge, clear of the card-support strip: IN port, OUT port, INPUT's EF line;
     # the RTC's ports and IRQ (JP4) above them
     "JP1": (38.0, 105.0, 90), "JP2": (60.0, 105.0, 90), "JP3": (82.0, 105.0, 90), "JP4": (40.5, 91.0, 90),
@@ -119,7 +126,7 @@ PLACE.update(SERIAL)
 # the card standing in the bus, at 270 here): the bus pins' names at 270 take less room than they did at 0, and the
 # latch column needs room on its toggle side for its own labels
 SHIFT = -2.0
-for ref in ("U5", "U6", "U4", "U12", "Y1", "U13", "U2", "U3", "U9", "U10", "U11", "U1", "RN1", "R1", "C1", "C2", "BT1",
+for ref in ("U5", "U6", "U4", "U12", "Y1", "U13", "U2", "U3", "U9", "U10", "U11", "U1", "RN1", "R1", "C1", "C2", "BT1", "D1", "R5", "R6",
             "JP1", "JP2", "JP3", "JP4", "U18", "RN2", "U19"):
     x, y, rot = PLACE[ref]; PLACE[ref] = (x + SHIFT, y, rot)
 for k, u in enumerate(N.BYPASSED):
@@ -313,12 +320,16 @@ def beside(ref, reach=6.0, dys=(0.0, 1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0)
             out += [(cx + dx, bt + d), (cx + dx, t - d)]
     return out
 # where a part's label goes when the spots beside() tries would not do (the serial port's block, 2026-11-20): the
-# MAX232's between two of its capacitors, the oscillator's under its can, the DE-9's and JP6's in the clear patch right
+# MAX232's between two of its capacitors, the oscillator's under its can, the DE-9's in the clear patch right
 # of JP6 (under the DE-9 itself the connector would cover them)
-SPOTS = {"U21": [(116.96 + dx, 43.0 + dy) for dx in (0.0, 0.1, -0.1) for dy in (0.0, 0.5, -0.5, 1.0, -1.0)],
+SPOTS = {"U13": [(70.2 + dx, 34.0 + dy) for dy in (0.0, 1.0, 2.0, 3.0, 4.0) for dx in (0.0, 0.1, -0.1, 0.2)],   # its bus side,
+         "C12": [(70.0 + dx, 45.6 + dy) for dy in (0.0, -0.3, 0.2, -0.6) for dx in (0.0, 0.2, -0.2)],   # away from U10's line
+         "U21": [(116.96 + dx, 43.0 + dy) for dx in (0.0, 0.1, -0.1) for dy in (0.0, 0.5, -0.5, 1.0, -1.0)],
          "X1": [(109.0 + dx, 101.0 + dy) for dx in (0.0, 1.0, -1.0, 2.0, -2.0) for dy in (0.0, 0.3, -0.3, 0.6)],
-         "J2": [(145.8 + dx, 29.5 + dy) for dx in (0.0, 0.2, -0.2, -0.4) for dy in (0.0, 0.5, 1.0, 1.5, 2.0)],
-         "JP6": [(141.5 + dx, 29.73 + dy) for dx in (0.0, 0.2, 0.4, 0.6) for dy in (0.0, 0.5, 1.0, 1.5, 2.0)]}
+         "D1": [(64.8 + dx, 70.6 + dy) for dy in (0.0, 0.4, 0.8, 1.2) for dx in (0.0, 0.1, -0.1)],
+         "R5": [(78.3 + dx, 70.6 + dy) for dy in (0.0, 0.4, 0.8, 1.2) for dx in (0.0, 0.1, -0.1)],
+         "R6": [(49.8 + dx, 70.6 + dy) for dy in (0.0, 0.4, 0.8, 1.2) for dx in (0.0, 0.1, -0.1)],
+         "J2": [(145.8 + dx, 29.5 + dy) for dx in (0.0, 0.2, -0.2, -0.4) for dy in (0.0, 0.5, 1.0, 1.5, 2.0)]}
 def label(ref, text, two=None):
     """a part's label beside it: one line at 1.0 or 0.8 mm, else two (reference over value)"""
     v = [(text, 1.0), (text, 0.8)] + ([(two, 1.0), (two, 0.8)] if two else [])
@@ -384,13 +395,13 @@ place([("C9\n0.1uF", 0.8)], [(l - d, (t + bt) / 2 + dy) for d in (1.8, 2.0, 2.2,
 for ref, title, cols in (("JP1", "JP1 IN PORT", "1234567"), ("JP2", "JP2 OUT PORT", "1234567"),
                          ("JP3", "JP3 INPUT EF", ("1", "2", "3", "EF")),   # -EF1..-EF3, -EF: between the battery
                          # and the card-guide strip only single characters fit under the first three columns
-                         ("JP4", "JP4 RTC", ("A2", "A4", "A6", "D3", "D5", "D7", "INT"))):
+                         ("JP4", "JP4 RTC + UART", ("A2", "A4", "A6", "D3", "D5", "D7", "INT"))):
     for n, name in enumerate(cols):
         x, y = pad(ref, str(2 * n + 1))
         near = [(x, y + 2.9), (x, y + 1.85)] if len(name) == 1 else [(x, y + 3.6)]   # under the block as drawn, else
         place([(name, 0.8)], near + [(x, y - 2.54 - d) for d in (2.4, 2.9, 3.6, 4.2)])  # over it (the strip below)
-JP_TITLES = [("JP1", "JP1 IN PORT"), ("JP2", "JP2 OUT PORT"), ("JP3", "JP3 INPUT EF"), ("JP4", "JP4 RTC"),   # (it is the UART's too: the serial note says so; "JP4 RTC + UART" has no room there)
-             ("JP7", "JP7 UART INT")]   # placed last:
+JP_TITLES = [("JP1", "JP1 IN PORT"), ("JP2", "JP2 OUT PORT"), ("JP3", "JP3 INPUT EF"),
+             ("JP4", "JP4 RTC + UART")]   # placed last:
 # the caps beside the blocks have fewer places to go than the blocks' titles
 # 7. the front panel's other parts, then the chips, the passives, the crystal and the battery
 for ref, name in (("LED9", "Q"), ("LED10", "PWR")):
@@ -407,25 +418,54 @@ label("C10", "C10 %s" % N.PARTS["C10"][1], "C10\n%s" % N.PARTS["C10"][1])
 place([("JP5 RTC\nRAM CLR", 0.8)], [(x, y) for x in (105.1, 105.0, 105.2, 104.9) for y in (14.2, 14.4, 14.0, 14.6, 13.8)])
 place([("FIT =\nCLEAR", 0.8)], [(x, y) for x in (114.1, 114.0, 114.2, 113.9, 114.3) for y in (12.9, 13.0, 12.8, 13.2)])
 # (placed here since 2026-11-20, before the parts' labels: its two places are fixed, theirs are not)
-# the serial port (2026-11-20): over JP6 the DE-9 pin the card sends on with the two shunts there (1-3 and 2-4, the
-# end towards the MAX232: pin 2; 3-5 and 4-6: pin 3), then its name, the DE-9's and the oscillator's
-_y6 = min(pad("JP6", "1")[1], pad("JP6", "2")[1])      # over the block as drawn, each number over its pair of shunts
-place([("2", 0.8)], [((pad("JP6", "1")[0] + pad("JP6", "3")[0]) / 2, _y6 - d) for d in (2.3, 2.4, 2.5, 2.6, 2.8, 3.0)])
-place([("3", 0.8)], [((pad("JP6", "3")[0] + pad("JP6", "5")[0]) / 2, _y6 - d) for d in (2.3, 2.4, 2.5, 2.6, 2.8, 3.0)])
-label("JP6", "JP6 TX PIN", "JP6\nTX PIN")
-# the serial port's settings, spelled out (Ken, 2026-11-23: "can you add more detail to silkscreen for IO card settings
-# for serial port"): one block in the free patch under RN3, between the UART and the toggles, placed before the parts'
-# own labels so that they go round it. What each of the port's three jumper blocks does, what J2's pins are as JP6 is
-# set, how a program reaches a UART register, and the divisor for 9600 baud with the 1.8432 MHz can
+# the serial port's settings, each beside its own jumper (Ken, 2026-11-23: "better silk screen" for the serial port, then
+# "yes as suggested"). Nothing at the DE-9's own pins (they were numbered there for an hour: "we don't need pin 2,3 5 it is
+# cluttering"). Under JP6 as drawn
+# (right of it with the card standing) its two settings as pictures, the way the block stands: its outline, its six
+# pins, the two shunts outlined where they go, and beside each picture what the DE-9's pins 2 and 3 then are (Ken: "it is not clear
+# where jumpers go for each mode ... there is no need to show the words null modem but it should be clear how to
+# configure the jumpers"). 1-3 and 2-4 (the lower two rows with the card standing): the card sends on pin 2; 3-5 and 4-6:
+# on pin 3. JP7's name with what a shunt does
+_y6 = bbox("JP6")[3]
+def shunts(x, y, pairs, pitch=1.4):
+    """a picture of a jumper block: its pins as dots, rows along x and columns along y (as JP6 lies on the board), the
+    middle at (x, y), and a rounded outline round each pair of pins that a shunt joins: pairs [(row, row, column)]"""
+    R = 0.475                                            # half a shunt's width
+    def shape(kind, a, c, w, fill=False):
+        q = pcbnew.PCB_SHAPE(b); q.SetShape(kind); q.SetLayer(pcbnew.F_SilkS); q.SetWidth(MM(w)); q.SetStart(V(*a)); q.SetEnd(V(*c))
+        if fill: q.SetFilled(True)
+        b.Add(q); return q
+    at = lambda row, col: (x + (row - 1) * pitch, y + (col - 0.5) * pitch)
+    for row in range(3):
+        for col in range(2):
+            cx, cy = at(row, col); shape(pcbnew.SHAPE_T_CIRCLE, (cx, cy), (cx + 0.2, cy), 0.1, True)
+    for r1, r2, col in pairs:
+        (ax, ay), (cx, cy) = at(r1, col), at(r2, col)
+        for sg in (-1, 1):
+            shape(pcbnew.SHAPE_T_SEGMENT, (ax, ay + sg * R), (cx, cy + sg * R), 0.15)
+        for (ex, ey), sg in (((ax, ay), -1), ((cx, cy), 1)):
+            q = pcbnew.PCB_SHAPE(b); q.SetShape(pcbnew.SHAPE_T_ARC); q.SetLayer(pcbnew.F_SilkS); q.SetWidth(MM(0.15))
+            q.SetArcGeometry(V(ex, ey - R), V(ex + sg * R, ey), V(ex, ey + R)); b.Add(q)
+    E = R + 0.3                                          # the block's outline round it all
+    shape(pcbnew.SHAPE_T_RECT, (x - pitch - E, y - pitch / 2 - E), (x + pitch + E, y + pitch / 2 + E), 0.15)
+    box = (x - pitch - E - 0.1, y - pitch / 2 - E - 0.1, x + pitch + E + 0.1, y + pitch / 2 + E + 0.1)
+    if not free(box): raise SystemExit("silk: no room for a jumper picture at (%.1f, %.1f)" % (x, y))
+    blocks.append((box[0] - 0.1, box[1] - 0.1, box[2] + 0.1, box[3] + 0.1))
+for x_, r_, what in ((135.4, 0, "PIN 2=TX\nPIN 3=RX"), (140.15, 1, "PIN 2=RX\nPIN 3=TX")):
+    shunts(x_, _y6 + 2.3, [(r_, r_ + 1, 0), (r_, r_ + 1, 1)])
+    place([(what, 1.0), (what, 0.9), (what, 0.8)], [(x_ + dx, _y6 + 4.4 + dy) for dy in (0.0, 0.2, 0.4) for dx in (0.0, 0.1, -0.1)], just="left")
+place([("JP7 UART INT\nFIT = -INT", 1.0), ("JP7 UART INT\nFIT = -INT", 0.8)],
+      [(105.6 + dx, 105.5 + dy) for dx in (0.0, 0.2, 0.4, 0.6, 0.8) for dy in (0.0, -0.4, -0.8, -1.2, -1.6)])
+place([("JP6 TX/RX", 1.0), ("JP6 TX/RX", 0.8)], [(141.9 + dx, 29.2 + dy) for dx in (0.0, -0.2, 0.2, 0.4, 0.6) for dy in (0.0, -0.3, 0.3, 0.6)])
+# what is left of the block of 2026-11-23 ("can you add more detail to silkscreen for IO card settings for serial
+# port") once each jumper's line stands at its jumper: how a program reaches a UART register, and the divisor for 9600
+# baud with the 1.8432 MHz can, in the free patch under RN3, between the UART and the toggles, at 1.0 mm (0.8 until then)
 SERIAL_NOTE = ("SERIAL PORT (16C550)\n"
-               "J2 AS SET: 2 TX 3 RX 5 GND\n"
-               "JP6: TX ON PIN 2 OR PIN 3\n"
-               "JP4: PORTS 6 + 7 (AS RTC)\n"
-               "REG N: OUT 6 = 80+N, PORT 7\n"
-               "DIVISOR 12 = 9600 BAUD\n"
-               "JP7 FITTED: INT ON -INT")
-place([(SERIAL_NOTE, 0.8)], [(142.0 + dx, 82.6 + dy) for dy in (0.0, 0.3, 0.6, 0.9, 1.2, 1.5) for dx in (0.0, 0.3, -0.3, 0.6, -0.6)],
-      just="left")
+               "REG N: OUT 6 = 80+N,\n"
+               "THEN PORT 7 (JP4: 6+7)\n"
+               "DIVISOR 12 = 9600 BAUD")
+place([(SERIAL_NOTE, 1.0), (SERIAL_NOTE, 0.8)],
+      [(142.5 + dx, 82.6 + dy) for dy in (0.0, 0.3, 0.6, 0.9, 1.2, 1.5) for dx in (0.0, 0.3, -0.3, 0.6, -0.6)], just="left")
 label("J2", "J2 %s" % N.PARTS["J2"][1], "J2\n%s" % N.PARTS["J2"][1])
 # the front panel's header (2026-11-22): its first and last pins numbered at their ends, and its name beside it. The
 # numbers go first and must find room (2026-11-23): placed after the name they were optional, and when the RESET
@@ -449,11 +489,11 @@ _xs = [_l - d for d in (0.9, 1.0, 0.8, 1.1)]
 _plus = place([("+", 1.0)], [(x, _py + dy) for x in _xs for dy in (0.0, 0.2, -0.2)])
 place([("BT1 %s" % N.PARTS["BT1"][1], 1.0), ("BT1 %s" % N.PARTS["BT1"][1], 0.8)],
       [(_plus[0], _plus[1] + d) for d in [5.6 + 0.1 * k for k in range(12)]])
-for ref in sorted([r for r in N.PARTS if r[0] in "RCYB" and r not in ("R2", "R3", "C9", "C10", "Y1", "BT1")]):
+for ref in sorted([r for r in N.PARTS if r[0] in "RCYBD" and r not in ("R2", "R3", "C9", "C10", "Y1", "BT1")]):
     v = N.PARTS[ref][1].replace("32.768kHz", "32.768kHz")
     label(ref, "%s %s" % (ref, v), "%s\n%s" % (ref, v))
 for ref, title in JP_TITLES:
-    label(ref, title, title.replace(" ", "\n", 1))
+    label(ref, title, {"JP4": "JP4 RTC\n+ UART"}.get(ref, title.replace(" ", "\n", 1)))
 
 def overlaps(b):
     """pairs of parts whose courtyards overlap (the board must have none)"""

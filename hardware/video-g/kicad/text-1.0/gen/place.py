@@ -24,8 +24,9 @@ LENGTH = 188.0
 # J4. 188 x 106.565 mm
 YTOP = 10.025 - 10.375
 J1 = (15.735, 50.50, 90)                          # the C36's middle; pad 1 (GND) at y 94.95, pad 36 at 6.05
-ROUTE_SEED = 7          # common/route.py: the order of Freerouting's input. Tried 2026-11-17, seeds 0-10: nine routed
-#                         every net; 7 finished soonest, with 14.9 m of track and 222 vias (0, the sorted order, routes too)
+ROUTE_SEED = 0          # common/route.py: the order of Freerouting's input (0: the sorted order). Since the 6845 is write-only
+#                         (2026-11-24) 0 routes every net; 7, the seed from 2026-11-17, leaves -EF open for the leftover
+#                         router, which then comes too near J1's pins
 ROUTE_AS = {"DE9VS": "DB9VS"}   # (common/route.py, tools/kicad/dsn_order.py) the net at the DE-9's pin 9 was DB9VS until
 #                         2026-11-22 (Ken: the part is a DE-9, "change to de-9 everywhere"). Under its new name it would
 #                         sort after DE, DE2 and DE3 in Freerouting's input and the board would route another way; it
@@ -145,7 +146,12 @@ SPOTS = {"LED1": [(X1 - 5.5 + 1.27 - 2.5 - 1.3 - 0.2 * k, 85.5) for k in range(1
          # one place for it on the board side of the jack, and narrower than the placer's 0.2 mm steps from the part's
          # body (it was found by chance while the DE-9's fab drawing was its pin tails; with the whole connector drawn
          # there, 2026-11-19, the steps fell either side of it and the label went beyond the resistors)
-         "J3": [(182.376 + dx, 27.2) for dx in (0.0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03)]}
+         "J3": [(182.376 + dx, 27.2) for dx in (0.0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03)],
+         # "C22 100n" clear of IC22's chip (Ken, 2026-11-24: "move the C22 label clear of IC22"): a 14-pin chip is 19.3 mm
+         # long, 2.03 mm past its end pins (y 15.37), 0.65 mm more than the socket the placer goes by, and the placer's
+         # 1 mm steps left the label's end 0.15 mm under it. Same column beside C22, 0.35 mm clear of the chip
+         "C22": [(170.35, 11.9)]}
+SIZES = {"C22": (0.8,)}                          # at the 0.8 mm it had: the spot would take 1.0, and reach IC22 again
 # the name line along the bottom edge as drawn, angle 0 (up the right-hand side with the card standing), clear of the
 # card-guide strip (the first 76.2 mm from the bus, 3.81 mm in from the edge): the name with its revision (pcb-check
 # wants them in one text, 1.2 mm or more), cottageworker.com beside it, and the spots to try for the name

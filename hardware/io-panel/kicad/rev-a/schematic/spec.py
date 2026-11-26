@@ -7,14 +7,14 @@ SUBTITLE = ("The front panel: LEDs, TIL311s and switches on jumper-picked ports;
             "on a jumper-picked EF line; ELF-style RUN and LOAD with DMA loading; a DS12885 real-time clock; a 16C550 "
             "serial port; 36-pin bus")
 THEORY = "Design: hardware/io-panel/kicad/rev-a/DESIGN.md; the bus: docs/manual/bus.md (the 36-pin extension)"
-DATE = "2026-11-23"
+DATE = "2026-11-25"
 REV = "A"
 BUSREF = "J1"
 POWER = ("+5V", "GND")
 ROOT_NOTE = "Redrawn from the board netlist; proven pin for pin against it (gen_schematic.py)."
 VALUES = {"U1": "74HCT138", "U2": "74HCT374", "U3": "74HCT244", "U4": "74HCT14", "U5": "74HCT10", "U6": "74HCT00",
           "U9": "74HC03", "U10": "74HCT74", "U11": "74HCT74", "U12": "74HCT02", "U13": "DS12885+", "U18": "74HCT573",
-          "U19": "74HCT573", "U20": "16C550", "U21": "MAX232", "U22": "74HCT573", "U23": "74HC03",
+          "U19": "74HCT573", "U20": "16C550", "U21": "MAX232", "U22": "74HCT573", "U23": "74HCT03",
           "X1": "1.8432MHz"}
 SHEETS = [
     ("decode", "Decode", "PORT DECODE: THE IN AND OUT PORTS ON JUMPERS, AND THE STROBES",
@@ -40,22 +40,25 @@ SHEETS = [
      "toggles (sheet Front panel) switch a line to +5V through 1k or leave it open; a card built for one leaves SW1-SW8 out."),
     ("control", "Control", "INPUT BUTTON ON A JUMPER-PICKED EF LINE, RUN AND LOAD, ONE DMA IN PER PRESS, Q LED",
      ["SW9", "R1", "C1", ("U4", 1), ("U4", 4), ("U4", 5), ("U4", 6), ("U6", 3), "SW10", "SW11", "U10", ("U11", 1),
-      ("U9", 1), ("U9", 2), "JP3", ("U5", 2), "LED9", "R2"], None,
+      ("U9", 1), ("U9", 2), ("U9", 3), ("U9", 4), "D1", "R5", "R6", "JP3", ("U5", 2), "LED9", "R2"], None,
      "INPUT (SW9, R1/C1 + Schmitt) drives EFOUT (open collector, U9A) to JP3: a jumper across a row puts it on -EF1, -EF2,\n"
      "-EF3 or -EF (set to -EF1); RN1 holds EFOUT high with no jumper. SW10 RUN/RESET grounds -RESET, SW11 LOAD grounds\n"
      "-PAUSE: both = LOAD mode (LOAD_H). In LOAD mode a press sets REQ (U10A); -DMAIN = NAND(REQ, SC0) (U9B, open drain):\n"
      "the 1802 samples its DMA request at clock 7 of every cycle, before -MWR rises, so SC0, low from the start of the DMA\n"
      "cycle, lets the line go there (2026-11-22; REQ alone made two cycles of a press). The write's -MWR rise sets ACK\n"
      "(U10B), which clears REQ until the button is let go. DRIVE (U11A) keeps the switches on the bus until -MRD falls.\n"
+     "REQ's clear, REQCLR_L (2026-11-25), is low while ACK is set (D1, a Schottky, its cathode on ACK_L) and outside LOAD\n"
+     "mode (U9C, open drain, with R5), and DRIVE reaches the '244's enable in LOAD mode alone (U9D, R6): neither flip-flop has\n"
+     "a state at power-up, and either up as 1 put the switches on the bus against the 1802.\n"
      "The Q LED sinks into U5B = NAND(Q, 1, 1), push-pull."),
     ("panel", "Front panel", "THE FRONT PANEL'S RIBBON: DISPLAYS, LEDS, TOGGLES, INPUT, RUN, LOAD, RESET",
-     ["J3", ("U9", 4), "SW12", "R4", ("U23", 1), ("U23", 2)], None,
+     ["J3", ("U23", 4), "SW12", "R4", ("U23", 1), ("U23", 2)], None,
      "J3, a keyed 2x25 header at the front edge (Ken, 2026-11-22): a straight 50-way ribbon to the front panel card,\n"
      "pin n to pin n (tools/s5panel.py). ADR15-ADR0 and OUT7-OUT0 for its displays and bit LEDs, SW7-SW0 from its data\n"
      "toggles, LED_Q_K for its Q LED, INPUT_RC for its INPUT button, and the bus lines -RESET, -PAUSE and -DMAIN themselves\n"
-     "(RUN, LOAD, the RESET button's boot reset, the mode LEDs). ROM_LED_L = NAND(-VMA, -VMA) (U9D, open drain) sinks its\n"
+     "(RUN, LOAD, the RESET button's boot reset, the mode LEDs). ROM_LED_L = NAND(-VMA, -VMA) (U23D, open drain) sinks its\n"
      "ROM LED while the CPU card's EPROM answers. SW12 RESET (2026-11-23) is this card's own boot reset, for a machine\n"
-     "with no front panel: pressed, BTN_H is high and U23A / U23B (74HC03, open drain) pull -RESET and -DMAIN low\n"
+     "with no front panel: pressed, BTN_H is high and U23A / U23B (74HCT03, open drain) pull -RESET and -DMAIN low\n"
      "together, unless -PAUSE is low (LOAD on); the CPU card then starts in the EPROM."),
     ("rtc", "Real-time clock", "DS12885 CLOCK, CALENDAR AND NVRAM ON A JUMPER-PICKED PORT PAIR",
      ["U13", "Y1", "BT1", "JP4", "JP5", ("U6", 4), ("U12", 1), ("U12", 2), ("U12", 3), ("U12", 4), ("U5", 3)], None,
@@ -67,13 +70,13 @@ SHEETS = [
      "selects and IRQ up. JP5: a shunt grounds RCLR, which clears the 114 bytes of RAM (not the clock) while the chip runs\n"
      "from its battery, the power off; open, nothing changes (RCLR has its own pull-up: no outside one)."),
     ("serial", "Serial port", "16C550 UART ON THE CLOCK'S PORT PAIR, MAX232, DE-9",
-     ["U22", "U20", "X1", ("U11", 2), ("U9", 3), "JP7", "U21", "C22", "C23", "C24", "C25", "JP6", "J2"], None,
+     ["U22", "U20", "X1", ("U11", 2), ("U23", 3), "JP7", "U21", "C22", "C23", "C24", "C25", "JP6", "J2"], None,
      "U20 16C550 (Ken, 2026-11-20; as on his YACC1 I/O card): X1 1.8432 MHz on XIN, -BAUDOUT to RCLK, MR = RESET_H, the\n"
      "modem inputs tied off. It shares the clock's ports (JP4): U22 (LE = RTC_AS) holds the byte written to the address\n"
      "port: bit 7 = SEL_UART (1: the UART, CS0; 0: the DS12885, its CS), bits 2-0 = the UART's register. WR = RTC_WR, high in\n"
      "TPB of an OUT to the data port. -RD = UART_RD_L from U11B, preset by -MWR low (only an INP has it) and held clear while\n"
      "RTC_RD is low: the 1802 puts N out 1.5 clocks before -MRD falls in an OUT, so RTC_RD pulses at the start of every\n"
-     "OUT to the data port, and a 16550 read there would throw a received character away. INTR through U9C (open\n"
+     "OUT to the data port, and a 16550 read there would throw a received character away. INTR through U23C (open\n"
      "drain, RN1) and JP7 to -INT (off). U21 MAX232 with four 1 uF; JP6 swaps the DE-9's pins 2 and 3 (1-3 and 2-4:\n"
      "the card sends on pin 2); J2's shell to GND."),
     ("power", "Power", "POWER, DECOUPLING, POWER LED", ["LED10", "R3", "C2"], None,

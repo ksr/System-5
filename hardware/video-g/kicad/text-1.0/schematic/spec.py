@@ -5,10 +5,10 @@ PROJ = "video-g-text-schematic"
 TITLE = "System-5 VIDEO-G 1.0 TEXT"
 SUBTITLE = "64 x 25 / 64 x 32 text (6845, IDT7134), status register, PS/2 keyboard, all memory-mapped; the GFX board on the J6 ribbon"
 THEORY = "Design: hardware/video-g/DESIGN.md; board: ../video-g-text.kicad_pcb (generated from ../gen/netlist.py)"
-DATE = "2026-11-17"
+DATE = "2026-11-24"
 REV = "1.0"
 BUSREF = "J1"
-ROOT_NOTE = "Redrawn 2026-11-17 (memory-mapped) from the board netlist; proven pin for pin against it (gen_schematic.py)."
+ROOT_NOTE = "Redrawn 2026-11-24 (the 6845 write-only) from the board netlist; proven pin for pin against it (gen_schematic.py)."
 SHEETS = [
     ("decode", "Decode", "BUS: THE CARD'S BLOCK (7000-7FFF): TEXT RAM, REGISTERS, GFX WINDOW",
      ["IC1", "IC2", "SV1", "RN1", ("IC16", 4), ("IC17", 3), ("IC20", 4), ("IC18", 4), ("IC19", 4), "IC5", "IC6", "IC7",
@@ -16,14 +16,14 @@ SHEETS = [
      "Memory-mapped, no I/O ports. IC1 latches A8-A15 while TPA is high; IC2 compares A12-A15 with the BLOCK jumper (1-2\n"
      "only = block 7) while -VMA is low -> BOARDSEL. A11 low: -TXTCE, the text RAM 7000-77FF (IC20D). A11 high: UPPER,\n"
      "7800-7FFF (IC18D); in it A10 high = WSEL, the GFX window 7C00-7FFF (IC19D), A10 low = the registers, from A1-A2\n"
-     "(repeating to 7BFF): IC5 the 6845's -CS (7800/7801, RS = A0); IC6 reads while -MRD low (7800 6845, 7802 key, 7804\n"
-     "status, 7806 mouse); IC7 writes while -MRW low and TPB high (7800 6845, 7804 control, 7806 Y). RN2: pull-ups."),
+     "(repeating to 7BFF): IC5 the 6845's -CS (7800/7801, RS = A0); IC6 reads while -MRD low (7802 key, 7804 status, 7806\n"
+     "mouse; the 6845 is not read); IC7 writes while -MRW low (7800 6845, 7804 control, 7806 Y). RN2: pull-ups."),
     ("crtc", "CRTC + RAM", "THE 6845 AT 7800/7801 AND THE IDT7134 TEXT RAM",
-     ["IC3", "IC4", ("IC21", 3), ("IC24", 1)], None,
+     ["IC3", "IC4", ("IC21", 3)], None,
      "The IDT7134's right port is the bus (2K: A11R low), its left port the 6845's refresh address MA0-MA11: no snow.\n"
-     "6845 (HD68B45, the 2 MHz grade): -CS from IC5, RS = A0. E = NAND(-RDCRTC, -WRCRTC) (IC21C): the whole -MRD time on\n"
-     "a read, TPB within -MRW on a write. R/-W from IC24A: set while -MRD is low, cleared while -MRW is low, so it holds\n"
-     "between cycles and never changes while E is high; a write latches as E falls."),
+     "6845 (HD68B45), write-only (2026-11-24): -CS from IC5, RS = A0, R/-W on ground. E = NOT -WRCRTC (IC21C): the whole of\n"
+     "-MRW, 2 T, in a write to 7800 / 7801, which the 6845 takes as E falls; in no other cycle. A read of 7800 / 7801 finds\n"
+     "nothing."),
     ("clock", "Clock + pipeline", "12 MHz DOT CLOCK, CHARACTER COUNTER, CODE LATCH, CHARACTER ROM, SHIFTER",
      ["Y1", "R1", "R2", ("IC16", 1), ("IC16", 2), ("IC16", 3), ("IC16", 6), "IC15", "R3", ("IC20", 2), ("IC22", 4),
       "IC11", "IC12", "IC13", "IC14", ("IC22", 1), ("IC22", 2)], None,
@@ -47,6 +47,7 @@ SHEETS = [
      "Pin map: hardware/video-g/kicad/common/ribbon.py. The clocks leave through 33 ohm (R11-R13). With GFX absent RN2\n"
      "holds TEXT-ON high and RN3 holds GDOT, XORM, MOUSE-READY, GFX-PRESENT (and MONITOR, JP1 open) low."),
     ("power", "Power", "POWER, DECOUPLING, SPARE GATES, LED",
-     ["LED1", "R6", "C26", ("IC16", 5), ("IC17", 1), ("IC17", 5), ("IC17", 6), ("IC18", 3), ("IC22", 3)], None,
-     "One 0.1 uF (0.1 in leads) per IC, beside its socket; 47 uF bulk. LED1: power. Spare gate inputs to GND."),
+     ["LED1", "R6", "C26", ("IC16", 5), ("IC17", 1), ("IC17", 5), ("IC17", 6), ("IC18", 3), ("IC22", 3), ("IC24", 1)], None,
+     "One 0.1 uF (0.1 in leads) per IC, beside its socket; 47 uF bulk. LED1: power. Spare gate inputs to GND; the spare\n"
+     "flip-flop IC24A (the 6845's R/-W latch to 2026-11-24): clear and preset to +5V, D and clock to GND."),
 ]

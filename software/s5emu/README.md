@@ -85,14 +85,14 @@ monitor's `B` boots ELF/OS and the IO panel's clock has its driver). **VIDEO-G i
 | Graphics window | 7C00-7C3F = pixel line Y (written at 7806) of page CPAGE, bit 7 of byte 0 = x 0; repeated to 7FFF |
 | Pages | two of 16K (512 x 256); NTSC shows lines 0-199. At power-up they hold noise (seeded) |
 | 7804 | write = control (TEXT-OFF, GFX-ON, XOR, DPAGE, CPAGE, MOUSE-ON; on the GFX board, so nothing without it); read = status (KEY-READY, MOUSE-READY, VSYNC and DE from the CPU clock, MONITOR, GFX-PRESENT, ID 10) |
-| 7800/7801, 7802, 7806 | 6845 address / data (7801 reads R14-R17); the key (EF3 = KEY-READY); Y register (write) / mouse byte (read). 7800-7807 repeat through 7BFF |
+| 7800/7801, 7802, 7806 | 6845 address / data (write-only: a read finds FF); the key (EF3 = KEY-READY); Y register (write) / mouse byte (read). 7800-7807 repeat through 7BFF |
 | Ports | none answer VIDEO-G; the IDE card keeps 2/3, and `--panel A` puts the IO panel on port 4 beside it |
 | Keys | ASCII; F1-F12 = 80-8B; Home, Up, PgUp, Left, keypad 5, Right, End, Down, PgDn, Ins, Del = 90-9A, Shift + 40h (`videog.KEYS`) |
 | Mouse | `video.mouse_packet(dx, dy, buttons)` queues a PS/2 packet, only while MOUSE-ON; the latch keeps its byte after MOUSE-ON goes off (read 7806 once before turning it back on) |
 | Options | `--monitor mda` (IBM 5151: 512 x 256, MONITOR = 1), `--no-gfx` (the TEXT board alone: the window and the mouse float) |
 
 With `--hw` (2026-11-20) TEXT and GFX are read from their KiCad netlists (`s5emu/hwvideog.py`: every decode, the
-R/-W latch, the READY flip-flops and the graphics write slot through the cards' own gates; the RAMs, the 6845, the
+6845's E, the READY flip-flops and the graphics write slot through the cards' own gates; the RAMs, the 6845, the
 latches and the two ATmegas played on the pins those gates drive). `--videog-rev none` keeps the behavioural model on
 the modelled bus, `--no-gfx` unplugs the ribbon, `--kbd-flag` is TEXT's JP3, and `--panel A` fits the IO panel beside
 it in either machine. What the netlist model found is in `hardware/video-g/DESIGN.md`, section 10.
@@ -123,7 +123,7 @@ addresses this card shares with VIDEO-G; it sets the 6845 for 64 x 25.
 
 | What | Model |
 |---|---|
-| Instruction level | `machine.Video6845KbdMachine` / `Video6845Kbd`: the text RAM at 7000-77FF; the 6845 at 7800 / 7801; the key at 7802 (the read takes it); the status at 7804 (bit 0 KEY-READY, bit 7 = 1); 7800-7807 repeat through 7BFF; nothing at 7806 or 7C00-7FFF. EF3 is KEY-READY |
+| Instruction level | `machine.Video6845KbdMachine` / `Video6845Kbd`: the text RAM at 7000-77FF; the 6845 at 7800 / 7801, write-only (a read finds nothing); the key at 7802 (the read takes it); the status at 7804 (bit 0 KEY-READY, bit 7 = 1); 7800-7807 repeat through 7BFF; nothing at 7806 or 7C00-7FFF. EF3 is KEY-READY |
 | `--hw` | `hw.NetlistVideoKbdCard`, **from the card's netlist**: Rev B's gates and the new 74HCT138, '32, '00 and '74 are simulated; the key latch, the status buffer and the ATmega are played on the enables those gates make. `--kbd-flag ef / ef1 / ef2 / ef3 / none` is the card's JP1 (the bus line KEY-READY pulls low). VSYNC and DE in the status read 0 in both models |
 | `--video-rev B-Clean` | Rev B-Clean (the card without the keyboard) from its own netlist: on the bus it is Rev B |
 
@@ -253,7 +253,10 @@ python3 tests/test_hw.py
 - `test_videog.py`: the VIDEO-G model (status, window, pages, CRTC ports, reset, VSYNC, PNG) and the VIDEO-G HBIOS (boot screen, the 24-row line feed and its 47 ms).
 - `test_newset.py` (2026-11-20): the new card set together (CPU Rev D, the IO panel, VIDEO-G TEXT + GFX, with the memory and IDE cards) on both machines: the VIDEO-G HBIOS's commands, a program that reaches every new card, a program toggled in from the panel, Elf/OS 5.1.1 with the clock and `vgdemo`; on the hardware machine the bus log must stay empty.
 - `test_hw_videog.py`: VIDEO-G TEXT and GFX from their netlists (`hwvideog.py`), cycle by cycle.
+- `test_hw_videogbus.py` (2026-11-24): TEXT's write-only 6845 inside a machine cycle: E the whole write strobe and long enough with every strobe on its own, the byte steady, nothing driven in any cycle, the GFX board's two register strobes; the card as first drawn (E = TPB within -MRW, readable) fails it, and each wrong wire of the change is caught.
+- `test_videog_candidates.py` (2026-11-24): the other ways to wire that 6845 that were weighed (`timing_videog.py`), on changed netlists.
 - `test_hw_videokbd.py`: the 6845 card Rev B-Clean-Keyboard: the card alone from its netlist, then the ROM, the keyboard, the panel and Elf/OS 5.1.1 on both machines (`--video kbd`).
+- `test_hw_crtcbus.py` (2026-11-24): the same card's 6845 inside a machine cycle: no bus fight at the end of a register write, nothing in a cycle with no memory access, its data sheet's times in the worst case and at random delays; the card as first drawn (R/W = -MRW, E = TPB) fails it.
 - `test_buslink_c.py`: `--buslink` speaking BUSDRV-C's protocol with CPU Rev D.
 
 ## Files

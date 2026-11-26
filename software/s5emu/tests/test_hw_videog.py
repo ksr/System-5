@@ -2,9 +2,10 @@
 """VIDEO-G 1.0 from its two netlists (s5emu/hwvideog.py): the card against the behavioural model (s5emu/videog.py),
 what its gates do sub-phase by sub-phase, and the whole machine from netlists with it (python3 -m s5emu --hw --video g).
 
-Where the gates show something the design notes do not say, the test records it as found, with a comment: the 6845
-enabled in the high-byte time of the other registers' reads, its RS moving under a high E in a read of x801, and the
-second, cut-short -WE a window write can get. None of them is hidden, and none is asserted to be right."""
+Where the gates show something the design notes do not say, the test records it as found, with a comment: the key latch
+enabled in the high-byte time of reads at 7Axx and 7Bxx, and the second, cut-short -WE a window write can get. None of them
+is hidden, and none is asserted to be right. (Found on 2026-11-20 and gone since the 6845 is write-only, 2026-11-24: the
+6845 enabled in that time, and its RS moving under a high E. What the 6845 sees inside a cycle: test_hw_videogbus.py.)"""
 import contextlib, gzip, io, os, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, ".."))
 from s5emu.hw import HWMachine
@@ -45,7 +46,7 @@ class Card(unittest.TestCase):
 
     def test_every_address_in_the_block(self):
         """each of 7000-7FFF written and then read, through the gates and in the behavioural model: the same bytes land
-        in the same places, the same byte comes back, one part drives and no cycle has a fault. The registers and the
+        in the same places, the same byte comes back, one part drives (none at the write-only 6845) and no cycle has a fault. The registers and the
         window are written in an order that moves the Y register and the pages about, so the multiplexer wiring found
         from the netlist is compared with the model's line y at y * 64 across both pages."""
         ref, v, card = pair(); lines = set()
@@ -62,7 +63,8 @@ class Card(unittest.TestCase):
         ref.mouse.extend((k * 11 + 3) & 0xFF for k in range(600)); v.mouse.extend(ref.mouse)
         for a in range(0x7000, 0x8000):
             b, drv, faults = read(card, a)
-            self.assertEqual(faults, [], "%04X" % a); self.assertEqual(len(drv), 1, "%04X: %s" % (a, drv))
+            self.assertEqual(faults, [], "%04X" % a)
+            self.assertEqual(len(drv), 0 if a & 0xFC06 == 0x7800 else 1, "%04X: %s" % (a, drv))
             self.assertEqual(b, ref.read(a), "%04X" % a)
         self.assertEqual(ref.m.kbd.queue, v.m.kbd.queue); self.assertEqual(list(ref.mouse), list(v.mouse))
         self.assertIsNone(card.slot_fault)                           # (the window's slot ran through the gates on the way)
@@ -71,12 +73,12 @@ class Card(unittest.TestCase):
         """the map as DESIGN.md section 3 has it, by the part that drives or takes the byte; the register pairs repeat
         through 7BFF and the window through 7FFF"""
         ref, v, card = pair(); v.m.kbd.queue[:] = [0x41] * 40; v.mouse.extend([1] * 40)
-        want_r = {0: "video-g IC4", 1: "video-g IC9", 2: "video-g IC8", 3: "video-g GFX IC12"}
+        want_r = {0: None, 1: "video-g IC9", 2: "video-g IC8", 3: "video-g GFX IC12"}      # (the 6845 is write-only)
         want_w = {0: ["video-g IC4"], 1: [], 2: ["video-g GFX IC19"], 3: ["video-g GFX IC10"]}
         for a in (0x7000, 0x7001, 0x73FF, 0x77FF):
             self.assertEqual(read(card, a)[1], ["video-g IC3"]); self.assertEqual(card.bus_write(a, 0, 0x20)[0], ["video-g IC3"])
         for a in list(range(0x7800, 0x7810)) + [0x7900, 0x79F4, 0x7A02, 0x7BFE, 0x7BFF]:
-            self.assertEqual(read(card, a)[1], [want_r[(a >> 1) & 3]], "%04X" % a)
+            w = want_r[(a >> 1) & 3]; self.assertEqual(read(card, a)[1], [w] if w else [], "%04X" % a)
             self.assertEqual(card.bus_write(a, 0, 0)[0], want_w[(a >> 1) & 3], "%04X" % a)
         for a in (0x7C00, 0x7C3F, 0x7C40, 0x7D15, 0x7FFF):
             self.assertEqual(read(card, a)[1], ["video-g GFX IC6"]); self.assertEqual(card.bus_write(a, 0, 0)[0], ["video-g GFX IC1"])
@@ -152,7 +154,8 @@ class Card(unittest.TestCase):
         self.assertTrue(card.ef("-EF")); self.assertFalse(card.ef("-EF1")); self.assertTrue(card.kready)
         self.assertEqual(read(card, 0x7802, commit=False)[0], 0x41); self.assertEqual(v.m.kbd.queue, [0x41, 0x42])
         self.assertEqual(card.early(0x7A00), [("mrd", "IC9"), ("hold", "IC9")])
-        read(card, 0x7A00); self.assertEqual(v.m.kbd.queue, [0x41, 0x42])     # (the 6845 answers 7A00; the key stays)
+        self.assertEqual(read(card, 0x7A00), (FLOAT, [], [])); self.assertEqual(v.m.kbd.queue, [0x41, 0x42])     # (nothing
+        #                                                              answers 7A00, the write-only 6845's; the key stays)
         self.assertEqual(read(card, 0x7802)[0], 0x41); self.assertEqual(v.m.kbd.queue, [0x42]); self.assertTrue(card.ef("-EF"))
         self.assertEqual(read(card, 0x7803)[0], 0x42); self.assertEqual(v.m.kbd.queue, []); self.assertFalse(card.ef("-EF"))
         self.assertEqual(read(card, 0x7802)[0], 0x42)                # no key waiting: the latch still holds the last one
@@ -193,49 +196,47 @@ class Card(unittest.TestCase):
         card.reset_line(1); self.assertTrue(card.ef("-EF")); self.assertEqual(card.held, set())    # let go: the key is loaded
 
     def test_strobes_sub_phase_by_sub_phase(self):
-        """the cycle as the gates time it: read enables from -MRD's fall to the end of the cycle; the 6845's E only at
-        TPB in a write (TPB within -MRW); a register's clock low at TPB and rising when -MRW rises; the text RAM written
-        while -MRW is low"""
+        """the cycle as the gates time it: read enables from -MRD's fall to the end of the cycle; the 6845's E the whole -MRW
+        time of a write, and never in a read; a register's clock low while -MRW is low and rising when it rises; the text
+        RAM written while -MRW is low"""
         ref, v, card = pair()
         on = lambda a, w=False: {ph: (rd, wr) for ph, rd, wr, cl, ck in card.trace(a, 0, w)}
         t = on(0x7000); self.assertEqual([ph for ph in t if t[ph][0] == ["IC3"]], ["mrd", "hold", "low", "tpb", "end"])
-        t = on(0x7801); self.assertEqual([ph for ph in t if t[ph][0] == ["IC4"]], ["mrd", "hold", "low", "tpb", "end"])
-        t = on(0x7801, True); self.assertEqual([ph for ph in t if t[ph][1] == ["IC4"]], ["tpb"])
+        t = on(0x7801); self.assertTrue(all(rw == ([], []) for rw in t.values()))      # a read of it: nothing, ever
+        t = on(0x7801, True); self.assertEqual([ph for ph in t if t[ph][1] == ["IC4"]], ["mrw", "tpb"])
         self.assertTrue(all(not t[ph][0] for ph in t))               # nothing drives in a write cycle
         t = on(0x7000, True); self.assertEqual([ph for ph in t if t[ph][1] == ["IC3"]], ["mrw", "tpb"])
         for a, reg in ((0x7804, "control"), (0x7806, "Y")):
             clk = [ck[reg] for ph, rd, wr, cl, ck in card.trace(a, 0, True)]
-            self.assertEqual(clk, [1, 1, 1, 1, 1, 0, 1, 1])          # idle tpa hold low mrw TPB mrwend end
+            self.assertEqual(clk, [1, 1, 1, 1, 0, 0, 1, 1])          # idle tpa hold low MRW TPB mrwend end
             self.assertEqual(card.plan(a, 0, True).regs, [reg])
         self.assertIsNone(card.plan(0x7802, 0, True))                # 7802 takes no write: the cycle does nothing here
 
-    def test_as_found_the_6845_in_the_high_byte_time(self):
-        """AS FOUND, not in DESIGN.md. The 1802 takes -MRD low at 1.5 T, while A0-A7 still carry the HIGH address byte
-        (the low byte comes at 2.5 T). The register decoders IC5 and IC6 take A1 and A2 from those lines, so for that
-        clock a read at 78xx or 79xx looks like a read of 7800/7801 (A9 = A10 = 0 there): -RDCRTC is low, E is high and
-        the 6845 is on the bus, whatever register the low byte then names; at 7Axx / 7Bxx (A9 = 1) it is the key latch.
-        Nobody else drives then and the 1802 does not look, and KEY-READY is not cleared (that waits for TPB). The
-        hand-over to the status buffer or the key latch at 2.5 T is a matter of nanoseconds this model does not see."""
+    def test_the_6845_is_on_the_bus_in_no_cycle(self):
+        """write-only since 2026-11-24: in no sub-phase of a read, and in no sub-phase of a write, does it drive; as first
+        drawn it was on the bus in the high-byte time of the other registers' reads (DESIGN.md section 10)"""
         ref, v, card = pair()
-        for a in (0x7802, 0x7804, 0x7806, 0x79F4):
-            self.assertEqual(card.early(a), [("mrd", "IC4"), ("hold", "IC4")], "%04X" % a)
+        for a in list(range(0x7800, 0x7820)) + list(range(0x79F0, 0x7A10)) + [0x7000, 0x77FF, 0x7BFF, 0x7C00, 0x7FFF, 0x0000, 0xF800]:
+            for w in (False, True):
+                for ph, rd, wr, cl, ck in card.trace(a, 0, w):
+                    self.assertNotIn("IC4", rd, "%04X %s" % (a, ph))
+                    if not w: self.assertEqual(wr, [], "%04X %s" % (a, ph))
+
+    def test_as_found_the_key_latch_in_the_high_byte_time(self):
+        """AS FOUND (2026-11-20), not in DESIGN.md's sections 3-4. The 1802 takes -MRD low at 1.5 T, while A0-A7 still carry
+        the HIGH address byte (the low byte comes at 2.5 T). The register decoder IC6 takes A1 and A2 from those lines, so for
+        that clock a read at 7Axx or 7Bxx (A9 = 1, A10 = 0) looks like a read of the key: the key latch is on the bus. Nobody
+        else drives then, the 1802 does not look, and KEY-READY is not cleared (that waits for TPB). At 78xx and 79xx it looks
+        like a read of the 6845, which is not read any more: nothing is enabled before the low byte. The text RAM's address
+        pins move under its enables, which an asynchronous RAM does not mind."""
+        ref, v, card = pair()
+        for a in (0x7800, 0x7801, 0x7802, 0x7804, 0x7806, 0x79F4): self.assertEqual(card.early(a), [], "%04X" % a)
         for a in (0x7A00, 0x7A04, 0x7B06):
             self.assertEqual(card.early(a), [("mrd", "IC9"), ("hold", "IC9")], "%04X" % a)
-        for a in (0x7000, 0x77FF, 0x7800, 0x7801, 0x7A02, 0x7C00, 0x7FFF):
+        for a in (0x7000, 0x77FF, 0x7A02, 0x7C00, 0x7FFF):
             self.assertEqual(card.early(a), [], "%04X" % a)          # the part the low byte names is the one already on
-
-    def test_as_found_rs_moves_under_e_in_a_read_of_7801(self):
-        """AS FOUND, not in DESIGN.md. In a read the 6845's E is the whole -MRD time, so it rises at 1.5 T with A8 on RS
-        (A0's line still carries the high byte); A0 itself arrives at 2.5 T. A read of 7801 therefore moves RS from 0
-        to 1 with E already high: the 6845's address set-up to E (tAS) is not met. Writes are not touched (their E is
-        TPB's), and no System-5 program reads 7801 today (the VIDEO-G HBIOS and GBASIC only write it). The text RAM's
-        address pins move the same way under its enables, which an asynchronous RAM does not mind."""
-        ref, v, card = pair()
-        self.assertEqual(card.shifts(0x7801), [("low", "IC4")])
-        self.assertEqual(card.shifts(0x7800), []); self.assertEqual(card.shifts(0x7901), []); self.assertEqual(card.shifts(0x7900), [("low", "IC4")])
+        for a in (0x7800, 0x7801, 0x7900, 0x7901): self.assertEqual(card.shifts(a), [], "%04X" % a)
         self.assertEqual(card.shifts(0x7123), [("low", "IC3")])
-        v.sel = 14; v.reg[14] = 0x12
-        self.assertEqual(read(card, 0x7801)[0], 0x12)                # (played as if the 6845 follows the late RS)
 
     def test_multiplexer_wiring(self):
         """the graphics RAM's address as the four 74HCT157s make it, found from the netlist input by input:
@@ -300,7 +301,7 @@ class System(unittest.TestCase):
         self.assertEqual(m.log.events, {})
         d = m.describe(); self.assertIn("VIDEO-G 1.0", d); self.assertIn("GFX on the ribbon", d); self.assertNotIn("6845 card", d)
         bm = m.bus_map()
-        for line in ("7000  -VMA=0  video-g IC3", "7800  -VMA=0  video-g IC4", "7804  -VMA=0  video-g IC8", "7C00  -VMA=0  video-g GFX IC6",
+        for line in ("7000  -VMA=0  video-g IC3", "7800  -VMA=0  (nothing: floats FF)", "7804  -VMA=0  video-g IC8", "7C00  -VMA=0  video-g GFX IC6",
                      "6000  -VMA=0  mem IC1", "F000  -VMA=1  CPU EPROM"):
             self.assertIn(line, bm)
         self.assertNotIn("6845", bm)

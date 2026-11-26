@@ -32,7 +32,9 @@ TURN = {"hardware/cpu/eagle/rev-a/photos/2026-10-07-front-1.jpg": 180,
         "hardware/video-6845/eagle/rev-b/photos/2026-10-07-front-1.jpg": 90}
 
 # the KiCad renders: every card is drawn with its bus connector on the left (on the right seen from the bottom side),
-# so a top view is turned 90 and a bottom view 270; the backplane (hardware/bus) is not a card and is not turned
+# so a top view is turned 90 and a bottom view 270; the boards that do not plug into the bus (the
+# backplane, hardware/bus, and the front panel, drawn the way it is read) are not turned
+NOT_CARDS = ("bus", "front-panel")
 RENDER = re.compile(r"^hardware/([^/]+)/kicad/[^/]+/[^/]+-render-(top|bottom)\.png$")
 
 
@@ -41,7 +43,7 @@ def render(src, dst, card, side):
     im = Image.open(src).convert("RGBA")
     solid = im.getchannel("A").point(lambda a: 255 if a > 128 else 0).getbbox()     # without the faint shadow
     if solid: im = im.crop(solid)
-    if card != "bus": im = im.rotate(90 if side == "top" else 270, expand=True)
+    if card not in NOT_CARDS: im = im.rotate(90 if side == "top" else 270, expand=True)
     im.thumbnail((PHOTO_PX, PHOTO_PX))
     im.save(dst, optimize=True)
 

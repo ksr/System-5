@@ -35,10 +35,11 @@ As the board is drawn, which is as it is seen from the front:
 | top left | ADDRESS, four TIL311s | the bus address, A15-A12 to A3-A0 |
 | top middle | DATA, two TIL311s | the IO panel card's output port, D7-D4 and D3-D0 |
 | top right | STATUS, six LEDs | PWR, Q, PAUSE, RESET, ROM, START FROM RAM |
+| top right corner | RESET | the push-button that boots HBIOS (beside START FROM RAM since 2026-11-26) |
 | middle | eight LEDs, 7 to 0 | the output port again, bit by bit |
 | under them | eight toggles | the data byte: up is 1 |
 | right of them | RUN / RESET, LOAD / OFF | the two ELF-style toggles: up is RUN, up is LOAD |
-| far right | INPUT, RESET | two push-buttons |
+| far right | INPUT | the push-button |
 | a row below | U7-U10, RN1, RN2, C2 | the logic |
 | bottom left | the board's name | `System-5 front panel  Rev A  2026`, `cottageworker.com` |
 | bottom middle, on the back | J1 | the ribbon's header |
@@ -72,6 +73,27 @@ The three bus lines have a ground wire on each side: they are the ones a spike c
 
 Six TIL311s take about 1.1 A. Four supply wires carry 0.28 A each. If the IO panel card has its own six displays
 fitted as well, the two sets take 2.2 A of the backplane regulator's 3 A: fit the displays on one board.
+
+### The cable, and which way round the boards stand
+
+Ken, 2026-11-23: "can you verify a ribbon cable between IO card and panel will work, given the connector for panel is on
+the rear (where it should be)". Checked on the two board files:
+
+- **Pin n is pin n**, all fifty. Two nets have another name on each board (39 `LED_Q_K` / `Q_LED_L`, 42 `INPUT_RC` /
+  `INPUT_L`) and are the same line.
+- **J1 is a header on the back, not a front footprint to be fitted on the back** (which would swap the odd and the even
+  row): seen from the rear its pins run as any header's do, pin 1 at the right, the odd row at the top, the key slot on
+  the odd row's side, as on the IO panel card's J3 (the same footprint).
+- **Nothing stands in its way**: no other part's pins under it, no front part over its joints; the nearest leads (U8, U9,
+  U10, RN1) are about 1.2 mm from its body.
+- **The cable** is the usual kind, both sockets on the same face of the ribbon, pin 1 on the marked edge. It lies without
+  a twist when the IO panel card's parts side faces the back of this board: pin 1 is then at the left on both, seen from
+  the front, and the ribbon goes up over the card's top edge, forward and down into J1. The cards' parts side faces the
+  bus board's power connector, so this panel belongs at that end; at the other end the ribbon needs a fold.
+- **Room:** between two cards there is 21.3 mm; a header, its socket and the bend of the ribbon take some 15 to 20 mm
+  (estimated: measure the parts). Slot 1 has no card before its parts side. Allow about 20 mm behind this board.
+
+Nothing of it has been tried with a cable.
 
 ## The controls
 
@@ -143,6 +165,17 @@ latched by TPA, so in LOAD mode the two left digits change only when a byte is l
 byte; the two right digits follow R(0) all the time. After loading the byte at 00FF the display reads 0000, not 0100,
 until the next byte goes in. The IO panel card's own displays do the same. It is how the latches are clocked, on the
 IO card; nothing on this board could change it.
+
+## The RESET button moved away from INPUT (2026-11-26)
+
+Ken: "on the sys 5 front panel we need to move the reset pushbutton somewhere else, it will be too easy to hit when
+pushing input button, move it to the top right beside start from ram led". SW12 stood right of SW11 INPUT; it is now
+centred at (190, 24), right of START FROM RAM, 2 mm below the status row and clear of the top-right hole. Its RESET
+label is under it. R7 and C1, its pull-up and capacitor, stay in the logic row (Ken's "Yes, route it" with them
+there); no circuit change. Routed again, seed 0 as before: 1079 track segments, 29 vias, DRC 0 errors and 0 warnings,
+72 of 72 nets. The silkscreen is the same but for the label (`silkdiff.py`: one text moved, 40.7 mm).
+**`pcb-check --tests` at `803c3a8` (pcb-check `62d2548`): no failures, 0 warnings**; the copper rebuilt from the
+gerbers by two methods, which agree; 13 of 13 faults planted in copies of the zip noticed.
 
 ## Building it
 

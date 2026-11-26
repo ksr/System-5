@@ -64,7 +64,8 @@ the cursor kept in text RAM at 77FE/77FF (not on the screen at 25 rows), the min
 The scroll is new (at FC45 since 2026-11-20; at F300-F3E1 before).
 
 Not done: the IBM 5151 table (64 x 32, MONITOR jumper = 1). At 32 rows the text fills all of 7000-77FF, so the cursor
-would have to move out of 77FE/77FF first (into the 6845: R14/R15 can be read at 7801). And, as in v1.0.4, a
+would have to move out of 77FE/77FF first, to another place still to be chosen: **not into the 6845's R14/R15, which cannot
+be read back** (VIDEO-G TEXT's 6845 is write-only since 2026-11-24, as Rev B-Clean-Keyboard's is). And, as in v1.0.4, a
 character typed past column 63 goes off the screen (HBIOS does not wrap; GBASIC wraps its own output).
 
 ## Building

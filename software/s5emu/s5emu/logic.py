@@ -24,6 +24,8 @@ Bus devices (the card reads their pins after the logic settles; they drive only 
   6845          CRTC register interface: CS low and E high; R/W; RS = register select
   1852          CDP1852 input port: drives the bus while CS1 and CS2 are high (MODE low)
   1861          CDP1861: listens only; the card's DISPON / DISPOFF pins are read
+  D_Schottky    a diode whose anode (pin 2) is on a net with a pull-up: it takes that net low while its cathode (pin 1)
+                is low, and lets it go otherwise (the IO panel's D1, 2026-11-25). Any other diode is outside the logic
 Pull networks (G09R, RNX4): a weak pull of each pin to whatever pin 1 is on; a resistor with one end on a supply is a
 weak pull of its other end. C30 = the System-5 bus connector.
 
@@ -42,7 +44,7 @@ control and address pin of the bus devices through the modelled logic, and refus
 output of an unmodelled chip (or a non-data output of a bus device). The 6845 card's character generator and dot
 clock are such parts.
 """
-import re
+import contextlib, random, re
 
 X = 2
 PASSIVE = ("C-US", "CPOL", "R-US", "LED", "MA0", "CRYTAL", "cdp_RCA", "PINHD", "jumper_", "switch-")
@@ -191,6 +193,15 @@ class DFF74(Model):
             ins = [n for n in (clr, d, clk, pre) if n]
             out += [(n, ins) for n in (q, nq) if n]
         return out
+
+
+class WiredDiode(Model):
+    """a diode onto a pulled-up net: the anode's net is low while the cathode's is"""
+    def __init__(self, nl, ref): super().__init__(nl, ref); self.k, self.a = self.n("1", "K"), self.n("2", "A")
+    def outputs(self, val):
+        v = val.get(self.k); yield self.a, 0 if v == 0 else X if v == X else None
+
+    def deps(self): return [(self.a, [self.k])]
 
 
 class Hex04(Model):
@@ -567,7 +578,7 @@ class BusConnector(Model):
 
 # CPU Rev D (2026-10-30) is generated, not converted from Eagle: its parts carry KiCad stock names (Device:R, the
 # 36-pin bus as Conn_01x36) and project symbols named by type (74HCT00 ...), with the 2005 symbols' pin names
-REV_D_PASSIVE = ("R", "C", "C_Polarized", "LED", "D_Schottky", "SW_SPDT", "Conn_01x02", "Conn_01x03", "Conn_01x06",
+REV_D_PASSIVE = ("R", "C", "C_Polarized", "LED", "SW_SPDT", "Conn_01x02", "Conn_01x03", "Conn_01x06",
                  "Conn_02x03_Odd_Even", "Conn_02x04_Odd_Even", "Conn_02x07_Odd_Even", "OSC_DIP8", "DS1813", "SW_Push",
                  "TIL311", "Crystal", "Battery_Cell",      # TIL311: the IO panel's displays; jumper blocks: fitted as shorts
                  "Conn_02x25_Odd_Even", "MountingHole", "R_Pack08",   # the front panel's ribbon header (the front
@@ -579,6 +590,7 @@ REV_D_PASSIVE = ("R", "C", "C_Polarized", "LED", "D_Schottky", "SW_SPDT", "Conn_
 
 
 def classify(lib):
+    if lib == "D_Schottky": return "diode"
     m = re.match(r"74HCT?(\d+)$", lib)                                 # CPU Rev D, the IO panel (74HCTxx, 74HC05)
     if m:
         return {"00": "nand", "02": "02", "03": "nand03", "05": "05", "10": "nand3", "14": "04", "20": "nand4", "74": "74", "373": "373",
@@ -609,6 +621,14 @@ def classify(lib):
     return "unmodelled"
 
 
+@contextlib.contextmanager
+def powering_up(state):
+    """every Circuit made inside starts with its flip-flops and latches at `state` (Circuit's power_up)"""
+    was, Circuit.POWER_UP = Circuit.POWER_UP, state
+    try: yield
+    finally: Circuit.POWER_UP = was
+
+
 class Circuit:
     """the active parts of one card. `fitted` = the refs actually in their sockets (None = all); an empty socket's
     pins float. drive(signal=value, ...) sets the bus connector's pins; settle() returns {net: value}."""
@@ -618,15 +638,24 @@ class Circuit:
              "k74": KDFF74, "k85": KComp85, "k138": KDec138, "k157": KMux157, "k373": KLatch373}
     LOGIC.update({k: (lambda nl, r, k=k: KGates(nl, r, k)) for k in KGates.TABLES})
 
-    def __init__(self, nl, fitted=None, controls=(), external=None, bus=None):
+    POWER_UP = None                                                     # what power_up is when it is not given
+
+    def __init__(self, nl, fitted=None, controls=(), external=None, bus=None, power_up=None):
         """controls: more nets the bus-path check starts from (e.g. a drive's strobes on a header).
         external: {ref: reason} for parts the emulator plays itself (the 1802, the reset chip): their outputs may feed
         the bus path; the nets they drive are set with drive().
         bus: the reference of the connector drive() sets, for a board whose "bus" is a cable header (the front panel's
-        J1, the ribbon from the IO panel card); None = the System-5 bus connector, found by its symbol."""
+        J1, the ribbon from the IO panel card); None = the System-5 bus connector, found by its symbol.
+        power_up: the state every flip-flop and latch comes up in: 0, 1, or "seed N" (each its own, reproducibly). It is put
+        there once the first settle() has ended, wherever the part's own clear, preset or enable does not hold it, and the
+        circuit settles again. (The first settle begins from no net values, which a TTL input reads as 1, so an inverter
+        gives a 0 for a pass and a clear fed by it can clear a flip-flop before anything has happened: the ELF II session's
+        finding, 2026-11-25, and true here.) None, as until 2026-11-25: whatever the first settle leaves, mostly unknown."""
+        self.power_up = Circuit.POWER_UP if power_up is None else power_up; self._started = False
         self.nl = nl; self.extra_controls = list(controls); self.external = dict(external or {}); self.models = []; self.mem = []; self.empty = []; self.unmodelled = []; self.pulls = {}; self.bus = None
         for ref, part in nl.parts.items():
             if ref == bus or (bus is None and classify(part.lib) == "bus"): self.bus = BusConnector(nl, ref)
+        diodes = []
         for ref, part in sorted(nl.parts.items()):
             kind = classify(part.lib)
             if ref == bus: continue
@@ -636,6 +665,7 @@ class Circuit:
             if kind == "bus": continue
             if ref in self.external: continue
             if kind == "pull": self._pull(ref); continue
+            if kind == "diode": diodes.append(ref); continue
             if fitted is not None and ref not in fitted: self.empty.append(ref); continue
             if kind == "unmodelled": self.unmodelled.append(ref)
             elif kind in ("RAM", "ROM"): self.mem.append(MemChip(nl, ref, kind))
@@ -648,6 +678,8 @@ class Circuit:
             elif kind == "PORT": self.mem.append(Port1852(nl, ref))
             elif kind == "PIXIE": self.mem.append(Pixie1861(nl, ref))
             else: self.models.append(self.LOGIC[kind](nl, ref))
+        for ref in diodes:                                              # once every resistor is known
+            if self.pulls.get(nl.net(ref, "2")) == 1: self.models.append(WiredDiode(nl, ref))
         if self.bus is None: raise ValueError("no System-5 bus connector (C30) in " + nl.path)
         self.ext = {}; self.forced = {}; self.val = {}; self.fights = {}
         self.cone = self._check_bus_path()
@@ -692,9 +724,13 @@ class Circuit:
 
     def drives_low(self, net):
         """True while this card itself holds `net` low: a gate's output or a forced part (a switch), not what drive()
-        put on the bus pins. For the open-collector bus lines, where the level alone does not say who pulls"""
+        put on the bus pins. For the open-collector bus lines, where the level alone does not say who pulls. An output
+        that is neither pulling nor let go (it depends on something undefined) raises: until 2026-11-25 it read as let go,
+        which hid that the IO panel's -DMAIN came up unknown"""
         if any(n == net and v == 0 for n, (_, v) in self.forced.items()): return True
-        return any(n == net and v == 0 for m in self.models for n, v in m.outputs(self.val))
+        out = [v for m in self.models for n, v in m.outputs(self.val) if n == net]
+        if 0 not in out and X in out: raise ValueError("%s: %s is neither pulled nor let go" % (self.nl.path, net))
+        return 0 in out
 
     def drive(self, **sig):
         """bus pins by name: A=byte (A0-A7), N=0-7 (N0-N2), TPA, TPB, MRD, MRW, VMA (the active-low ones by their plain
@@ -714,6 +750,31 @@ class Circuit:
                 if name in s: self.ext[s[name]] = v
 
     def settle(self, limit=50):
+        if not self._started:
+            self._started = True; self._settle(limit)
+            if self.power_up is not None: self._come_up(limit)
+            return self.val
+        return self._settle(limit)
+
+    def _come_up(self, limit):
+        """the flip-flops and latches in their power_up states (see __init__)"""
+        rnd = random.Random(str(self.power_up)) if not isinstance(self.power_up, int) else None
+        want = {}
+        pick = lambda key: want.setdefault(key, rnd.getrandbits(1) if rnd else self.power_up)
+        for _ in range(8):
+            moved = False
+            for n, m in enumerate(self.models):
+                if isinstance(m, DFF74): free = [(i, i) for i, ff in enumerate(m.ff) if ttl(self.val.get(ff[0])) != 0 and ttl(self.val.get(ff[3])) != 0]
+                elif isinstance(m, Reg374): free = [(q, q) for _, _, bits in m.groups for _, q, _ in bits]
+                elif isinstance(m, Latch): free = [(q, q) for en, level, bits in m.groups if m.rd(self.val.get(en)) != level for _, q, _ in bits]
+                else: continue
+                for key, k in free:
+                    v = pick((n, key))
+                    if m.state[k] != v: m.state[k] = v; moved = True
+            if not moved: return
+            self._settle(limit)
+
+    def _settle(self, limit=50):
         val = self.val
         for _ in range(limit):
             drv = {}

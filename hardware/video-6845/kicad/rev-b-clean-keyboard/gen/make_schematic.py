@@ -14,6 +14,7 @@ What it does to Rev B-Clean's sheet (everything else is that sheet, wire for wir
     the bus -EF and the three new flag lines
   * the 6845's -CS (IC3 pin 25) cut from the gate that drove it (IC5 pin 3): that gate's output is now -UPPER, the
     74HCT138's enable, and the 6845's -CS is the 74HCT138's first output, -CRTCCS
+  * the 6845's R/W (IC3 pin 22) off -MRW and onto ground, its E (pin 23) off TPB and onto CRTE (keyboard.RELABEL)
   * the new parts (keyboard.PARTS), KiCad's own symbols, each unit placed to the right of the old drawing with a
     stub and a label on every connected pin and a no-connect mark on every open one (as VIDEO-G's
     kicad/common/make_schematic.py draws its cards)
@@ -167,6 +168,19 @@ def main():
         if mark in sheet:
             k = sheet.index(mark); sheet = sheet[:k] + sheet[sheet.index("\n", k) + 1:]
         label(net, x, y, "join-%s-%s" % (ref, pin))
+    # ---- the pins of old parts that change net: the label at the far end of the pin's own wire goes
+    relabelled = []
+    for (ref, pin), (old_label, net) in sorted(K.RELABEL.items()):
+        e = ends[(ref, pin)]
+        hit = [m for m in re.finditer(wire_re, sheet) if same((float(m.group(1)), float(m.group(2))), e) or same((float(m.group(3)), float(m.group(4))), e)]
+        assert len(hit) == 1, (ref, pin, len(hit))
+        m = hit[0]; a, b = (float(m.group(1)), float(m.group(2))), (float(m.group(3)), float(m.group(4)))
+        far = b if same(a, e) else a
+        head = '\t(label "%s" (at %s %s ' % (old_label, fmt(far[0]), fmt(far[1]))
+        assert sheet.count(head) == 1, head
+        k = sheet.index(head); sheet = sheet[:k] + sheet[sheet.index("\n", k) + 1:]
+        relabelled.append((net, far[0], far[1], "relabel-%s-%s" % (ref, pin)))
+        if net != "GND": label(net, far[0], far[1], relabelled[-1][3])
     for num in sorted(K.J1_NEW):                        # the connector's positions this card leaves open
         if ("J1", num) not in K.JOIN:
             x, y = ends[("J1", num)]
@@ -186,6 +200,9 @@ def main():
                     '\t\t(pin "1" (uuid "%s"))\n\t\t(instances (project "%s" (path "%s" (reference "%s") (unit 1))))\n\t)'
                     % (lib_id, x, y, U("pwr", tag), prop("Reference", ref, x, y, True), prop("Value", net, x, yv),
                        prop("Footprint", "", x, y, True), prop("Datasheet", "", x, y, True), U("pwr", tag, "pin"), NEW, path, ref))
+
+    for net, x, y, tag in relabelled:
+        if net == "GND": power(net, x, y, tag)
 
     LABEL_ROOM = 22.86; X0, WIDTH = 570.0, 1140.0
     cells = []
@@ -288,6 +305,8 @@ def main():
         for cand in (label, "/Sheet 1/" + label):
             if cand in want: return cand
         want[label] = set(); return label
+    for node, (_, net) in K.RELABEL.items():
+        want[of(node)].discard(node); want[named(net)].add(node)
     for node, net in K.JOIN.items():
         if node == K.CUT or node[0] == "J1" and node[1] in K.J1_NEW:
             named(net); want[named(net)].add(node); continue
