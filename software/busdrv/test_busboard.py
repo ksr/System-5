@@ -15,7 +15,8 @@ drive are compared with that machine's at the end.
   Faults     faults planted in a copy of the board's netlist, all of which must be noticed: every position of every slot
              open, every two neighbours in every slot swapped, each slot turned or one along, neighbouring lines shorted
              (all of these by the program, with the flag lines' jumpers tried in all four settings), and every pull
-             resistor missing, moved or on the wrong supply. The one setting Slots has in each arrangement misses 8 of the
+             resistor missing, moved or on the wrong supply; and -INT shorted to -DMAIN, which only the watch on -DMAIN in
+             RUN sees (2026-11-27). The one setting Slots has in each arrangement misses 8 of the
              288 opens, one flag line in each slot (J1 -EF3, J2 -EF, J3 -EF1, J4 -EF2, J5 -EF3, J6 -EF, J7 -EF1, J8 -EF2;
              QA, 2026-11-25); the board at rest shows all 8
 
@@ -204,6 +205,14 @@ class Faults(unittest.TestCase):
     def test_neighbours_in_a_slot_swapped(self): self.program("swap", 280)
     def test_a_slot_turned_or_one_along(self): self.program("slot", 16)
     def test_neighbouring_lines_shorted(self): self.program("short", 35)
+
+    def test_a_short_no_card_feels(self):
+        """-INT to -DMAIN, the one pair of the 595 other shorts nothing noticed until 2026-11-27 (busboard.py survey): -DMAIN
+        is low only in a boot reset and in LOAD mode, when the 1802 takes no interrupt, and CPU Rev D takes -DMAIN only when
+        paused, so the UART's interrupt in RUN pulled -DMAIN low with no card to feel it. The program now watches -DMAIN in
+        RUN, as a logic probe or the bus driver would, and the interrupt shows it"""
+        w = dict(b.notice(("short", "/-INT", "/-DMAIN")))
+        self.assertIn("-DMAIN is 0 in RUN (-INT 0)", w.get("program", ""))
 
     def test_the_pull_resistors(self):
         for group, n in (("resistor open", 28), ("resistor moved", 24), ("resistor common", 4)):

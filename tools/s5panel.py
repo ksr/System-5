@@ -16,14 +16,15 @@ pin n, so two pins next to each other in this list lie side by side in the cable
 Thirty-eight signals and twelve supply pins:
   ADR15-ADR0   the bus address as the IO card's two 74HCT573s hold it, for the four address displays
   OUT7-OUT0    the IO card's output port (its 74HCT374), for the eight bit LEDs and the two data displays
-  SW7-SW0      the eight data toggles (SPDT on the front panel: +5V or GND), to the IO card's 74HCT244
+  SW7-SW0      the eight data toggles (on the front panel: on = +5V through RN2's 1k, off = open, the IO card pulling it down), to the IO card's 74HCT244
   Q_LED_L      low while Q is high (the IO card's U5B), to sink the Q LED
-  ROM_LED_L    low while the CPU card's EPROM answers (-VMA high; the IO card's U9F, open drain), to sink the ROM LED
+  ROM_LED_L    low while the CPU card's EPROM answers (-VMA high; the IO card's U23D, open drain), to sink the ROM LED
   INPUT_L      the INPUT button, to ground (the IO card's R1 / C1 debounce it)
   -RESET, -PAUSE, -DMAIN   the three bus lines themselves, open collector: the RUN and LOAD toggles pull the first
                two to ground, the RESET button pulls -RESET and -DMAIN together (a boot reset: docs/manual/bus.md),
                and the front panel reads all three for its RESET, PAUSE and START FROM RAM LEDs
-The switch lines (42-48) have a ground wire on each side: they are the ones a spike could matter on. The address and
+The switch lines INPUT_RC (42), -RESET (44) and -PAUSE (46) have a ground wire on each side; -DMAIN (48) lies between
+GND (47) and +5V (49). They are the ones a spike could matter on. The address and
 output lines change at the machine's rate and sit at the other end of the cable. +5V is on four wires and ground on
 eight: six TIL311s take up to about 1.1 A.
 """

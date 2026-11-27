@@ -34,7 +34,7 @@ every card has it, TEXT with the 36-pin one since 2026-11-18 (its positions 1-30
 end, 47 mm taller, and 10.4 mm more along the backplane at the +5V end for the six added positions. Its 24 ICs (four 600-mil or 28-pin) and the DE-9
 (21 mm deep at the front edge) need about 11,000 mm2 of socket cells, against the standard card's ~9,000 usable; even
 with the keyboard moved off it would need ~167 mm. **Approved by Ken, 2026-11-17: 188 mm fits.** A **40-pin ribbon
-(2 x 20 IDC, about 10 cm)** joins them: both headers lie along the same side edge, 88-148 mm from the bus edge, so
+(2 x 20 IDC, about 10 cm)** joins them: both headers lie along the same side edge, 78-138 mm from the bus edge (pins 83.6-131.9 mm), so
 the cable goes straight across between the slots. Board-layout rules
 of 2026-10-24 apply (jacks, LEDs and jumpers labelled; references outside parts; IC types beside them), and
 `cottageworker.com` beside the board name.
@@ -57,7 +57,7 @@ changed except the CPU EPROM's video driver (section 8).
 | 24, 28, 29 | N2, N1, N0 | not used: no I/O ports (2026-11-17) | - |
 | 25 | -EF | KEY-READY, open collector, when JP3 KBD FLAG picks it (as set; or -EF1, -EF2, -EF3 on the 36-pin connector, 2026-11-18) | - |
 | 26 | -VMA | block decode | - |
-| 27 | -RESET | control register, ATmega | flags, ATmega |
+| 27 | -RESET | the 6845, KEY-READY, ATmega | control register, flags, ATmega |
 | 10, 23 | Q, -INT | not used | not used |
 
 **Pull-ups TEXT carries, because the 2009 backplane has none:**
@@ -200,9 +200,9 @@ allows 25 us, Hitachi's (the HD68B45SP's) has no limit; a pause in a register wr
 
 **Text RAM: the IDT7134** (4K x 8 dual port, as on the 6845 card and V2.0; kept by Ken on 2026-11-01 after weighing
 an ordinary 62256 shared in slots, which needed six more chips and a bigger card). The bus on the right port (A0-A10,
-A11 low; CE from TSEL, -OE = -MRD, R/-W = -MRW), the 6845 on the left (MA0-MA11, always reading). No snow, no waiting.
+A11 low; CE from -TXTCE, -OE = -MRD, R/-W = -MRW), the 6845 on the left (MA0-MA11, always reading). No snow, no waiting.
 
-**Display.** V2.0's text path at 8 dots: the 12 MHz oscillator (74LS04), IC28 74LS163 loading 8 on every carry
+**Display.** V2.0's text path at 8 dots: the 12 MHz oscillator (74LS04), IC15 74F163A (V2.0's IC28 74LS163) loading 8 on every carry
 (counts 8-15; QC = the 6845's clock, RCO -> CHARCLOCK), the code latch (74LS374: **7 code bits**, 128 characters,
 because HBIOS writes lower case - V2.0's font has 64), 28C64 (a 128-character 8 x 8 font), 74LS166 shifter, 74LS175
 delays, 74LS86 cursor/reverse XORs (bit 7 = reverse, as now), combine gates, 7416 open-collector outputs.
@@ -236,7 +236,7 @@ V2.0's graphics layer, with the plane register replaced by the **Y register** an
 **Address.** The display reads **{DPAGE, RA2..RA0, MA10..MA0}**: plane n (2K) holds scan line n of every character
 row - the RA:MA layout, which needs no counter of its own. The CPU's address is the same layout made from y and x:
 y = 8 x row + scan line, so **{CPAGE, Y2..Y0, Y7..Y3, A5..A0}** - pure wiring, linear in y, and 64 bytes a line.
-Four 74LS157 choose between them:
+Four 74HCT157 (IC2-IC5) choose between them:
 
 | RAM address | GA14 | GA13-GA11 | GA10-GA6 | GA5-GA0 |
 |---|---|---|---|---|
@@ -245,7 +245,7 @@ Four 74LS157 choose between them:
 
 **Slots.** V2.0's: in each character time (8 dot clocks, 667 ns) the first half is the CPU's, the second the
 display's (mux select = QC OR RCO, from TEXT). Reads: a 74HCT374 loads the CPU-half byte on every QC rise and drives
-D0-D7 while the window is read (WSEL AND -MRD low). Writes: WRQ (74LS74) samples WSEL AND -MRW low on CHARCLOCK's rise;
+D0-D7 while the window is read (WSEL AND -MRD low). Writes: WRQ (IC13A, 74HCT74) samples WSEL AND -MRW low on CHARCLOCK's rise;
 -WE pulses at counts 9-10 (167 ns) with a 74HCT244 driving the byte onto the RAM. Display: a 74LS374 latches the
 display-half byte, a 74LS166 shifts it out at the dot clock -> GDOT to TEXT.
 

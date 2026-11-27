@@ -21,7 +21,9 @@ BOOKS = [
     ("system5-hardware-reference", "System-5 Hardware Reference", "The system, the bus and every card: theory of operation",
      ["docs/manual/system.md", "docs/manual/bus.md", "docs/manual/cpu-card.md", "docs/manual/memory-card.md",
       "docs/manual/video-6845-card.md", "docs/manual/io-card.md", "docs/manual/ide-cf-card.md",
-      "docs/manual/bus-driver-card.md", "docs/manual/other-cards.md"]),
+      "docs/manual/bus-driver-card.md", "docs/manual/bus-board-rev-d.md", "docs/manual/cpu-card-rev-d.md",
+      "docs/manual/video-g-text-card.md", "docs/manual/video-g-gfx-card.md", "docs/manual/io-panel.md",
+      "docs/manual/front-panel.md", "docs/manual/other-cards.md"]),
     ("system5-programmers-guide", "System-5 Programmer's Guide", "The memory and I/O maps, the devices, HBIOS, "
      "the monitor and the BIOS calls", ["docs/manual/programmers-guide.md"]),
     ("system5-operators-guide", "System-5 Operator's Guide", "The boot monitor, Elf/OS 5.1.1 and every program on its "
@@ -35,6 +37,13 @@ BOOKS = [
     ("system5-io-card", "System-5 IO Card (1861 and Keyboard)", "Theory of operation", ["docs/manual/io-card.md"]),
     ("system5-ide-cf-card", "System-5 IDE/CF Card", "Theory of operation", ["docs/manual/ide-cf-card.md"]),
     ("system5-bus-driver-card", "System-5 Bus Driver Card", "Theory of operation", ["docs/manual/bus-driver-card.md"]),
+    ("system5-bus-board-rev-d", "System-5 Bus Rev D", "The 2026 backplane: theory of operation",
+     ["docs/manual/bus-board-rev-d.md"]),
+    ("system5-cpu-card-rev-d", "System-5 CPU Card Rev D", "Theory of operation", ["docs/manual/cpu-card-rev-d.md"]),
+    ("system5-video-g-text-card", "System-5 VIDEO-G TEXT Card", "Theory of operation", ["docs/manual/video-g-text-card.md"]),
+    ("system5-video-g-gfx-card", "System-5 VIDEO-G GFX Card", "Theory of operation", ["docs/manual/video-g-gfx-card.md"]),
+    ("system5-io-panel", "System-5 IO Panel Card", "Theory of operation", ["docs/manual/io-panel.md"]),
+    ("system5-front-panel", "System-5 Front Panel", "Theory of operation", ["docs/manual/front-panel.md"]),
     ("system5-other-cards", "System-5: Other Cards and Designs", "The prototyping card, the front panel, earlier revisions",
      ["docs/manual/other-cards.md"]),
 ]

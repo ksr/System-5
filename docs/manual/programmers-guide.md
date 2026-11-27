@@ -48,6 +48,13 @@ The memory card in the machine, Rev E (MEM3-E, since 2026-10-31), decodes by jum
 | EF1, EF2, EF4 | not connected |
 | interrupt | only the 1861 can interrupt; with it off, interrupts never come |
 
+### The 2026 boards (designed, not built)
+
+The maps above are the machine as built. The boards designed in 2026 change two parts of them; each has its own chapter.
+
+- **VIDEO-G TEXT and GFX** ([video-g-text-card.md](video-g-text-card.md), [video-g-gfx-card.md](video-g-gfx-card.md)) answer in one 4K block, like the 6845 card, and use no I/O port. In block 7: 7000–77FF the text RAM; 7800 / 7801 the 6845 (write-only, reads FF); 7802 the key (reading it clears KEY-READY); 7804 status (bit 0 KEY-READY, 1 MOUSE-READY, 2 VSYNC, 3 DE, 4 MONITOR, 5 GFX-PRESENT, bits 7–6 = 10), and on GFX its control register when written; 7806 on GFX the mouse byte (read) and the Y register (write); 7C00–7C3F, repeated to 7FFF, the GFX graphics window. The keyboard is read from memory there, not from `INP 1`.
+- **The IO panel** ([io-panel.md](io-panel.md)) replaces the 2005 IO card: `OUT 4` the LEDs and the two OUT digits, `INP 4` the toggles (JP1 and JP2 may move these to any port 1–7); port 6 selects a clock register (`00`–`7F`) or a UART register (`80`–`87`), port 7 writes or reads it (JP4: ports 2/3, 4/5 or 6/7; 6/7 as set, which leaves the IDE card its ports 2 and 3). INPUT is on EF1 as set (JP3). The [front panel](front-panel.md) is the same card's controls on a ribbon and adds no port.
+
 ## Programming the devices
 
 ### The screen

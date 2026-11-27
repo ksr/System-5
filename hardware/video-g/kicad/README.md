@@ -13,7 +13,7 @@ Both: 4 layers (F.Cu / B.Cu signals, In1.Cu a solid GND plane, In2.Cu a solid +5
 System-5 bus connector (GFX the 30-pin one; TEXT the 36-pin one since 2026-11-18, for its keyboard flag's choice of four
 EF lines: its positions 1-30 where the 30-pin connector's pins were, the board grown at the +5V end) and card-guide
 keep-outs where every card has them, the 2 x 20 ribbon header along the same
-side edge 88-148 mm from the bus edge (TEXT J6, GFX J4: a straight 40-way cable between neighbouring slots; pin map
+side edge 78-138 mm from the bus edge (pins 83.6-131.9 mm) (TEXT J6, GFX J4: a straight 40-way cable between neighbouring slots; pin map
 `common/ribbon.py`). Silkscreen per Ken's rules: every reference outside its part with the IC type beside it, jacks,
 jumpers and the LED labelled by function, the board name and cottageworker.com. **Since 2026-11-18 every text reads
 upright with the card standing in the bus, connector down** (Ken's rule for every board; he asked for it on TEXT and

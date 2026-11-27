@@ -12,6 +12,12 @@ Written 2026-10-26 from the cards' netlists (the KiCad conversions of the 2005 E
 | [io-card.md](io-card.md) | IO card: PS/2 keyboard through PAK-VI, PIC and CDP1852; the CDP1861 | `pdf/system5-io-card.pdf` |
 | [ide-cf-card.md](ide-cf-card.md) | IDE/CF card: ports, register latch, strobes, registers | `pdf/system5-ide-cf-card.pdf` |
 | [bus-driver-card.md](bus-driver-card.md) | bus driver card: the Nano and expanders, bus cycles, protocol | `pdf/system5-bus-driver-card.pdf` |
+| [bus-board-rev-d.md](bus-board-rev-d.md) | bus Rev D (2026, not built): eight 36-pin slots, power, pull-ups, layout | `pdf/system5-bus-board-rev-d.pdf` |
+| [cpu-card-rev-d.md](cpu-card-rev-d.md) | CPU card Rev D (2026, not built): run control from the bus, the boot reset, LOADED, 2 MHz | `pdf/system5-cpu-card-rev-d.pdf` |
+| [video-g-text-card.md](video-g-text-card.md) | VIDEO-G TEXT (2026, not built): the memory map, write-only 6845, text pipeline, PS/2 keyboard | `pdf/system5-video-g-text-card.pdf` |
+| [video-g-gfx-card.md](video-g-gfx-card.md) | VIDEO-G GFX (2026, not built): graphics RAM, Y and control registers, the mouse | `pdf/system5-video-g-gfx-card.pdf` |
+| [io-panel.md](io-panel.md) | IO panel (2026, not built): toggles, LEDs, TIL311s, RUN/LOAD/INPUT, RESET, clock, serial port | `pdf/system5-io-panel.pdf` |
+| [front-panel.md](front-panel.md) | front panel (2026, not built): the IO panel's controls on a ribbon, for a case | `pdf/system5-front-panel.pdf` |
 | [other-cards.md](other-cards.md) | the prototyping card, the front panel, earlier and planned revisions | `pdf/system5-other-cards.pdf` |
 | [operators-guide.md](operators-guide.md) | using the machine: the boot monitor, Elf/OS 5.1.1 and every program on its card, ELF/OS 0.2.6, Rc/Basic, known problems | `pdf/system5-operators-guide.pdf` |
 | [programmers-guide.md](programmers-guide.md) | memory and I/O maps, the devices, booting, the monitor, BIOS calls, tools | `pdf/system5-programmers-guide.pdf` |

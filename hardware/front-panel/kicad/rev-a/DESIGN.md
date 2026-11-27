@@ -133,7 +133,7 @@ Each LED has 1k from +5V and is sunk by the line that lights it.
 | Q | the IO card's U5B | Q is high |
 | PAUSE | U7E (PAUSE_N) | -PAUSE is low |
 | RESET | U7F (RESET_N) | -RESET is low |
-| ROM | the IO card's U9D | the CPU card's EPROM answers (-VMA high) |
+| ROM | the IO card's U23D (U9D until 2026-11-25) | the CPU card's EPROM answers (-VMA high) |
 | START FROM RAM | U9A, !Q | the CPU card's LOADED flag is set |
 
 START FROM RAM is a copy of the flag, not the flag itself. The CPU card's flag is set by LOAD mode and cleared by a

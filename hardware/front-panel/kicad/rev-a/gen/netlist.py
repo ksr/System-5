@@ -39,7 +39,7 @@ Blocks:
                      and its 1k are the load. pcb-check's DESIGN line took them for outputs with no pull-up, because
                      it knows an LED by the word LED in its value and these carry their function; the pcb-check
                      session found that on 2026-11-22. The spare push-pull gates stay)
-              ROM    ROM_LED_L, the IO card's U9D: lit while the CPU card's EPROM answers
+              ROM    ROM_LED_L, the IO card's U23D: lit while the CPU card's EPROM answers
               START FROM RAM   !Q of U9A, a copy of the CPU card's LOADED flag made from the same three bus lines by
                      the same two gates: set by LOAD mode (LOAD_L = NAND(RESET_H, PAUSE_H), U8A), cleared by a boot
                      reset (BOOT_L = NAND(RESET_H, DMAIN_H, PAUSE_N), U8B). The CPU card's power-on reset is a boot

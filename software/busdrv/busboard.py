@@ -401,6 +401,7 @@ class System:
             self.n_n = [n(19), n(18), n(17)]; self.n_ef = [n(p) for p in (24, 23, 22, 21)]
             self.n_int, self.n_dma, self.n_wait, self.n_clear = n(36), n(38), n(2), n(3)
             self.pins.ef = self._ef; self.cpu_sw = self._dev(Level(self, "cpu.SW1"))
+            self.n_bus_dmain = nl.net("bus.J1", LINES.index("-DMAIN") + 1)
         if "panel" in self.on:
             self.hand = self._dev(Level(self, "panel switches"))
             find = lambda name: next(nl.net("panel." + r, pin) for (r, pin), (net, _) in cards["panel"].pins.items() if net == "/" + name and r != "J1")
@@ -561,6 +562,11 @@ class System:
             if i not in (0, 1): raise Noticed("the 1802's INTERRUPT is undefined")
             if d not in (0, 1): raise Noticed("the 1802's DMA IN is undefined")
             p.core.int_line = i == 0
+            if p.mode == "run" and self.val.get(self.n_bus_dmain) != 1:
+                # nothing pulls -DMAIN while the machine runs (a boot reset and LOAD mode are the only times it is low), and
+                # CPU Rev D takes it only when paused, so no card would notice; a logic probe or the bus driver reading the
+                # line does. A short to -INT shows when the UART's interrupt comes in (2026-11-27)
+                raise Noticed("-DMAIN is %s in RUN (-INT %s), must be high" % (self.val.get(self.n_bus_dmain), i))
         b = self.data()
         if running and self.live and e in (13, 14, 15):
             f = self.fights()

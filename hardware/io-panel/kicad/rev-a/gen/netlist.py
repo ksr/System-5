@@ -100,7 +100,11 @@ Blocks:
             elsewhere does nothing. -RD is low from clock 5 of an INP of the data port to the end of that cycle.
             MR = RESET_H. INTR, inverted by U23C (open drain; RN1 pulls it up), reaches -INT
             through JP7 (off).
-  pull-ups  none on the bus lines (the CPU card and the bus Rev D have them); the SPDT toggles drive the bits both ways.
+  pull-ups  RN1 (10k x8, common pin 1 on +5V) pulls one bus line directly: SC0 (pin 9, its eighth resistor), so it
+            rests high with no CPU card. Three more reach the bus only through a jumper: EFOUT (pin 4) on the flag line
+            JP3 picks (-EF1 as set), UIRQ_L (pin 8) on -INT with JP7 fitted, RTC_IRQ (pin 7) on -INT with JP4's row 7
+            fitted. The bus lines' own pull-ups are on the CPU card and the bus Rev D. The SPDT toggles drive the bits
+            both ways.
 """
 BUS = {1: "+5V", 2: "D0", 3: "D1", 4: "D2", 5: "D3", 6: "D4", 7: "D5", 8: "D6", 9: "D7", 10: "Q", 11: "TPA", 12: "TPB",
        13: "-MRD", 14: "-MRW", 15: "A0", 16: "A1", 17: "A2", 18: "A3", 19: "A4", 20: "A5", 21: "A6", 22: "A7", 23: "-INT",

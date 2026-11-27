@@ -29,8 +29,9 @@ and the proposals as they were made. **Status (2026-11-21): a sixth LED, RAM, fo
    or VMA-mode jumpers** (Ken, 2026-10-30): Rev A's SV2/SV4 (window) and SV5 (Boot/REMAP, Boot only, No ROM) are dropped; the card
    is always Boot/REMAP with the EPROM at F000-FFFF.
 4. **Debug control: -PAUSE and -DMAIN** (Ken, 2026-10-30; replaces CPU-generated -INP/-OUT: I/O cards keep their own decode).
-   Position 34 -PAUSE (open collector, a level): while low the card holds the 1802's WAIT low. Position 35 -DMAIN (open collector) to
-   the 1802's DMA IN. With -RESET also low, -PAUSE puts the 1802 in LOAD mode, and each -DMAIN writes the bus byte to M(R0), R0 + 1.
+   Position 36 -PAUSE (open collector, a level; 34 when this was proposed, before the slot order of 2026-11-18): while low the
+   card holds the 1802's WAIT low. Position 34 -DMAIN (open collector; 35 when proposed) to the 1802's DMA IN, through the DMA
+   interlock since 2026-11-22 (DMA_ARMED: the 1802 takes it only when paused). With -RESET also low, -PAUSE puts the 1802 in LOAD mode, and each -DMAIN writes the bus byte to M(R0), R0 + 1.
    The debug board drives the data bus only while -MRD is high (the DMA IN cycle; in IDLE memory drives M(R0)); no SC0/SC1 needed.
    - **The boot remap must be off in LOAD mode.** -RESET clears the boot flip-flop, and while it is clear the EPROM answers at every
      address and -VMA keeps the memory cards off, so DMA writes from R0 = 0000 would go nowhere. Set the flip-flop (boot map off)
@@ -52,7 +53,8 @@ and the proposals as they were made. **Status (2026-11-21): a sixth LED, RAM, fo
    the debug board is in control; on RESET the switch wins. **PAUSE and LOAD are not on this card** (Ken, 2026-10-30, option B): the
    CPU card only listens to -PAUSE and -DMAIN; the new IO card (switches, by hand) and the debug board (from the Mac) drive them,
    either one alone or both together (open collector). A PAUSE LED on this card shows the mode.
-7. **LEDs (front edge, labelled):** PWR, Q, WAIT, CLEAR, VMA, and CLK EXT (on while the external clock is selected).
+7. **LEDs (front edge, labelled):** PWR, Q, WAIT, CLEAR, VMA, and CLK EXT (on while the external clock is selected). As drawn:
+   LED1 PWR, LED2 Q, LED3 PAUSE (WAIT low), LED4 RESET (CLEAR low), LED5 ROM and LED6 START FROM RAM; no VMA or CLK EXT LED.
 8. **Timing.** Rerun `python3 -m s5emu.timing 2` and `contention()` at 2 MHz; Rev A's review was at an assumed 1.76 MHz. Watch T6
    (IDE card, `BACKLOG.md`): INP 3 into RAM fails worst case from about 2.2 MHz, so 2 MHz leaves little margin.
 9. **Folder.** `hardware/cpu/kicad/rev-d/` with `gen/netlist.py`, `make_schematic.py`, `make_board.py`, as for the bus Rev D; a
@@ -63,16 +65,24 @@ and the proposals as they were made. **Status (2026-11-21): a sixth LED, RAM, fo
 The circuit is written; ERC 0 (`reports/erc.rpt`), 87 nets, none with a single pin. Board not started. Choices made while
 writing it (for Ken to review):
 
+(This section is the record of 2026-10-30. Where the boot reset of 2026-11-22 changed it, the change is marked
+**[2026-11-22]**; "A boot reset on the bus, and the DMA interlock", below, has the whole of it.)
+
 - **No run latches, no one-shot.** -RESET and -PAUSE are levels now, so CLEAR = -RESET and WAIT = -PAUSE through two Schmitt
   inverters each (U7): reset, run, pause and load follow directly. Rev A's two 74LS20 latches and the 74LS123 are gone.
 - **DS1813, not CM1232/DS1232.** Rev A's CM1232 has a watchdog strobed by TPA; TPA stops in PAUSE, in LOAD and with the external
   clock stopped, so it would reset a paused or stepped machine within a second. The DS1813 (TO-92) is power-on reset and a
   debounced push-button input on one open-drain pin, which sits on the bus -RESET; no watchdog.
 - **SW1 RESET/RUN** grounds SW_RST: through D1 (BAT85) that pulls -RESET (the DS1813 then holds it 150 ms after release), and it
-  clears LOADED. C12 on SW_RST clears LOADED at power-on.
+  clears LOADED. C12 on SW_RST clears LOADED at power-on. **[2026-11-22]** D1 and the 1 uF C12 are gone: a second DS1813,
+  U12, holds SW_RST low at power-on and for 150 ms after SW1; U11 (74HC03, open drain) puts it on the bus, -RESET (U11A)
+  and -DMAIN (U11B, not while paused), a boot reset, and LOADED is cleared by any boot reset on the bus (BOOT_L =
+  NAND(RST_H, DMAIN_H, WAIT), U6B). C12 is U11's 0.1 uF now.
 - **LOADED (U8A)** decides what a reset boots: set by LOAD mode, cleared by SW1 and power-on. While it is set the boot map stays
   off, so after loading a program at 0000 the ELF sequence LOAD → RESET → RUN runs it from RAM; SW1 (or power-on) boots HBIOS.
-  A reset from the bus (the debug board, the IO card) leaves LOADED as it is. Checked as a gate-level walk-through of power-on,
+  A reset from the bus (the debug board, the IO card) leaves LOADED as it is. **[2026-11-22]** A plain reset (-RESET alone)
+  still does; a boot reset (-RESET and -DMAIN low together, -PAUSE high), from SW1, the front panel's or the IO card's
+  RESET button or the bus driver's `MODE:4#`, clears it. Checked as a gate-level walk-through of power-on,
   boot, bus reset, LOAD → RESET → RUN, PAUSE and SW1.
 - **Consequence for the IO panel card:** its hand controls become the COSMAC ELF's **RUN** and **LOAD** toggles (RUN off pulls
   -RESET, LOAD on pulls -PAUSE; LOAD mode = RUN off + LOAD on), not PAUSE and LOAD; PAUSE is RUN on + LOAD on.
@@ -84,7 +94,8 @@ writing it (for Ken to review):
 - **Parts:** U1 CDP1802ACE, U2 74HCT373, U3 2732, U4/U8 74HCT74, U5 74HCT00, U6 74HCT20, U7/U9 74HCT14, U10 DS1813-10,
   X1 4 MHz DIP-8 oscillator; J1 the 36-pin bus (footprint to settle with the board: a placeholder 1×36 header), J2 DEBUG
   (a keyed 2×3 since 2026-11-18: EXT_CLK, GND, CLOCK, SC0, SC1, GND), JP1 CLK INT/EXT, JP2-JP5 the EF blocks (2×4 each); LEDs PWR, Q, PAUSE, RESET, ROM,
-  and RAM since 2026-11-21 (the last section). Spare: U6B (inputs tied high), U8B.
+  and RAM since 2026-11-21 (the last section). Spare: U9C (input on ground); U6B and U8B, spare when this was written, are the boot reset's
+  BOOT_L and DMA_ARMED since 2026-11-22.
 - **Symbols:** KiCad's stock 74xx symbols are one unit per gate, which the generator cannot place, so the logic uses one-unit
   project symbols (`s5cpu.kicad_sym`, written by make_schematic.py from `netlist.CHIPS`, pinouts from the data sheets). The
   readable drawing is the redrawn schematic (`tools/kicad/sch/gen_schematic.py`), still to set up (`schematic/spec.py`).
